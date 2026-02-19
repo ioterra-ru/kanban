@@ -1,0 +1,220 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Column {
+  BACKLOG
+  HIGH_PRIORITY
+  TODO
+  IN_PROGRESS
+  READY_FOR_ACCEPTANCE
+  DONE
+}
+
+enum Importance {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum Role {
+  ADMIN
+  MEMBER
+}
+
+model Board {
+  id   String @id @default(uuid())
+  name String
+  description String?
+
+  cards       Card[]
+  memberships BoardMembership[]
+  defaultForUsers User[] @relation("DefaultBoard")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([name])
+}
+
+model BoardMembership {
+  boardId String
+  board   Board   @relation(fields: [boardId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@id([boardId, userId])
+  @@index([userId])
+}
+
+model Card {
+  id          String     @id @default(uuid())
+  boardId     String
+  board       Board      @relation(fields: [boardId], references: [id], onDelete: Cascade)
+
+  description String
+  details     String?
+  assignee    String?
+  dueDate     DateTime?
+
+  column    Column
+  position  Int
+
+  importance Importance @default(MEDIUM)
+  paused     Boolean    @default(false)
+
+  authorId  String?
+  author    User?      @relation("CardAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+
+  comments    Comment[]
+  attachments Attachment[]
+  participants CardParticipant[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([boardId, column, position])
+  @@index([authorId])
+  @@index([boardId])
+}
+
+model Comment {
+  id        String   @id @default(uuid())
+  cardId    String
+  card      Card     @relation(fields: [cardId], references: [id], onDelete: Cascade)
+
+  author    String? // legacy display name
+  authorId  String?
+  authorUser User?  @relation("CommentAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+  body      String
+  createdAt DateTime @default(now())
+
+  @@index([cardId, createdAt])
+  @@index([authorId])
+}
+
+model Attachment {
+  id        String   @id @default(uuid())
+  cardId    String
+  card      Card     @relation(fields: [cardId], references: [id], onDelete: Cascade)
+
+  filename    String
+  storedName  String
+  mimeType    String
+  size        Int
+  relativePath String
+
+  createdAt DateTime @default(now())
+
+  @@index([cardId, createdAt])
+}
+
+model User {
+  id        String  @id @default(uuid())
+  email     String  @unique
+  name      String
+  avatarPreset     String?
+  avatarUploadName String?
+  role      Role    @default(MEMBER)
+  isSystem  Boolean @default(false)
+
+  defaultBoardId String?
+  defaultBoard   Board?  @relation("DefaultBoard", fields: [defaultBoardId], references: [id], onDelete: SetNull)
+
+  passwordHash String
+  mustChangePassword Boolean @default(true)
+
+  totpEnabled    Boolean @default(false)
+  totpSecret     String?
+  totpTempSecret String?
+
+  cardsAuthored Card[] @relation("CardAuthor")
+  commentsAuthored Comment[] @relation("CommentAuthor")
+  cardParticipations CardParticipant[]
+  boardMemberships BoardMembership[]
+  trustedDevices TrustedDevice[]
+  passwordResetTokens PasswordResetToken[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([defaultBoardId])
+}
+
+model PasswordResetToken {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  tokenHash String   @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model CardParticipant {
+  cardId String
+  card   Card   @relation(fields: [cardId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@id([cardId, userId])
+  @@index([userId])
+}
+
+// Session table used by connect-pg-simple (express-session store)
+model Session {
+  sid    String   @id @db.VarChar
+  sess   Json
+  expire DateTime @db.Timestamp(6)
+
+  @@index([expire], map: "IDX_session_expire")
+  @@map("session")
+}
+
+model TrustedDevice {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  tokenHash String   @unique
+  userAgent String?
+  lastUsedAt DateTime @default(now())
+  expiresAt DateTime
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+}
+
+model MailSettings {
+  id      String @id @default("mail")
+
+  enabled Boolean @default(false)
+
+  host   String?
+  port   Int?
+  secure Boolean @default(true)
+  user   String?
+  pass   String?
+  from   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+

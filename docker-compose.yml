@@ -1,0 +1,65 @@
+services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: kanban
+      POSTGRES_PASSWORD: kanban
+      POSTGRES_DB: kanban
+    volumes:
+      - kanban_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kanban -d kanban"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
+  adminer:
+    image: adminer:4
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    restart: unless-stopped
+    environment:
+      PORT: 4000
+      DATABASE_URL: "postgresql://kanban:kanban@db:5432/kanban?schema=public"
+      SESSION_SECRET: "${SESSION_SECRET:?SESSION_SECRET is required}"
+      PUBLIC_BASE_URL: "${PUBLIC_BASE_URL:-}"
+      # when frontend is served via nginx on 8080, requests are same-origin; CORS is mostly irrelevant,
+      # but keeping it permissive for direct API access during development:
+      CORS_ORIGIN: "${CORS_ORIGIN:-https://localhost:8443,https://127.0.0.1:8443}"
+      SMTP_HOST: "${SMTP_HOST:-}"
+      SMTP_PORT: "${SMTP_PORT:-465}"
+      SMTP_USER: "${SMTP_USER:-}"
+      SMTP_PASS: "${SMTP_PASS:-}"
+      SMTP_FROM: "${SMTP_FROM:-}"
+      SMTP_SECURE: "${SMTP_SECURE:-true}"
+    volumes:
+      - kanban_uploads:/app/backend/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "8443:443"
+    volumes:
+      - ./certs:/etc/nginx/certs:ro
+    depends_on:
+      - backend
+      - adminer
+
+volumes:
+  kanban_pg:
+  kanban_uploads:
+

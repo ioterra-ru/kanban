@@ -1,0 +1,17 @@
+node_modules/
+dist/
+.env
+.env.*
+!.env.example
+
+backend/uploads/
+
+frontend/dist/
+
+# Local one-app env files
+docker/compose/.cont_one_app.env
+docker/compose/.cont_one_app.secrets.env
+
+# Local TLS certs/keys
+certs/
+

@@ -1,0 +1,12 @@
+**/node_modules
+**/dist
+**/.env
+**/.env.*
+!backend/.env.example
+!frontend/.env.example
+
+backend/uploads
+
+.cursor
+.git
+
