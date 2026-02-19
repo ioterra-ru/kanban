@@ -1,3 +1,7 @@
+# kanban
+
+Канбан доски.
+
 ## ИоТерра‑Канбан (PostgreSQL + Node/Express + React/Vite)
 
 Веб‑приложение Kanban‑доски с карточками, участниками, вложениями, ролями, 2FA и несколькими досками.
@@ -126,4 +130,3 @@ npm run test
 npm run test -w backend
 npm run test -w frontend
 ```
-
