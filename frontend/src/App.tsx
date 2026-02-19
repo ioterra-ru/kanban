@@ -14,7 +14,7 @@ import { format } from "date-fns";
 
 import { Api } from "./api";
 import type { Board, BoardColumn, CardDetail, CardSummary, ColumnId, Importance, User } from "./types";
-import { compactFileName, compactMiddle } from "./utils/files";
+import { compactFileName } from "./utils/files";
 import { AVATAR_PRESETS, autoAvatarPreset, avatarSrc } from "./utils/avatar";
 
 function classNames(...xs: Array<string | false | null | undefined>) {
@@ -24,8 +24,6 @@ function classNames(...xs: Array<string | false | null | undefined>) {
 function clamp(n: number, min: number, max: number) {
   return Math.max(min, Math.min(max, n));
 }
-
-// compactMiddle/compactFileName are in ./utils/files
 
 function importanceLabel(importance: Importance) {
   switch (importance) {
