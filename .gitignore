@@ -8,6 +8,10 @@ backend/uploads/
 
 frontend/dist/
 
+# Test artifacts
+**/coverage/
+**/vitest-report.json
+
 # Local one-app env files
 docker/compose/.cont_one_app.env
 docker/compose/.cont_one_app.secrets.env

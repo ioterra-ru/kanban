@@ -1,5 +1,11 @@
 # kanban
 
+[![CI](https://github.com/ioterra-ru/kanban/actions/workflows/ci.yml/badge.svg)](https://github.com/ioterra-ru/kanban/actions/workflows/ci.yml)
+![Tests %](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/ioterra-ru/kanban/main/badges/tests.json)
+![Coverage %](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/ioterra-ru/kanban/main/badges/coverage.json)
+![License](https://img.shields.io/github/license/ioterra-ru/kanban)
+![Last commit](https://img.shields.io/github/last-commit/ioterra-ru/kanban)
+
 Канбан доски.
 
 ## ИоТерра‑Канбан (PostgreSQL + Node/Express + React/Vite)
