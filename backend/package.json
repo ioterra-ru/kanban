@@ -6,7 +6,7 @@
   "description": "Kanban backend (Express + Prisma)",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "tsc -p tsconfig.json",
+    "build": "prisma generate && tsc -p tsconfig.json",
     "test": "vitest run",
     "test:watch": "vitest",
     "start": "node dist/index.js",

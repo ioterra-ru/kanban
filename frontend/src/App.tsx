@@ -130,6 +130,7 @@ function ColumnDropZone(props: { id: ColumnId; children: React.ReactNode }) {
 function CardTile(props: {
   card: CardSummary;
   assigneeDisplay?: string | null;
+  assigneeUser?: { id: string; avatarUploadName?: string | null; avatarPreset?: string | null; name?: string } | null;
   onClick: () => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -161,7 +162,13 @@ function CardTile(props: {
             {props.card.description}
           </div>
           <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-600">
-            {props.assigneeDisplay ? <span>Ответственный: {props.assigneeDisplay}</span> : null}
+            {props.assigneeDisplay ? (
+              <span className="inline-flex min-w-0 items-center gap-1.5">
+                <span className="shrink-0">Ответственный:</span>
+                {props.assigneeUser ? <AvatarImg user={props.assigneeUser} size={16} /> : null}
+                <span className="min-w-0 truncate">{props.assigneeDisplay}</span>
+              </span>
+            ) : null}
             {props.card.dueDate ? (
               <span>Срок: {format(new Date(props.card.dueDate), "dd.MM.yyyy HH:mm")}</span>
             ) : null}
@@ -208,7 +215,7 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [usersOpen, setUsersOpen] = useState(false);
-  const [allUsers, setAllUsers] = useState<Array<Pick<User, "id" | "email" | "name">> | null>(null);
+  const [allUsers, setAllUsers] = useState<Array<Pick<User, "id" | "email" | "name" | "avatarPreset" | "avatarUploadName">> | null>(null);
   const [boards, setBoards] = useState<Board[]>([]);
   const [currentBoardId, setCurrentBoardId] = useState<string | null>(null);
   const [boardsOpen, setBoardsOpen] = useState(false);
@@ -238,10 +245,22 @@ function App() {
     return m;
   }, [allUsers]);
 
+  const userByEmail = useMemo(() => {
+    const m = new Map<string, Pick<User, "id" | "email" | "name" | "avatarPreset" | "avatarUploadName">>();
+    for (const u of allUsers ?? []) m.set(u.email, u);
+    return m;
+  }, [allUsers]);
+
   const assigneeDisplay = (assignee: string | null) => {
     if (!assignee) return null;
     if (assignee.includes("@")) return userNameByEmail.get(assignee) ?? assignee;
     return assignee;
+  };
+
+  const assigneeUser = (assignee: string | null) => {
+    if (!assignee) return null;
+    if (!assignee.includes("@")) return null;
+    return userByEmail.get(assignee) ?? null;
   };
 
   const loadMe = async () => {
@@ -536,6 +555,7 @@ function App() {
                           key={card.id}
                           card={card}
                           assigneeDisplay={assigneeDisplay(card.assignee)}
+                          assigneeUser={assigneeUser(card.assignee)}
                           onClick={() => void onOpenCard(card.id)}
                         />
                       ))}
@@ -557,8 +577,12 @@ function App() {
                 <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-2xl">
                   <div className="text-sm font-semibold">{cardsById.get(activeCardId)!.description}</div>
                   {assigneeDisplay(cardsById.get(activeCardId)!.assignee) ? (
-                    <div className="mt-1 text-xs text-slate-600">
-                      Ответственный: {assigneeDisplay(cardsById.get(activeCardId)!.assignee)}
+                    <div className="mt-1 flex min-w-0 items-center gap-1.5 text-xs text-slate-600">
+                      <span className="shrink-0">Ответственный:</span>
+                      {assigneeUser(cardsById.get(activeCardId)!.assignee) ? (
+                        <AvatarImg user={assigneeUser(cardsById.get(activeCardId)!.assignee)!} size={16} />
+                      ) : null}
+                      <span className="min-w-0 truncate">{assigneeDisplay(cardsById.get(activeCardId)!.assignee)}</span>
                     </div>
                   ) : null}
                 </div>
@@ -1987,7 +2011,9 @@ function BoardsModal(props: { open: boolean; onClose: () => void; boards: Board[
   const [createMemberIds, setCreateMemberIds] = useState<string[]>([]);
 
   const [edit, setEdit] = useState<Record<string, { name: string; description: string; memberIds: string[] }>>({});
-  const [allUsers, setAllUsers] = useState<Array<{ id: string; email: string; name: string; role: string }> | null>(null);
+  const [allUsers, setAllUsers] = useState<
+    Array<{ id: string; email: string; name: string; role: string; avatarPreset?: string | null; avatarUploadName?: string | null }> | null
+  >(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -2087,6 +2113,7 @@ function BoardsModal(props: { open: boolean; onClose: () => void; boards: Board[
                         checked={createMemberIds.includes(u.id)}
                         onChange={() => setCreateMemberIds((prev) => toggleId(prev, u.id))}
                       />
+                      <AvatarImg user={u} size={20} />
                       <span className="truncate">{u.name || u.email}</span>
                     </label>
                   ))}
@@ -2170,6 +2197,7 @@ function BoardsModal(props: { open: boolean; onClose: () => void; boards: Board[
                                         }))
                                       }
                                     />
+                                    <AvatarImg user={u} size={20} />
                                     <span className="truncate">{u.name || u.email}</span>
                                   </label>
                                 ))}
@@ -2230,7 +2258,7 @@ function CardModal(props: {
   onChanged: () => Promise<void>;
   onDeleted: () => Promise<void>;
   viewer: User;
-  allUsers: Array<Pick<User, "id" | "email" | "name">>;
+  allUsers: Array<Pick<User, "id" | "email" | "name" | "avatarPreset" | "avatarUploadName">>;
 }) {
   const card = props.card;
   const uploadInputRef = useRef<HTMLInputElement>(null);
@@ -2248,7 +2276,9 @@ function CardModal(props: {
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editingCommentBody, setEditingCommentBody] = useState<string>("");
 
-  const [participants, setParticipants] = useState<Array<{ user: Pick<User, "id" | "email" | "name"> }>>([]);
+  const [participants, setParticipants] = useState<
+    Array<{ user: Pick<User, "id" | "email" | "name" | "avatarPreset" | "avatarUploadName"> }>
+  >([]);
   const [participantAddOpen, setParticipantAddOpen] = useState(false);
   const [participantAddUserId, setParticipantAddUserId] = useState("");
   const [participantError, setParticipantError] = useState<string | null>(null);
@@ -2267,6 +2297,10 @@ function CardModal(props: {
 
   const canManageCard =
     !!card && (props.viewer.role === "ADMIN" || ((card as any).authorId as string | null | undefined) === props.viewer.id);
+
+  const userById = useMemo(() => new Map(props.allUsers.map((u) => [u.id, u])), [props.allUsers]);
+  const userByEmail = useMemo(() => new Map(props.allUsers.map((u) => [u.email, u])), [props.allUsers]);
+  const selectedAssigneeUser = useMemo(() => (assignee && assignee.includes("@") ? userByEmail.get(assignee) ?? null : null), [assignee, userByEmail]);
 
   useEffect(() => {
     if (!card) return;
@@ -2619,6 +2653,12 @@ function CardModal(props: {
                     </option>
                   ))}
                 </select>
+                {assignee ? (
+                  <div className="flex min-w-0 items-center gap-2 text-xs text-slate-500" title={assignee}>
+                    {selectedAssigneeUser ? <AvatarImg user={selectedAssigneeUser} size={18} /> : null}
+                    <span className="min-w-0 truncate">{selectedAssigneeUser ? selectedAssigneeUser.name || selectedAssigneeUser.email : assignee}</span>
+                  </div>
+                ) : null}
               </label>
 
               <div className="grid gap-1">
@@ -2703,7 +2743,13 @@ function CardModal(props: {
                       setParticipantError(null);
                       void Api.addParticipant(card.id, { userId })
                         .then((d) => {
-                          const added = (d as any).participant as { id: string; email: string; name: string };
+                          const added = (d as any).participant as {
+                            id: string;
+                            email: string;
+                            name: string;
+                            avatarPreset?: string | null;
+                            avatarUploadName?: string | null;
+                          };
                           setParticipants((prev) =>
                             prev.some((p) => p.user.id === added.id) ? prev : [...prev, { user: added }],
                           );
@@ -2729,6 +2775,7 @@ function CardModal(props: {
                       className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm text-slate-800"
                       title={p.user.email}
                     >
+                      <AvatarImg user={p.user} size={18} />
                       <div className="max-w-[320px] truncate">
                         {p.user.name || p.user.email}
                       </div>
@@ -2860,10 +2907,19 @@ function CardModal(props: {
                 <div key={c.id} className="rounded-xl border border-slate-200 bg-slate-50 p-3">
                   <div className="flex items-center justify-between gap-2">
                     <div className="min-w-0 text-xs text-slate-600">
-                      <span className="truncate">
-                        {c.author ? <span className="font-semibold text-slate-900">{c.author}</span> : "Аноним"} •{" "}
-                        {format(new Date(c.createdAt), "yyyy-MM-dd HH:mm")}
-                      </span>
+                      {(() => {
+                        const authorId = (c as any).authorId as string | null | undefined;
+                        const u = authorId ? (userById.get(authorId) ?? { id: authorId, name: c.author ?? undefined }) : null;
+                        return (
+                          <div className="flex min-w-0 items-center gap-2">
+                            {u ? <AvatarImg user={u} size={18} /> : null}
+                            <span className="min-w-0 truncate">
+                              {c.author ? <span className="font-semibold text-slate-900">{c.author}</span> : "Аноним"} •{" "}
+                              {format(new Date(c.createdAt), "yyyy-MM-dd HH:mm")}
+                            </span>
+                          </div>
+                        );
+                      })()}
                     </div>
                     {(() => {
                       const authorId = (c as any).authorId as string | null | undefined;
@@ -2942,6 +2998,7 @@ function CardModal(props: {
 
           <div className="mt-3 grid gap-2">
             <div className="flex items-start gap-2">
+              <AvatarImg user={props.viewer} size={24} />
               <textarea
                 className="min-h-[80px] flex-1 rounded-xl border border-slate-200 bg-white p-2 text-sm outline-none focus:border-[#246c7c]"
                 value={commentBody}

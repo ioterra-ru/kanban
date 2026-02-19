@@ -355,7 +355,7 @@ router.get(
       include: {
         comments: { orderBy: { createdAt: "asc" } },
         attachments: { orderBy: { createdAt: "asc" } },
-        participants: { include: { user: { select: { id: true, email: true, name: true } } } },
+        participants: { include: { user: { select: { id: true, email: true, name: true, avatarPreset: true, avatarUploadName: true } } } },
       },
     });
     if (!card) throw new HttpError(404, "Card not found");
@@ -552,8 +552,8 @@ router.post(
     if (!canManage) throw new HttpError(403, "Forbidden");
 
     const user = userId
-      ? await prisma.user.findUnique({ where: { id: userId }, select: { id: true, email: true, name: true } })
-      : await prisma.user.findUnique({ where: { email: email! }, select: { id: true, email: true, name: true } });
+      ? await prisma.user.findUnique({ where: { id: userId }, select: { id: true, email: true, name: true, avatarPreset: true, avatarUploadName: true } })
+      : await prisma.user.findUnique({ where: { email: email! }, select: { id: true, email: true, name: true, avatarPreset: true, avatarUploadName: true } });
     if (!user) throw new HttpError(404, "User not found");
 
     await prisma.cardParticipant.upsert({

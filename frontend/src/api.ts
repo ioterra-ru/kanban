@@ -69,7 +69,10 @@ export const Api = {
     },
   ) => api<{ card: unknown }>(`/api/cards/${id}`, { method: "PATCH", body: JSON.stringify(input) }),
 
-  listAllUsers: () => api<{ users: Array<{ id: string; email: string; name: string; role: string }> }>("/api/users"),
+  listAllUsers: () =>
+    api<{ users: Array<{ id: string; email: string; name: string; avatarPreset?: string | null; avatarUploadName?: string | null; role: string }> }>(
+      "/api/users",
+    ),
 
   addParticipant: (cardId: string, input: { userId: string }) =>
     api<{ participant: unknown }>(`/api/cards/${cardId}/participants`, { method: "POST", body: JSON.stringify(input) }),
