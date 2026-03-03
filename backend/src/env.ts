@@ -1,6 +1,12 @@
 import "dotenv/config";
 import { z } from "zod";
 
+const optionalNonEmptyString = z.preprocess((v) => {
+  if (typeof v !== "string") return v;
+  const t = v.trim();
+  return t ? t : undefined;
+}, z.string().min(1).optional());
+
 const EnvSchema = z.object({
   PORT: z.coerce.number().int().positive().default(4000),
   DATABASE_URL: z.string().min(1),
@@ -12,11 +18,11 @@ const EnvSchema = z.object({
       const t = v.trim();
       return t ? t : undefined;
     }, z.string().url().optional()),
-  SMTP_HOST: z.string().min(1).optional(),
+  SMTP_HOST: optionalNonEmptyString,
   SMTP_PORT: z.coerce.number().int().positive().optional().default(587),
-  SMTP_USER: z.string().min(1).optional(),
-  SMTP_PASS: z.string().min(1).optional(),
-  SMTP_FROM: z.string().min(1).optional(),
+  SMTP_USER: optionalNonEmptyString,
+  SMTP_PASS: optionalNonEmptyString,
+  SMTP_FROM: optionalNonEmptyString,
   SMTP_SECURE: z
     .string()
     .optional()
