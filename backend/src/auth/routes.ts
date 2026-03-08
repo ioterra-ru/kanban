@@ -160,6 +160,13 @@ authRouter.post(
 
     const u = await (async () => {
       if (lower === "admin") {
+        // "admin" is an alias for the built-in system administrator account.
+        // Email may change, so resolve by system marker first.
+        const systemAdmin = await prisma.user.findFirst({
+          where: { isSystem: true, role: Role.ADMIN },
+          orderBy: { createdAt: "asc" },
+        });
+        if (systemAdmin) return systemAdmin;
         return await prisma.user.findFirst({
           where: { email: { equals: "admin@local", mode: "insensitive" } },
         });
