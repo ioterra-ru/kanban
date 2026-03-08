@@ -14,8 +14,7 @@ frontend/dist/
 
 # Local one-app env files
 docker/compose/.cont_one_app.env
-docker/compose/.cont_one_app.secrets.env
+docker/compose/.cont_one_app.secrets*.env
 
 # Local TLS certs/keys
 certs/
-
