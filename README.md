@@ -20,6 +20,13 @@
 
 При первом запуске скрипт создаёт `docker/compose/.cont_one_app.env` из примера (значения по умолчанию — для локального запуска). При необходимости отредактируйте этот файл и запустите снова.
 
+**Важно:** переменные берутся только из `docker/compose/.cont_one_app.env` и `.cont_one_app.secrets.env`. Команду `docker compose` нужно всегда вызывать **с этими файлами**, иначе переменные не подставятся и будет ошибка (например `invalid spec: :/etc/nginx/certs:ro`). Не запускайте `docker compose up -d` без указания env-файлов.
+
+- Из корня проекта: `./run_one_app.sh` (рекомендуется) или  
+  `docker compose --env-file docker/compose/.cont_one_app.env --env-file docker/compose/.cont_one_app.secrets.env up -d`
+- Остановка/перезапуск на сервере:  
+  `./docker/compose/run.sh stop` и `./docker/compose/run.sh up -d` (скрипт сам подставляет env-файлы).
+
 После запуска UI и Adminer доступны по адресу из переменной `PUBLIC_BASE_URL` (по умолчанию `https://localhost:8443`). При `ENABLE_HTTPS=false` используется HTTP по порту из `FRONTEND_HTTP_PORT` (по умолчанию 8080). Самоподписанный сертификат при HTTPS создаётся автоматически в каталоге из `CERTS_PATH` (`./certs/` по умолчанию).
 
 ### Вход в систему
@@ -95,7 +102,7 @@
 - **`.cont_one_app.env`** — конфигурация (порты, хосты, URL, БД). По умолчанию в примере заданы значения для локального запуска; пользователь редактирует этот файл под себя.
 - **`.cont_one_app.secrets.env`** — секреты (не коммитить). Создаётся скриптом при первом запуске; нужно задать `SESSION_SECRET` и при необходимости SMTP.
 
-Файлы нужно создать вручную (скопировать из `.example` и заполнить). **PUBLIC_BASE_URL** и **CORS_ORIGIN** в env не задают — backend формирует их из `APP_HOST`, `ENABLE_HTTPS` и портов.
+Файлы нужно создать вручную (скопировать из `.example` и заполнить). **PUBLIC_BASE_URL** и **CORS_ORIGIN** в env не задают — backend формирует их из `APP_HOST`, `ENABLE_HTTPS` и портов. Файлы должны быть в кодировке UTF-8 или ASCII, с окончаниями строк LF (Unix); каждая переменная — одна строка вида `NAME=value`, без переносов внутри значения (иначе значение может «обрезаться»).
 
 #### Переменные в `docker/compose/.cont_one_app.env`
 

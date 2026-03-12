@@ -70,7 +70,7 @@ if [ "${ENABLE_HTTPS}" = "true" ]; then
   fi
 fi
 
-docker compose --env-file "$ENV_FILE" --env-file "$SECRETS_FILE" up --build
+docker compose --env-file "$ENV_FILE" --env-file "$SECRETS_FILE" -d up --build
 
 # URL для вывода (формируется так же, как в backend: из APP_HOST и портов)
 if [ "$ENABLE_HTTPS" = "true" ]; then
