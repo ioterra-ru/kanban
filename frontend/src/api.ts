@@ -1,4 +1,4 @@
-import type { BoardResponse, CardDetail, ColumnId, Importance } from "./types";
+import type { BoardResponse, CardDetail, Importance } from "./types";
 
 // In containers we use same-origin (nginx proxies /api and /uploads to backend),
 // so default base URL is empty (relative requests).
@@ -52,7 +52,7 @@ export const Api = {
     details?: string | null;
     assignee?: string | null;
     dueDate?: string | null;
-    column?: ColumnId;
+    columnId: string;
     importance?: Importance;
     paused?: boolean;
   }) => api<{ card: unknown }>("/api/cards", { method: "POST", body: JSON.stringify(input) }),
@@ -80,7 +80,7 @@ export const Api = {
   removeParticipant: (cardId: string, userId: string) =>
     api<{ ok: true }>(`/api/cards/${cardId}/participants/${userId}`, { method: "DELETE" }),
 
-  moveCard: (id: string, input: { toColumn: ColumnId; toIndex: number }) =>
+  moveCard: (id: string, input: { toColumnId: string; toIndex: number }) =>
     api<{ ok: true }>(`/api/cards/${id}/move`, { method: "POST", body: JSON.stringify(input) }),
 
   deleteCard: (id: string) => api<{ ok: true }>(`/api/cards/${id}`, { method: "DELETE" }),
@@ -175,6 +175,23 @@ export const Api = {
       body: JSON.stringify(input),
     }),
   deleteBoard: (id: string) => api<{ ok: true }>(`/api/boards/${id}`, { method: "DELETE" }),
+
+  listBoardColumns: (boardId: string) =>
+    api<{ columns: Array<{ id: string; title: string; position: number; _count?: { cards: number } }> }>(
+      `/api/boards/${boardId}/columns`,
+    ),
+  createBoardColumn: (boardId: string, input: { title: string; position?: number }) =>
+    api<{ column: { id: string; title: string; position: number } }>(`/api/boards/${boardId}/columns`, {
+      method: "POST",
+      body: JSON.stringify(input),
+    }),
+  updateBoardColumn: (boardId: string, columnId: string, input: { title?: string; position?: number }) =>
+    api<{ column: { id: string; title: string; position: number } }>(`/api/boards/${boardId}/columns/${columnId}`, {
+      method: "PATCH",
+      body: JSON.stringify(input),
+    }),
+  deleteBoardColumn: (boardId: string, columnId: string) =>
+    api<{ ok: true }>(`/api/boards/${boardId}/columns/${columnId}`, { method: "DELETE" }),
 
   listUsers: () => api<{ users: any[] }>("/api/auth/users"),
   createUser: (input: { email: string; name?: string; role?: "ADMIN" | "MEMBER"; password: string }) =>

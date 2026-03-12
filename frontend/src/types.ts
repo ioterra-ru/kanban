@@ -1,10 +1,5 @@
-export type ColumnId =
-  | "BACKLOG"
-  | "HIGH_PRIORITY"
-  | "TODO"
-  | "IN_PROGRESS"
-  | "READY_FOR_ACCEPTANCE"
-  | "DONE";
+/** Column id is UUID of BoardColumn. */
+export type ColumnId = string;
 
 export type Importance = "LOW" | "MEDIUM" | "HIGH";
 
@@ -34,6 +29,7 @@ export type CardSummary = {
   description: string;
   assignee: string | null;
   dueDate: string | null;
+  /** Column id (BoardColumn.id). */
   column: ColumnId;
   position: number;
   importance: Importance;
@@ -46,9 +42,16 @@ export type CardSummary = {
 };
 
 export type BoardColumn = {
-  id: ColumnId;
+  id: string;
   title: string;
   cards: CardSummary[];
+};
+
+export type BoardColumnInfo = {
+  id: string;
+  title: string;
+  position: number;
+  _count?: { cards: number };
 };
 
 export type BoardResponse = {
@@ -86,7 +89,7 @@ export type CardDetail = {
   details: string | null;
   assignee: string | null;
   dueDate: string | null;
-  column: ColumnId;
+  column: { id: string; title: string };
   position: number;
   importance: Importance;
   paused: boolean;

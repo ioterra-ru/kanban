@@ -7,15 +7,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-enum Column {
-  BACKLOG
-  HIGH_PRIORITY
-  TODO
-  IN_PROGRESS
-  READY_FOR_ACCEPTANCE
-  DONE
-}
-
 enum Importance {
   LOW
   MEDIUM
@@ -32,6 +23,7 @@ model Board {
   name String
   description String?
 
+  columns     BoardColumn[]
   cards       Card[]
   memberships BoardMembership[]
   defaultForUsers User[] @relation("DefaultBoard")
@@ -40,6 +32,19 @@ model Board {
   updatedAt DateTime @updatedAt
 
   @@index([name])
+}
+
+model BoardColumn {
+  id       String @id @default(uuid())
+  boardId  String
+  board    Board  @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  title    String
+  position Int
+
+  cards Card[]
+
+  @@unique([boardId, position])
+  @@index([boardId])
 }
 
 model BoardMembership {
@@ -65,7 +70,8 @@ model Card {
   assignee    String?
   dueDate     DateTime?
 
-  column    Column
+  columnId  String
+  column    BoardColumn @relation(fields: [columnId], references: [id], onDelete: Restrict)
   position  Int
 
   importance Importance @default(MEDIUM)
@@ -81,7 +87,7 @@ model Card {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  @@index([boardId, column, position])
+  @@index([boardId, columnId, position])
   @@index([authorId])
   @@index([boardId])
 }
