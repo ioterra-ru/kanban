@@ -1,78 +1,76 @@
 #!/bin/bash
-# Скрипт запускает контейнеры приложения (one app).
-# Можно передать имя хоста первым аргументом (по умолчанию: $HOSTNAME).
+# Запуск приложения в контейнерах.
+# Конфигурация: docker/compose/.cont_one_app.env (редактируется пользователем).
+# Секреты: docker/compose/.cont_one_app.secrets.env (создаётся при первом запуске).
 
 set -euo pipefail
 
-srv="${HOSTNAME:-localhost}"
-if [ -n "${1:-}" ]; then
-  srv="$1"
-fi
+COMPOSE_ENV_DIR="docker/compose"
+ENV_FILE="$COMPOSE_ENV_DIR/.cont_one_app.env"
+SECRETS_FILE="$COMPOSE_ENV_DIR/.cont_one_app.secrets.env"
+mkdir -p "$COMPOSE_ENV_DIR"
 
-CERT_DIR="certs"
-CERT_CRT="$CERT_DIR/kanban.crt"
-CERT_KEY="$CERT_DIR/kanban.key"
-mkdir -p "$CERT_DIR"
-
-# Self-signed certificate for local HTTPS (replace with real cert in production).
-if [ ! -f "$CERT_CRT" ] || [ ! -f "$CERT_KEY" ]; then
-  echo "Generating self-signed TLS certificate for host: $srv"
-  # Use a throwaway container so we don't depend on openssl on host
-  # and can still write files even if certs/ is root-owned.
-  docker run --rm -v "$(pwd)/$CERT_DIR:/out" alpine:3.20 sh -c \
-    "apk add --no-cache openssl >/dev/null && \
-     openssl req -x509 -newkey rsa:2048 -nodes \
-       -keyout /out/kanban.key \
-       -out /out/kanban.crt \
-       -days 3650 \
-       -subj '/CN=$srv' \
-       -addext 'subjectAltName=DNS:$srv,DNS:localhost,IP:127.0.0.1' \
-     >/dev/null 2>&1"
-  echo "Created: $CERT_CRT and $CERT_KEY"
-fi
-
-ENV_FILE="docker/compose/.cont_one_app.env"
-SECRETS_FILE="docker/compose/.cont_one_app.secrets.env"
-mkdir -p "$(dirname "$ENV_FILE")"
+# Файл конфигурации обязателен; при первом запуске копируем из примера
 if [ ! -f "$ENV_FILE" ]; then
-  cat > "$ENV_FILE" <<EOF
-APP_HOST=$srv
-PUBLIC_BASE_URL=https://$srv:8443
-CORS_ORIGIN=https://$srv:8443,https://localhost:8443,https://127.0.0.1:8443
-EOF
+  if [ -f "$COMPOSE_ENV_DIR/.cont_one_app.env.example" ]; then
+    cp "$COMPOSE_ENV_DIR/.cont_one_app.env.example" "$ENV_FILE"
+    echo "Created $ENV_FILE from example. Edit it if needed, then run again."
+    exit 0
+  else
+    echo "Missing $ENV_FILE. Copy from .cont_one_app.env.example and set variables." >&2
+    exit 1
+  fi
 fi
 
-sed -i "s/^APP_HOST=.*/APP_HOST=$srv/" "$ENV_FILE"
-if grep -q "^PUBLIC_BASE_URL=" "$ENV_FILE"; then
-  sed -i "s#^PUBLIC_BASE_URL=.*#PUBLIC_BASE_URL=https://$srv:8443#" "$ENV_FILE"
-else
-  echo "PUBLIC_BASE_URL=https://$srv:8443" >> "$ENV_FILE"
+# Подставляем переменные из .cont_one_app.env
+set -a
+# shellcheck source=/dev/null
+source "$ENV_FILE"
+set +a
+
+# PUBLIC_BASE_URL и CORS_ORIGIN формируются из APP_HOST и портов (как в docker-compose.yml), если не заданы
+if [ -z "${PUBLIC_BASE_URL:-}" ]; then
+  if [ "${ENABLE_HTTPS:-true}" = "true" ]; then
+    export PUBLIC_BASE_URL="https://${APP_HOST:-localhost}:${FRONTEND_HTTPS_PORT:-8443}"
+    export CORS_ORIGIN="https://${APP_HOST:-localhost}:${FRONTEND_HTTPS_PORT:-8443},https://localhost:${FRONTEND_HTTPS_PORT:-8443},https://127.0.0.1:${FRONTEND_HTTPS_PORT:-8443}"
+  else
+    export PUBLIC_BASE_URL="http://${APP_HOST:-localhost}:${FRONTEND_HTTP_PORT:-8080}"
+    export CORS_ORIGIN="http://${APP_HOST:-localhost}:${FRONTEND_HTTP_PORT:-8080},http://localhost:${FRONTEND_HTTP_PORT:-8080},http://127.0.0.1:${FRONTEND_HTTP_PORT:-8080}"
+  fi
+elif [ -z "${CORS_ORIGIN:-}" ]; then
+  export CORS_ORIGIN="$PUBLIC_BASE_URL"
 fi
 
-if ! grep -q "^CORS_ORIGIN=" "$ENV_FILE"; then
-  echo "CORS_ORIGIN=https://$srv:8443,https://localhost:8443,https://127.0.0.1:8443" >> "$ENV_FILE"
+# Генерация самоподписанного сертификата, если включён HTTPS и сертификатов ещё нет
+if [ "${ENABLE_HTTPS:-true}" = "true" ]; then
+  CERTS_DIR="${CERTS_PATH:-./certs}"
+  CERT_CRT="$CERTS_DIR/kanban.crt"
+  CERT_KEY="$CERTS_DIR/kanban.key"
+  mkdir -p "$CERTS_DIR"
+  if [ ! -f "$CERT_CRT" ] || [ ! -f "$CERT_KEY" ]; then
+    echo "Generating self-signed TLS certificate for host: ${APP_HOST:-localhost}"
+    docker run --rm -v "$(pwd)/$CERTS_DIR:/out" alpine:3.20 sh -c \
+      "apk add --no-cache openssl >/dev/null && \
+       openssl req -x509 -newkey rsa:2048 -nodes \
+         -keyout /out/kanban.key \
+         -out /out/kanban.crt \
+         -days 3650 \
+         -subj \"/CN=${APP_HOST:-localhost}\" \
+         -addext 'subjectAltName=DNS:${APP_HOST:-localhost},DNS:localhost,IP:127.0.0.1' \
+       >/dev/null 2>&1"
+    echo "Created: $CERT_CRT and $CERT_KEY"
+  fi
 fi
 
-extra_env=""
+# Файл секретов — создаём только если ещё нет
 if [ ! -f "$SECRETS_FILE" ]; then
-  echo "Creating secrets file: $SECRETS_FILE"
+  echo "Creating $SECRETS_FILE (set SESSION_SECRET and SMTP as needed)"
   secret="$(docker run --rm alpine:3.20 sh -c "apk add --no-cache openssl >/dev/null && openssl rand -hex 32" 2>/dev/null | tr -d '\r\n')"
   cat > "$SECRETS_FILE" <<EOF
-# Secrets for IoTerra-Kanban (DO NOT COMMIT)
+# Секреты (DO NOT COMMIT). Отредактируйте SESSION_SECRET и SMTP.
 SESSION_SECRET=$secret
 
-# SMTP (optional). If SMTP_HOST is empty, emails are disabled.
-#
-# mp-co.ru is hosted on Mail.ru (MX: emx.mail.ru). Typical settings:
-# - host: smtp.mail.ru
-# - port: 465
-# - secure: true
-#
-# IMPORTANT:
-# - SMTP_USER should be the full mailbox login (e.g. kanban@mp-co.ru)
-# - SMTP_FROM is recommended to match SMTP_USER (same mailbox)
-# - If the mailbox has 2FA enabled, you usually need an app password.
-SMTP_HOST=smtp.mail.ru
+SMTP_HOST=
 SMTP_PORT=465
 SMTP_SECURE=true
 SMTP_USER=
@@ -81,11 +79,8 @@ SMTP_FROM=
 EOF
 fi
 
-extra_env="--env-file $SECRETS_FILE"
-
-docker compose --env-file "$ENV_FILE" $extra_env up -d --build
+docker compose --env-file "$ENV_FILE" --env-file "$SECRETS_FILE" up -d --build
 
 echo
-echo "OK. UI:      https://localhost:8443"
-echo "Adminer: https://localhost:8443/adminer/"
-
+echo "OK. UI:      ${PUBLIC_BASE_URL}"
+echo "Adminer: ${PUBLIC_BASE_URL}/adminer/"
