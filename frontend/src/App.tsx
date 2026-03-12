@@ -640,7 +640,12 @@ function App() {
                 const title = createTitle.trim();
                 if (!title) return;
                 const details = createDetails.trim() ? createDetails.trim() : null;
-                void Api.createCard({ description: title, details, column: createColumn }).then(async () => {
+                void Api.createCard({
+                  description: title,
+                  details,
+                  column: createColumn,
+                  assignee: me?.user?.email ?? undefined,
+                }).then(async () => {
                   setCreateOpen(false);
                   await reload();
                 });
@@ -787,6 +792,22 @@ function IconCheck(props: { className?: string }) {
     </svg>
   );
 }
+
+function IconChevronDown(props: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={props.className ?? "h-5 w-5"} fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function IconChevronUp(props: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={props.className ?? "h-5 w-5"} fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M18 15l-6-6-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
 // AVATAR_PRESETS/autoAvatarPreset/avatarSrc are in ./utils/avatar
 
 function AvatarImg(props: { user: { id: string; avatarUploadName?: string | null; avatarPreset?: string | null; name?: string }; size: number }) {
@@ -844,7 +865,7 @@ function AvatarPresetDropdown(props: {
       >
         <img src={`/avatars/${selectedKey}.svg`} alt="" className="h-6 w-6 rounded-full border border-slate-200 bg-white" />
         <span>{selectedLabel}</span>
-        <span className="ml-1 text-slate-400">{open ? "▴" : "▾"}</span>
+        <span className="ml-1 flex shrink-0 text-slate-500" aria-hidden>{open ? <IconChevronUp className="h-6 w-6" /> : <IconChevronDown className="h-6 w-6" />}</span>
       </button>
 
       {open ? (
@@ -2143,13 +2164,13 @@ function BoardsModal(props: { open: boolean; onClose: () => void; boards: Board[
               return (
                 <div key={b.id} className="bg-white">
                   <button
-                    className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left hover:bg-slate-50"
+                    className="flex w-full items-center justify-between gap-3 px-4 py-3.5 text-left hover:bg-slate-50"
                     onClick={() => setExpandedId((prev) => (prev === b.id ? null : b.id))}
                   >
                     <div className="min-w-0">
                       <div className="truncate text-sm font-semibold text-slate-900">{b.name}</div>
                     </div>
-                    <div className="shrink-0 text-slate-400">{isOpen ? "▴" : "▾"}</div>
+                    <div className="flex min-h-[2.75rem] min-w-[2.75rem] shrink-0 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-700">{isOpen ? <IconChevronUp className="h-6 w-6" /> : <IconChevronDown className="h-6 w-6" />}</div>
                   </button>
 
                   {isOpen ? (
@@ -2282,6 +2303,8 @@ function CardModal(props: {
   const [participantAddOpen, setParticipantAddOpen] = useState(false);
   const [participantAddUserId, setParticipantAddUserId] = useState("");
   const [participantError, setParticipantError] = useState<string | null>(null);
+  const [assigneeSelectOpen, setAssigneeSelectOpen] = useState(false);
+  const assigneeSelectRef = useRef<HTMLDivElement>(null);
 
   const [rightWidth, setRightWidth] = useState(420);
   const [dragging, setDragging] = useState(false);
@@ -2314,6 +2337,7 @@ function CardModal(props: {
     setParticipantAddOpen(false);
     setParticipantAddUserId("");
     setParticipantError(null);
+    setAssigneeSelectOpen(false);
     setSaveError(null);
     setDeleting(false);
     setEditingCommentId(null);
@@ -2344,6 +2368,17 @@ function CardModal(props: {
     mq.addEventListener("change", apply);
     return () => mq.removeEventListener("change", apply);
   }, []);
+
+  useEffect(() => {
+    if (!assigneeSelectOpen) return;
+    const onDocClick = (e: MouseEvent) => {
+      if (assigneeSelectRef.current && !assigneeSelectRef.current.contains(e.target as Node)) {
+        setAssigneeSelectOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", onDocClick);
+    return () => document.removeEventListener("mousedown", onDocClick);
+  }, [assigneeSelectOpen]);
 
   useEffect(() => {
     if (!dragging) return;
@@ -2631,35 +2666,83 @@ function CardModal(props: {
           <div className="rounded-2xl border border-slate-200 bg-white p-4">
             <div className="mb-3 text-sm font-semibold text-slate-900">Свойства</div>
             <div className="grid gap-3 md:grid-cols-2">
-              <label className="grid gap-1">
+              <div className="grid gap-1" ref={assigneeSelectRef}>
                 <div className="text-xs text-slate-600">Ответственный</div>
-                <select
-                  className="rounded-xl border border-slate-200 bg-white p-2 text-sm outline-none focus:border-[#246c7c]"
-                  value={assignee}
-                  disabled={!canManageCard}
-                  onChange={(e) => {
-                    if (!canManageCard) return;
-                    setAssignee(e.target.value);
-                    setTimeout(() => void persist(), 0);
-                  }}
-                >
-                  <option value="">—</option>
-                  {assignee && !props.allUsers.some((u) => u.email === assignee) ? (
-                    <option value={assignee}>{assignee}</option>
+                <div className="relative">
+                  <button
+                    type="button"
+                    disabled={!canManageCard}
+                    className="flex min-h-[2.75rem] w-full items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-left text-sm outline-none focus:border-[#246c7c] disabled:opacity-60 disabled:cursor-not-allowed"
+                    onClick={() => canManageCard && setAssigneeSelectOpen((v) => !v)}
+                    aria-haspopup="listbox"
+                    aria-expanded={assigneeSelectOpen}
+                  >
+                    {assignee ? (
+                      selectedAssigneeUser ? (
+                        <>
+                          <AvatarImg user={selectedAssigneeUser} size={24} />
+                          <span className="min-w-0 flex-1 truncate text-slate-800">{selectedAssigneeUser.name || selectedAssigneeUser.email}</span>
+                        </>
+                      ) : (
+                        <span className="min-w-0 flex-1 truncate text-slate-800">{assignee}</span>
+                      )
+                    ) : (
+                      <span className="text-slate-500">—</span>
+                    )}
+                    <span className="shrink-0 text-slate-400">
+                      {assigneeSelectOpen ? <IconChevronUp className="h-5 w-5" /> : <IconChevronDown className="h-5 w-5" />}
+                    </span>
+                  </button>
+                  {assigneeSelectOpen && canManageCard ? (
+                    <div
+                      className="absolute left-0 top-full z-20 mt-1 max-h-56 w-full min-w-[12rem] overflow-auto rounded-xl border border-slate-200 bg-white py-1 shadow-lg"
+                      role="listbox"
+                    >
+                      <button
+                        type="button"
+                        role="option"
+                        aria-selected={!assignee}
+                        className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-800 hover:bg-slate-50"
+                        onClick={() => {
+                          setAssignee("");
+                          setAssigneeSelectOpen(false);
+                          setTimeout(() => void persist(), 0);
+                        }}
+                      >
+                        <span className="text-slate-500">—</span>
+                      </button>
+                      {assignee && !props.allUsers.some((u) => u.email === assignee) ? (
+                        <button
+                          type="button"
+                          role="option"
+                          aria-selected={true}
+                          className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-800 hover:bg-slate-50"
+                          onClick={() => setAssigneeSelectOpen(false)}
+                        >
+                          <span className="min-w-0 truncate">{assignee}</span>
+                        </button>
+                      ) : null}
+                      {props.allUsers.map((u) => (
+                        <button
+                          key={u.id}
+                          type="button"
+                          role="option"
+                          aria-selected={assignee === u.email}
+                          className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-800 hover:bg-slate-50"
+                          onClick={() => {
+                            setAssignee(u.email);
+                            setAssigneeSelectOpen(false);
+                            setTimeout(() => void persist(), 0);
+                          }}
+                        >
+                          <AvatarImg user={u} size={24} />
+                          <span className="min-w-0 flex-1 truncate">{u.name || u.email}</span>
+                        </button>
+                      ))}
+                    </div>
                   ) : null}
-                  {props.allUsers.map((u) => (
-                    <option key={u.id} value={u.email}>
-                      {u.name || u.email}
-                    </option>
-                  ))}
-                </select>
-                {assignee ? (
-                  <div className="flex min-w-0 items-center gap-2 text-xs text-slate-500" title={assignee}>
-                    {selectedAssigneeUser ? <AvatarImg user={selectedAssigneeUser} size={18} /> : null}
-                    <span className="min-w-0 truncate">{selectedAssigneeUser ? selectedAssigneeUser.name || selectedAssigneeUser.email : assignee}</span>
-                  </div>
-                ) : null}
-              </label>
+                </div>
+              </div>
 
               <div className="grid gap-1">
                 <div className="text-xs text-slate-600">Срок исполнения</div>
@@ -2772,10 +2855,10 @@ function CardModal(props: {
                   participants.map((p) => (
                     <div
                       key={p.user.id}
-                      className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-sm text-slate-800"
+                      className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800"
                       title={p.user.email}
                     >
-                      <AvatarImg user={p.user} size={18} />
+                      <AvatarImg user={p.user} size={24} />
                       <div className="max-w-[320px] truncate">
                         {p.user.name || p.user.email}
                       </div>
