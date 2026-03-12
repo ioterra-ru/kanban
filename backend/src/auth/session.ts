@@ -29,7 +29,7 @@ export function createSessionMiddleware() {
     cookie: {
       httpOnly: true,
       sameSite: "lax",
-      secure: true,
+      secure: env.ENABLE_HTTPS,
       maxAge: 1000 * 60 * 60 * 12, // 12h
     },
     store: new PgSession({

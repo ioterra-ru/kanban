@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import type { Request, Response } from "express";
 
+import { env } from "../env.js";
 import { prisma } from "../prisma.js";
 
 const COOKIE_NAME = "ioterra.2fa_trust";
@@ -58,7 +59,7 @@ export async function issueTrustedDevice(input: { userId: string; req: Request; 
   input.res.cookie(COOKIE_NAME, token, {
     httpOnly: true,
     sameSite: "lax",
-    secure: true,
+    secure: env.ENABLE_HTTPS,
     maxAge: DAYS * 24 * 60 * 60 * 1000,
     path: "/",
   });
