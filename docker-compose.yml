@@ -33,9 +33,10 @@ services:
       PORT: ${BACKEND_PORT}
       DATABASE_URL: ${DATABASE_URL}
       SESSION_SECRET: ${SESSION_SECRET:?SESSION_SECRET is required}
-      # Формируются из APP_HOST и портов, если не заданы в env (для HTTP задать в .cont_one_app.env)
-      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-https://${APP_HOST}:${FRONTEND_HTTPS_PORT}}
-      CORS_ORIGIN: ${CORS_ORIGIN:-https://${APP_HOST}:${FRONTEND_HTTPS_PORT},https://localhost:${FRONTEND_HTTPS_PORT},https://127.0.0.1:${FRONTEND_HTTPS_PORT}}
+      APP_HOST: ${APP_HOST}
+      ENABLE_HTTPS: ${ENABLE_HTTPS}
+      FRONTEND_HTTP_PORT: ${FRONTEND_HTTP_PORT}
+      FRONTEND_HTTPS_PORT: ${FRONTEND_HTTPS_PORT}
       SMTP_HOST: ${SMTP_HOST:-}
       SMTP_PORT: ${SMTP_PORT:-}
       SMTP_USER: ${SMTP_USER:-}
@@ -47,6 +48,12 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "node -e \"require('http').get('http://127.0.0.1:4000/health', r => { r.resume(); process.exit(r.statusCode === 200 ? 0 : 1); }).on('error', () => process.exit(1))\""]
+      interval: 5s
+      timeout: 5s
+      start_period: 90s
+      retries: 5
 
   frontend:
     build:
@@ -61,8 +68,10 @@ services:
     volumes:
       - ${CERTS_PATH}:/etc/nginx/certs:ro
     depends_on:
-      - backend
-      - adminer
+      backend:
+        condition: service_healthy
+      adminer:
+        condition: service_started
 
 volumes:
   kanban_pg:

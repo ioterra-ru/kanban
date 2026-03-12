@@ -95,19 +95,17 @@
 - **`.cont_one_app.env`** — конфигурация (порты, хосты, URL, БД). По умолчанию в примере заданы значения для локального запуска; пользователь редактирует этот файл под себя.
 - **`.cont_one_app.secrets.env`** — секреты (не коммитить). Создаётся скриптом при первом запуске; нужно задать `SESSION_SECRET` и при необходимости SMTP.
 
-При первом запуске, если `.cont_one_app.env` отсутствует, он копируется из `.cont_one_app.env.example`.
+Файлы нужно создать вручную (скопировать из `.example` и заполнить). **PUBLIC_BASE_URL** и **CORS_ORIGIN** в env не задают — backend формирует их из `APP_HOST`, `ENABLE_HTTPS` и портов.
 
 #### Переменные в `docker/compose/.cont_one_app.env`
 
 | Переменная | Описание | Пример |
 |------------|----------|--------|
-| `APP_HOST` | Хост приложения (для CN сертификата и формирования URL) | `localhost` |
-| `ENABLE_HTTPS` | `true` — nginx слушает 443 (SSL) и редирект 80→443; `false` — только HTTP на 80 | `true` |
+| `APP_HOST` | Хост приложения (CN сертификата, ссылки в письмах, CORS) | `localhost` |
+| `ENABLE_HTTPS` | `true` — nginx на 443 + редирект 80→443; `false` — только HTTP на 80 | `true` |
 | `FRONTEND_HTTP_PORT` | Порт на хосте для HTTP (маппинг на 80 в контейнере) | `8080` |
 | `FRONTEND_HTTPS_PORT` | Порт на хосте для HTTPS (маппинг на 443 в контейнере) | `8443` |
 | `CERTS_PATH` | Путь к каталогу с TLS-сертификатами (относительно каталога запуска compose) | `./certs` |
-| `PUBLIC_BASE_URL` | Публичный URL приложения (письма, редиректы). Не задавать при HTTPS — формируется в docker-compose.yml из `APP_HOST` и `FRONTEND_HTTPS_PORT`. При `ENABLE_HTTPS=false` задать вручную, напр. `http://localhost:8080` | опционально |
-| `CORS_ORIGIN` | Разрешённые источники для CORS (через запятую). Не задавать при HTTPS — формируется в docker-compose.yml. При `ENABLE_HTTPS=false` задать вручную | опционально |
 | `POSTGRES_USER` | Пользователь PostgreSQL | `kanban` |
 | `POSTGRES_PASSWORD` | Пароль PostgreSQL | `kanban` |
 | `POSTGRES_DB` | Имя БД PostgreSQL | `kanban` |
