@@ -6,8 +6,8 @@ import multer from "multer";
 import { z } from "zod";
 
 import { prisma } from "./prisma.js";
-import { COLUMNS_IN_ORDER } from "./columns.js";
-import { ColumnIds, ImportanceIds } from "./domain.js";
+import { DEFAULT_COLUMN_TITLES } from "./columns.js";
+import { ImportanceIds } from "./domain.js";
 import { asyncHandler } from "./utils/asyncHandler.js";
 import { HttpError } from "./utils/httpError.js";
 import { requireLogin, requireTwoFactor } from "./auth/middleware.js";
@@ -105,6 +105,13 @@ router.post(
       const b = await tx.board.create({
         data: { name, description: description ?? null },
         select: { id: true, name: true, description: true },
+      });
+      await tx.boardColumn.createMany({
+        data: DEFAULT_COLUMN_TITLES.map((title, position) => ({
+          boardId: b.id,
+          title,
+          position,
+        })),
       });
       if (uniqMemberIds.length > 0) {
         await tx.boardMembership.createMany({
@@ -219,6 +226,169 @@ router.delete(
   }),
 );
 
+function requireAdmin() {
+  return (req: express.Request, _res: express.Response, next: express.NextFunction) => {
+    const user = (req as any).user as { role: Role };
+    if (user.role !== Role.ADMIN) throw new HttpError(403, "Forbidden");
+    next();
+  };
+}
+
+const BoardColumnsBoardIdSchema = z.object({ boardId: BoardIdSchema });
+const BoardColumnIdParamSchema = z.object({ boardId: BoardIdSchema, columnId: z.string().uuid() });
+
+router.get(
+  "/boards/:boardId/columns",
+  requireAdmin(),
+  asyncHandler(async (req, res) => {
+    const { boardId } = BoardColumnsBoardIdSchema.parse(req.params);
+    const columns = await prisma.boardColumn.findMany({
+      where: { boardId },
+      orderBy: { position: "asc" },
+      select: { id: true, title: true, position: true, _count: { select: { cards: true } } },
+    });
+    res.json({ columns });
+  }),
+);
+
+const CreateBoardColumnSchema = z.object({
+  title: z.string().min(1).max(200),
+  position: z.number().int().min(0).optional(),
+});
+
+router.post(
+  "/boards/:boardId/columns",
+  requireAdmin(),
+  asyncHandler(async (req, res) => {
+    const { boardId } = BoardColumnsBoardIdSchema.parse(req.params);
+    const body = CreateBoardColumnSchema.parse(req.body);
+    const existing = await prisma.boardColumn.findMany({
+      where: { boardId },
+      orderBy: { position: "asc" },
+      select: { id: true, position: true },
+    });
+    const maxPos = existing.length === 0 ? -1 : Math.max(...existing.map((c) => c.position));
+    const position = body.position ?? maxPos + 1;
+    const insertAt = clamp(position, 0, existing.length);
+    const column = await prisma.$transaction(async (tx) => {
+      for (let i = existing.length - 1; i >= insertAt; i--) {
+        await tx.boardColumn.update({
+          where: { id: existing[i].id },
+          data: { position: i + 1 },
+        });
+      }
+      return await tx.boardColumn.create({
+        data: { boardId, title: body.title.trim(), position: insertAt },
+        select: { id: true, title: true, position: true },
+      });
+    });
+    res.status(201).json({ column });
+  }),
+);
+
+const UpdateBoardColumnSchema = z.object({
+  title: z.string().min(1).max(200).optional(),
+  position: z.number().int().min(0).optional(),
+});
+
+router.patch(
+  "/boards/:boardId/columns/:columnId",
+  requireAdmin(),
+  asyncHandler(async (req, res) => {
+    const { boardId, columnId } = BoardColumnIdParamSchema.parse(req.params);
+    const body = UpdateBoardColumnSchema.parse(req.body);
+    const existing = await prisma.boardColumn.findFirst({
+      where: { id: columnId, boardId },
+      select: { id: true, position: true },
+    });
+    if (!existing) throw new HttpError(404, "Column not found");
+    if (body.title !== undefined && body.position === undefined) {
+      const column = await prisma.boardColumn.update({
+        where: { id: columnId },
+        data: { title: body.title.trim() },
+        select: { id: true, title: true, position: true },
+      });
+      res.json({ column });
+      return;
+    }
+    if (body.position !== undefined) {
+      const all = await prisma.boardColumn.findMany({
+        where: { boardId },
+        orderBy: { position: "asc" },
+        select: { id: true, position: true },
+      });
+      const fromIdx = all.findIndex((c) => c.id === columnId);
+      if (fromIdx < 0) throw new HttpError(404, "Column not found");
+      const toIdx = clamp(body.position, 0, all.length - 1);
+      if (fromIdx === toIdx && body.title === undefined) {
+        const col = await prisma.boardColumn.findUniqueOrThrow({
+          where: { id: columnId },
+          select: { id: true, title: true, position: true },
+        });
+        res.json({ column: col });
+        return;
+      }
+      const reordered = [...all];
+      const [removed] = reordered.splice(fromIdx, 1);
+      reordered.splice(toIdx, 0, removed);
+      await prisma.$transaction(
+        reordered.map((c, position) =>
+          prisma.boardColumn.update({ where: { id: c.id }, data: { position } }),
+        ),
+      );
+      if (body.title !== undefined) {
+        await prisma.boardColumn.update({
+          where: { id: columnId },
+          data: { title: body.title.trim() },
+        });
+      }
+    }
+    const column = await prisma.boardColumn.findUniqueOrThrow({
+      where: { id: columnId },
+      select: { id: true, title: true, position: true },
+    });
+    res.json({ column });
+  }),
+);
+
+router.delete(
+  "/boards/:boardId/columns/:columnId",
+  requireAdmin(),
+  asyncHandler(async (req, res) => {
+    const { boardId, columnId } = BoardColumnIdParamSchema.parse(req.params);
+    const col = await prisma.boardColumn.findFirst({
+      where: { id: columnId, boardId },
+      include: { _count: { select: { cards: true } } },
+    });
+    if (!col) throw new HttpError(404, "Column not found");
+    const firstOther = await prisma.boardColumn.findFirst({
+      where: { boardId, id: { not: columnId } },
+      orderBy: { position: "asc" },
+      select: { id: true },
+    });
+    if (!firstOther) throw new HttpError(400, "Cannot delete the last column");
+    await prisma.$transaction(async (tx) => {
+      if (col._count.cards > 0) {
+        const cards = await tx.card.findMany({
+          where: { columnId },
+          orderBy: { position: "asc" },
+          select: { id: true },
+        });
+        let pos = await tx.card.aggregate({
+          where: { columnId: firstOther.id },
+          _max: { position: true },
+        });
+        let nextPos = (pos._max.position ?? -1) + 1;
+        for (const c of cards) {
+          await tx.card.update({ where: { id: c.id }, data: { columnId: firstOther.id, position: nextPos++ } });
+        }
+      }
+      await tx.boardColumn.delete({ where: { id: columnId } });
+    });
+    res.json({ ok: true });
+  }),
+);
+
 function requireBoardContext() {
   return asyncHandler(async (req, _res, next) => {
     const user = (req as any).user as { id: string; role: Role };
@@ -262,7 +432,7 @@ async function notifyCardParticipants(input: {
     select: {
       id: true,
       description: true,
-      column: true,
+      column: { select: { title: true } },
       participants: {
         select: {
           user: { select: { id: true, email: true, name: true } },
@@ -295,9 +465,9 @@ async function notifyCardParticipants(input: {
 
   if (input.event === "moved") {
     if (input.meta?.fromColumn) detailsLines.push(`Из: ${input.meta.fromColumn}`);
-    detailsLines.push(`В: ${input.meta?.toColumn ?? card.column}`);
+    detailsLines.push(`В: ${input.meta?.toColumn ?? card.column.title}`);
   } else {
-    detailsLines.push(`Колонка: ${card.column}`);
+    detailsLines.push(`Колонка: ${card.column.title}`);
   }
 
   await sendEmail({
@@ -311,10 +481,15 @@ router.get(
   "/board",
   asyncHandler(async (req, res) => {
     const boardId = (req as any).boardId as string;
+    const boardColumns = await prisma.boardColumn.findMany({
+      where: { boardId },
+      orderBy: { position: "asc" },
+      select: { id: true, title: true, position: true },
+    });
     const columns = await Promise.all(
-      COLUMNS_IN_ORDER.map(async (col) => {
+      boardColumns.map(async (col) => {
         const cards = await prisma.card.findMany({
-          where: { boardId, column: col.id },
+          where: { boardId, columnId: col.id },
           orderBy: { position: "asc" },
           include: {
             _count: { select: { comments: true, attachments: true } },
@@ -322,13 +497,14 @@ router.get(
         });
 
         return {
-          ...col,
+          id: col.id,
+          title: col.title,
           cards: cards.map((c) => ({
             id: c.id,
             description: c.description,
             assignee: c.assignee,
             dueDate: c.dueDate,
-            column: c.column,
+            column: col.id,
             position: c.position,
             importance: c.importance,
             paused: c.paused,
@@ -353,6 +529,7 @@ router.get(
     const card = await prisma.card.findFirst({
       where: { id, boardId },
       include: {
+        column: { select: { id: true, title: true } },
         comments: { orderBy: { createdAt: "asc" } },
         attachments: { orderBy: { createdAt: "asc" } },
         participants: { include: { user: { select: { id: true, email: true, name: true, avatarPreset: true, avatarUploadName: true } } } },
@@ -368,7 +545,7 @@ const CardCreateSchema = z.object({
   details: z.string().optional().nullable(),
   assignee: z.string().min(1).optional().nullable(),
   dueDate: z.string().datetime().optional().nullable(),
-  column: z.enum(ColumnIds).optional().default("BACKLOG"),
+  columnId: z.string().uuid(),
   importance: z.enum(ImportanceIds).optional().default("MEDIUM"),
   paused: z.boolean().optional().default(false),
 });
@@ -380,8 +557,14 @@ router.post(
     const data = CardCreateSchema.parse(req.body);
     const userId = (req as any).user.id as string;
 
+    const boardColumn = await prisma.boardColumn.findFirst({
+      where: { id: data.columnId, boardId },
+      select: { id: true },
+    });
+    if (!boardColumn) throw new HttpError(400, "Invalid column for this board");
+
     const agg = await prisma.card.aggregate({
-      where: { boardId, column: data.column },
+      where: { boardId, columnId: data.columnId },
       _max: { position: true },
     });
     const position = (agg._max.position ?? -1) + 1;
@@ -393,7 +576,7 @@ router.post(
         details: data.details ?? null,
         assignee: data.assignee ?? null,
         dueDate: data.dueDate ? new Date(data.dueDate) : null,
-        column: data.column,
+        columnId: data.columnId,
         position,
         importance: data.importance,
         paused: data.paused,
@@ -445,7 +628,7 @@ router.patch(
 );
 
 const CardMoveSchema = z.object({
-  toColumn: z.enum(ColumnIds),
+  toColumnId: z.string().uuid(),
   toIndex: z.number().int().min(0),
 });
 
@@ -454,24 +637,33 @@ router.post(
   asyncHandler(async (req, res) => {
     const boardId = (req as any).boardId as string;
     const id = z.string().uuid().parse(req.params.id);
-    const { toColumn, toIndex } = CardMoveSchema.parse(req.body);
+    const { toColumnId, toIndex } = CardMoveSchema.parse(req.body);
     const actor = (req as any).user as { id: string; name: string; email: string };
 
-    const card = await prisma.card.findFirst({ where: { id, boardId } });
+    const toColumnExists = await prisma.boardColumn.findFirst({
+      where: { id: toColumnId, boardId },
+      select: { id: true, title: true },
+    });
+    if (!toColumnExists) throw new HttpError(400, "Invalid column for this board");
+
+    const card = await prisma.card.findFirst({
+      where: { id, boardId },
+      include: { column: { select: { title: true } } },
+    });
     if (!card) throw new HttpError(404, "Card not found");
 
-    const fromColumn = card.column;
+    const fromColumnId = card.columnId;
     const fromCards = await prisma.card.findMany({
-      where: { boardId, column: fromColumn },
+      where: { boardId, columnId: fromColumnId },
       orderBy: { position: "asc" },
       select: { id: true },
     });
 
     const toCards =
-      fromColumn === toColumn
+      fromColumnId === toColumnId
         ? fromCards
         : await prisma.card.findMany({
-            where: { boardId, column: toColumn },
+            where: { boardId, columnId: toColumnId },
             orderBy: { position: "asc" },
             select: { id: true },
           });
@@ -484,7 +676,7 @@ router.post(
       if (idx >= 0) arr.splice(idx, 1);
     };
 
-    if (fromColumn === toColumn) {
+    if (fromColumnId === toColumnId) {
       const ids = [...fromIds];
       removeFrom(ids);
       const idx = clamp(toIndex, 0, ids.length);
@@ -516,7 +708,7 @@ router.post(
           where: { id: cardId },
           data:
             cardId === id
-              ? { column: toColumn, position }
+              ? { columnId: toColumnId, position }
               : { position },
         }),
       ),
@@ -527,7 +719,7 @@ router.post(
       cardId: id,
       actor,
       event: "moved",
-      meta: { fromColumn: String(fromColumn), toColumn: String(toColumn) },
+      meta: { fromColumn: card.column.title, toColumn: toColumnExists.title },
     }).catch(() => undefined);
     res.json({ ok: true });
   }),

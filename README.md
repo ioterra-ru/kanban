@@ -32,7 +32,7 @@
 
 ### Основные возможности
 
-- **Колонки**: Backlog → High priority → ToDo → In Progress → Ready For Acceptance → Done
+- **Колонки**: по умолчанию — Backlog, High priority, ToDo, In Progress, Ready For Acceptance, Done; для каждой доски администратор может настраивать свой набор колонок (добавлять, удалять, переименовывать)
 - **Карточка**:
   - описание/детали
   - ответственный

@@ -224,7 +224,7 @@ function App() {
   const [activeCardId, setActiveCardId] = useState<string | null>(null);
 
   const [createOpen, setCreateOpen] = useState(false);
-  const [createColumn, setCreateColumn] = useState<ColumnId>("BACKLOG");
+  const [createColumn, setCreateColumn] = useState<ColumnId>("");
   const [createTitle, setCreateTitle] = useState("");
   const [createDetails, setCreateDetails] = useState("");
 
@@ -464,9 +464,10 @@ function App() {
               </select>
             ) : null}
             <button
-              className="rounded-xl bg-[#246c7c] px-4 py-2 text-sm font-semibold text-white hover:opacity-90"
+              className="rounded-xl bg-[#246c7c] px-4 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50"
+              disabled={columns.length === 0}
               onClick={() => {
-                setCreateColumn("BACKLOG");
+                setCreateColumn(columns[0]?.id ?? "");
                 setCreateTitle("");
                 setCreateDetails("");
                 setCreateOpen(true);
@@ -522,7 +523,7 @@ function App() {
             if (toColumn === from.columnId && toIndex === from.index) return;
 
             moveLocally(activeId, toColumn, toIndex);
-            void Api.moveCard(activeId, { toColumn, toIndex }).catch(async () => {
+            void Api.moveCard(activeId, { toColumnId: toColumn, toIndex }).catch(async () => {
               await reload();
             });
           }}
@@ -618,24 +619,26 @@ function App() {
               placeholder="Что нужно сделать?"
             />
           </label>
-          <label className="grid gap-1">
-            <div className="text-xs text-slate-600">Колонка</div>
-            <select
-              className="rounded-xl border border-slate-200 bg-white p-2 text-sm outline-none focus:border-[#246c7c]"
-              value={createColumn}
-              onChange={(e) => setCreateColumn(e.target.value as ColumnId)}
-            >
-              {columns.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.title}
-                </option>
-              ))}
-            </select>
-          </label>
+          {columns.length > 0 ? (
+            <label className="grid gap-1">
+              <div className="text-xs text-slate-600">Колонка</div>
+              <select
+                className="rounded-xl border border-slate-200 bg-white p-2 text-sm outline-none focus:border-[#246c7c]"
+                value={createColumn}
+                onChange={(e) => setCreateColumn(e.target.value)}
+              >
+                {columns.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.title}
+                  </option>
+                ))}
+              </select>
+            </label>
+          ) : null}
           <div className="flex justify-end">
             <button
               className="rounded-xl bg-[#246c7c] px-4 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50"
-              disabled={!createTitle.trim()}
+              disabled={!createTitle.trim() || !createColumn}
               onClick={() => {
                 const title = createTitle.trim();
                 if (!title) return;
@@ -643,7 +646,7 @@ function App() {
                 void Api.createCard({
                   description: title,
                   details,
-                  column: createColumn,
+                  columnId: createColumn,
                   assignee: me?.user?.email ?? undefined,
                 }).then(async () => {
                   setCreateOpen(false);
@@ -685,6 +688,7 @@ function App() {
           const b = await Api.listBoards();
           setBoards(b.boards as any);
           setCurrentBoardId(b.currentBoardId ?? null);
+          await reload();
         }}
       />
 
@@ -917,6 +921,7 @@ function IconButton(props: {
   title: string;
   onClick: () => void;
   variant?: "default" | "danger" | "brand";
+  disabled?: boolean;
   children: React.ReactNode;
 }) {
   const variant = props.variant ?? "default";
@@ -930,10 +935,11 @@ function IconButton(props: {
   return (
     <button
       type="button"
-      className={`grid h-10 w-10 place-items-center rounded-xl border border-slate-200 ${cls}`}
+      className={`grid h-10 w-10 place-items-center rounded-xl border border-slate-200 ${cls} disabled:opacity-50 disabled:pointer-events-none`}
       onClick={props.onClick}
       title={props.title}
       aria-label={props.title}
+      disabled={props.disabled}
     >
       {props.children}
     </button>
@@ -2038,6 +2044,14 @@ function BoardsModal(props: { open: boolean; onClose: () => void; boards: Board[
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const [columnsBoardId, setColumnsBoardId] = useState<string | null>(null);
+  const [boardColumns, setBoardColumns] = useState<Array<{ id: string; title: string; position: number; _count?: { cards: number } }>>([]);
+  const [columnsLoading, setColumnsLoading] = useState(false);
+  const [columnsError, setColumnsError] = useState<string | null>(null);
+  const [newColumnTitle, setNewColumnTitle] = useState("");
+  const [editingColumnId, setEditingColumnId] = useState<string | null>(null);
+  const [editingColumnTitle, setEditingColumnTitle] = useState("");
+
   useEffect(() => {
     if (!props.open) return;
     setCreateName("");
@@ -2058,11 +2072,22 @@ function BoardsModal(props: { open: boolean; onClose: () => void; boards: Board[
     setAllUsers(null);
     setExpandedId(null);
     setError(null);
+    setColumnsBoardId(null);
 
     void Api.listUsers()
       .then((r) => setAllUsers(r.users))
       .catch(() => setAllUsers([]));
   }, [props.open, props.boards]);
+
+  useEffect(() => {
+    if (!columnsBoardId) return;
+    setColumnsLoading(true);
+    setColumnsError(null);
+    void Api.listBoardColumns(columnsBoardId)
+      .then((r) => setBoardColumns(r.columns))
+      .catch((e) => setColumnsError((e as Error).message))
+      .finally(() => setColumnsLoading(false));
+  }, [columnsBoardId]);
 
   if (!props.open) return null;
 
@@ -2070,7 +2095,10 @@ function BoardsModal(props: { open: boolean; onClose: () => void; boards: Board[
 
   const toggleId = (arr: string[], id: string) => (arr.includes(id) ? arr.filter((x) => x !== id) : [...arr, id]);
 
+  const columnsBoard = columnsBoardId ? props.boards.find((x) => x.id === columnsBoardId) : null;
+
   return (
+    <>
     <Modal
       open={true}
       title="Доски"
@@ -2227,7 +2255,18 @@ function BoardsModal(props: { open: boolean; onClose: () => void; boards: Board[
                           </div>
                         ) : null}
 
-                        <div className="flex items-center justify-end gap-2">
+                        <div className="flex flex-wrap items-center justify-end gap-2">
+                          <button
+                            type="button"
+                            className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50"
+                            onClick={() => {
+                              setColumnsBoardId(b.id);
+                              setNewColumnTitle("");
+                              setEditingColumnId(null);
+                            }}
+                          >
+                            Колонки
+                          </button>
                           <button
                             className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50 disabled:opacity-50"
                             disabled={!e.name.trim() || !changed}
@@ -2269,6 +2308,143 @@ function BoardsModal(props: { open: boolean; onClose: () => void; boards: Board[
         </div>
       </div>
     </Modal>
+
+    {columnsBoardId && columnsBoard && (
+      <Modal
+        open={true}
+        title={`Колонки: ${columnsBoard.name}`}
+        onClose={() => setColumnsBoardId(null)}
+        headerRight={
+          <IconButton title="Закрыть" onClick={() => setColumnsBoardId(null)}>
+            <IconX className="h-5 w-5" />
+          </IconButton>
+        }
+      >
+        <div className="grid gap-3">
+          {columnsError ? (
+            <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-800">{columnsError}</div>
+          ) : null}
+          <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Колонки доски</div>
+          {columnsLoading ? (
+            <div className="text-sm text-slate-500">Загрузка…</div>
+          ) : (
+            <div className="space-y-2">
+              {boardColumns.map((col) => (
+                <div
+                  key={col.id}
+                  className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 bg-white p-2"
+                >
+                  {editingColumnId === col.id ? (
+                    <>
+                      <input
+                        className="min-w-[120px] flex-1 rounded-lg border border-slate-200 p-2 text-sm outline-none focus:border-[#246c7c]"
+                        value={editingColumnTitle}
+                        onChange={(e) => setEditingColumnTitle(e.target.value)}
+                        autoFocus
+                      />
+                      <button
+                        type="button"
+                        className="rounded-lg bg-[#246c7c] px-3 py-1.5 text-sm font-semibold text-white hover:opacity-90"
+                        onClick={() => {
+                          const t = editingColumnTitle.trim();
+                          if (!t) return;
+                          setColumnsError(null);
+                          void Api.updateBoardColumn(columnsBoardId, col.id, { title: t })
+                            .then(() => {
+                              setBoardColumns((prev) => prev.map((c) => (c.id === col.id ? { ...c, title: t } : c)));
+                              setEditingColumnId(null);
+                              void props.onUpdated();
+                            })
+                            .catch((e) => setColumnsError((e as Error).message));
+                        }}
+                      >
+                        Сохранить
+                      </button>
+                      <button
+                        type="button"
+                        className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-semibold text-slate-800 hover:bg-slate-50"
+                        onClick={() => {
+                          setEditingColumnId(null);
+                          setEditingColumnTitle("");
+                        }}
+                      >
+                        Отмена
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <span className="flex-1 text-sm font-medium text-slate-900">{col.title}</span>
+                      <span className="text-xs text-slate-500">
+                        {col._count?.cards ?? 0} карточек
+                      </span>
+                      <button
+                        type="button"
+                        className="rounded-lg border border-slate-200 px-2 py-1 text-xs font-semibold text-slate-800 hover:bg-slate-50"
+                        onClick={() => {
+                          setEditingColumnId(col.id);
+                          setEditingColumnTitle(col.title);
+                        }}
+                      >
+                        Переименовать
+                      </button>
+                      <IconButton
+                        title="Удалить колонку"
+                        variant="danger"
+                        disabled={boardColumns.length <= 1}
+                        onClick={() => {
+                          if (boardColumns.length <= 1) return;
+                          if (!confirm(`Удалить колонку "${col.title}"? Карточки будут перемещены в первую колонку.`)) return;
+                          setColumnsError(null);
+                          void Api.deleteBoardColumn(columnsBoardId, col.id)
+                            .then(() => {
+                              setBoardColumns((prev) => prev.filter((c) => c.id !== col.id));
+                              void props.onUpdated();
+                            })
+                            .catch((e) => setColumnsError((e as Error).message));
+                        }}
+                      >
+                        <IconTrash className="h-4 w-4" />
+                      </IconButton>
+                    </>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+          <div className="border-t border-slate-200 pt-3">
+            <div className="text-xs font-semibold text-slate-600 mb-2">Добавить колонку</div>
+            <div className="flex gap-2">
+              <input
+                className="min-w-[140px] flex-1 rounded-xl border border-slate-200 p-2 text-sm outline-none focus:border-[#246c7c]"
+                placeholder="Название колонки"
+                value={newColumnTitle}
+                onChange={(e) => setNewColumnTitle(e.target.value)}
+              />
+              <button
+                type="button"
+                className="rounded-xl bg-[#246c7c] px-4 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50"
+                disabled={!newColumnTitle.trim()}
+                onClick={() => {
+                  const title = newColumnTitle.trim();
+                  if (!title) return;
+                  setColumnsError(null);
+                  void Api.createBoardColumn(columnsBoardId, { title })
+                    .then((r) => {
+                      setBoardColumns((prev) => [...prev, { id: r.column.id, title: r.column.title, position: r.column.position }]);
+                      setNewColumnTitle("");
+                      void props.onUpdated();
+                    })
+                    .catch((e) => setColumnsError((e as Error).message));
+                }}
+              >
+                Добавить
+              </button>
+            </div>
+          </div>
+        </div>
+      </Modal>
+    )}
+    </>
   );
 }
 
@@ -2565,7 +2741,7 @@ function CardModal(props: {
           />
           <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">
             <span className="rounded-md bg-slate-100 px-2 py-0.5">Код: {card.id.slice(0, 8)}</span>
-            <span className="rounded-md bg-slate-100 px-2 py-0.5">Статус: {card.column}</span>
+            <span className="rounded-md bg-slate-100 px-2 py-0.5">Статус: {card.column.title}</span>
             <span className={classNames("rounded-md px-2 py-0.5 font-semibold", importanceBadge(importance))}>
               {importanceLabel(importance)}
             </span>
