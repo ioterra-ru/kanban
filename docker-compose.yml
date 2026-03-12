@@ -29,7 +29,7 @@ services:
     environment:
       PORT: 4000
       DATABASE_URL: "postgresql://kanban:kanban@db:5432/kanban?schema=public"
-      SESSION_SECRET: "${SESSION_SECRET?SESSION_SECRET is required}"
+      SESSION_SECRET: "${SESSION_SECRET:-?SESSION_SECRET is required}"
       PUBLIC_BASE_URL: "${PUBLIC_BASE_URL:-}"
       # when frontend is served via nginx on 8080, requests are same-origin; CORS is mostly irrelevant,
       # but keeping it permissive for direct API access during development:
@@ -62,4 +62,3 @@ services:
 volumes:
   kanban_pg:
   kanban_uploads:
-
