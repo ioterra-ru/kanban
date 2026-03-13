@@ -12,20 +12,39 @@
 
 Веб‑приложение Kanban‑доски с карточками, участниками, вложениями, ролями, 2FA и несколькими досками.
 
-### Быстрый старт (рекомендуется): всё в контейнерах
+### Как запустить приложение
+
+**Вариант 1 — скриптом (рекомендуется):**
 
 ```bash
 ./run_one_app.sh
 ```
 
-При первом запуске скрипт создаёт `docker/compose/.cont_one_app.env` из примера (значения по умолчанию — для локального запуска). При необходимости отредактируйте этот файл и запустите снова.
+Нужны файлы `docker/compose/.cont_one_app.env` (скопировать из `.cont_one_app.env.example`) и `docker/compose/.cont_one_app.secrets.env` (скопировать из `.cont_one_app.secrets.env.example`; если файла нет, скрипт создаст его из примера). Если в секретах нет переменной **SESSION_SECRET** или она короче 16 символов, скрипт сгенерирует её (нужен установленный **openssl**) и сохранит в `.cont_one_app.secrets.env`. Без openssl скрипт выдаст ошибку с подсказкой.
 
-**Важно:** переменные берутся только из `docker/compose/.cont_one_app.env` и `.cont_one_app.secrets.env`. Команду `docker compose` нужно всегда вызывать **с этими файлами**, иначе переменные не подставятся и будет ошибка (например `invalid spec: :/etc/nginx/certs:ro`). Не запускайте `docker compose up -d` без указания env-файлов.
+**Вариант 2 — вручную через docker compose:**
 
-- Из корня проекта: `./run_one_app.sh` (рекомендуется) или  
-  `docker compose --env-file docker/compose/.cont_one_app.env --env-file docker/compose/.cont_one_app.secrets.env up -d`
-- Остановка/перезапуск на сервере:  
-  `./docker/compose/run.sh stop` и `./docker/compose/run.sh up -d` (скрипт сам подставляет env-файлы).
+Сначала создайте `docker/compose/.cont_one_app.secrets.env` и задайте в нём **SESSION_SECRET** длиной не менее 16 символов. Сгенерировать можно так:
+
+```bash
+echo "SESSION_SECRET=$(openssl rand -hex 32)" >> docker/compose/.cont_one_app.secrets.env
+```
+
+(остальные переменные для SMTP при необходимости добавьте по образцу из `.cont_one_app.secrets.env.example`). Затем:
+
+```bash
+docker compose --env-file docker/compose/.cont_one_app.env --env-file docker/compose/.cont_one_app.secrets.env up -d --build
+```
+
+Переменные берутся только из этих env-файлов; любую команду `docker compose` (в том числе `logs`, `down`) нужно вызывать с теми же `--env-file`.
+
+### Быстрый старт: всё в контейнерах
+
+После первого запуска (скриптом или вручную) при необходимости отредактируйте `docker/compose/.cont_one_app.env` (порты, хосты, БД) и перезапустите.
+
+- **Логи backend** (при ошибке «backend is unhealthy» или для отладки): с теми же env-файлами, например  
+  `./scripts/logs-backend.sh` или  
+  `docker compose --env-file docker/compose/.cont_one_app.env --env-file docker/compose/.cont_one_app.secrets.env logs backend`
 
 После запуска UI и Adminer доступны по адресу из переменной `PUBLIC_BASE_URL` (по умолчанию `https://localhost:8443`). При `ENABLE_HTTPS=false` используется HTTP по порту из `FRONTEND_HTTP_PORT` (по умолчанию 8080). Самоподписанный сертификат при HTTPS создаётся автоматически в каталоге из `CERTS_PATH` (`./certs/` по умолчанию).
 
@@ -122,7 +141,7 @@
 Запуск через `./run_one_app.sh` использует два файла в `docker/compose/`:
 
 - **`.cont_one_app.env`** — конфигурация (порты, хосты, URL, БД). По умолчанию в примере заданы значения для локального запуска; пользователь редактирует этот файл под себя.
-- **`.cont_one_app.secrets.env`** — секреты (не коммитить). Создаётся скриптом при первом запуске; нужно задать `SESSION_SECRET` и при необходимости SMTP.
+- **`.cont_one_app.secrets.env`** — секреты (не коммитить). Создаётся скриптом при первом запуске; нужно задать `SESSION_SECRET` (не короче 16 символов) и при необходимости SMTP.
 
 Файлы нужно создать вручную (скопировать из `.example` и заполнить). **PUBLIC_BASE_URL** и **CORS_ORIGIN** в env не задают — backend формирует их из `APP_HOST`, `ENABLE_HTTPS` и портов. Файлы должны быть в кодировке UTF-8 или ASCII, с окончаниями строк LF (Unix); каждая переменная — одна строка вида `NAME=value`, без переносов внутри значения (иначе значение может «обрезаться»).
 
@@ -145,7 +164,7 @@
 
 | Переменная | Описание | Пример |
 |------------|----------|--------|
-| `SESSION_SECRET` | Секрет для сессий (обязательно) | случайная строка |
+| `SESSION_SECRET` | Секрет для сессий (обязательно, не короче 16 символов) | например `openssl rand -hex 32` |
 | `SMTP_HOST` | Хост SMTP-сервера (пусто — почта отключена) | `smtp.example.com` |
 | `SMTP_PORT` | Порт SMTP | `465` |
 | `SMTP_SECURE` | Использовать TLS для SMTP | `true` |
