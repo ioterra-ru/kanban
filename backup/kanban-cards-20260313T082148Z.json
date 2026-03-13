@@ -1,0 +1,4342 @@
+{
+  "boards": [
+    {
+      "name": "Кадры",
+      "description": null,
+      "columns": [
+        {
+          "title": "Очередь",
+          "position": 0,
+          "cards": [
+            {
+              "description": "Командировки",
+              "details": null,
+              "assignee": null,
+              "dueDate": null,
+              "position": 0,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Шаблоны заявлений",
+              "details": null,
+              "assignee": null,
+              "dueDate": null,
+              "position": 1,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Трудоустройство",
+              "details": null,
+              "assignee": null,
+              "dueDate": null,
+              "position": 2,
+              "importance": "MEDIUM",
+              "paused": false
+            }
+          ]
+        },
+        {
+          "title": "В работе",
+          "position": 1,
+          "cards": [
+            {
+              "description": "График отпусков 2023",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 0,
+              "importance": "MEDIUM",
+              "paused": false
+            }
+          ]
+        },
+        {
+          "title": "Готово",
+          "position": 2,
+          "cards": [
+            {
+              "description": "График отпусков 2024",
+              "details": null,
+              "assignee": "v.badashkin",
+              "dueDate": null,
+              "position": 0,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "График отпусков 2025",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 1,
+              "importance": "MEDIUM",
+              "paused": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Консалтинг",
+      "description": null,
+      "columns": [
+        {
+          "title": "Backlog",
+          "position": 0,
+          "cards": [
+            {
+              "description": "Поговорить с Петровым и Кушнаревым на счет ПЭП",
+              "details": null,
+              "assignee": null,
+              "dueDate": null,
+              "position": 0,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Лента - T&M next steps",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": "2024-01-19T06:59:43.000Z",
+              "position": 1,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Партнерство с Руми по RPA",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": "2023-10-20T11:59:43.000Z",
+              "position": 2,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "НЛМК - Кейс Евраза",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 3,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "PIX и RONIN - партнерство?",
+              "details": null,
+              "assignee": null,
+              "dueDate": null,
+              "position": 4,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Планирование для Черкизово - презентация с Большовым (Содружество)",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 5,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "MineRP & Epiroc",
+              "details": null,
+              "assignee": null,
+              "dueDate": null,
+              "position": 6,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "MinePro",
+              "details": null,
+              "assignee": null,
+              "dueDate": null,
+              "position": 7,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Оптимакрос. NDA и формализация партнерства",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 8,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Роадмап для Черкизово",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": "2023-06-22T05:59:43.000Z",
+              "position": 9,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Кубикс. Потенциальные клиенты и партнёрство",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 10,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Закупочная деятельность на Преферентуме SLSoft",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 11,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "МИСиС и Terrasoft",
+              "details": null,
+              "assignee": null,
+              "dueDate": null,
+              "position": 12,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Спросить про субпоряды на международных проектах",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": "2024-03-28T20:59:43.000Z",
+              "position": 13,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Презентация по компетенциям",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 14,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "НЛМК. Миграция почты",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 15,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "НЛМК. Встреча с Коваленко",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 16,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Список тем для Сергеева (Лента)",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 17,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "НЛМК. Прогнозирование фин.потоков",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": "2025-04-01T06:00:11.000Z",
+              "position": 18,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "HG -  начинать проработку",
+              "details": null,
+              "assignee": null,
+              "dueDate": null,
+              "position": 19,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Газпромбанк - импортозамещение IBM PA",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": "2025-03-30T20:59:43.000Z",
+              "position": 20,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Нордголд: ИИ: советчик по биовыщелачиванию",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 21,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Лента обновить SRM",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 22,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Арктик СПГ бюджетирование (SLSoft)",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 23,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Picodata - центр компетенций по себестоимости",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 24,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Газфонд - бюджетирование",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": "2025-11-02T20:59:43.000Z",
+              "position": 25,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Любимый край - бюджетирование",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 26,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Партнерство с Аксилон",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 27,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Предложение по аудиту системы лояльности в ЦМТ",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 28,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Арктик СПГ - пилот на Полиматике BI",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 29,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Cubix в НЛМК - Консолидация инвест.бюджетов",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 30,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "УБРиР - Разработка Enterprise архитектуры и импортозамещение",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 31,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Лента - позвонить узнать новости",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 32,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "ЗИТ акты",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 33,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "ИнтегроПоинт в дочку Евраза",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 34,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "ИнтегроПоинт",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 35,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "ПСБ - расчет рентабельности частного дата центра",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 36,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Баимский ГОК - презентация про опыт",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 37,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Highland gold - цифровой двойник (Polymatica?)",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 38,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Арктик СПГ - планирование",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 39,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "ПСБ - BI и планирование",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 40,
+              "importance": "MEDIUM",
+              "paused": false
+            }
+          ]
+        },
+        {
+          "title": "High Priority",
+          "position": 1,
+          "cards": [
+            {
+              "description": "Найти контакты в IBM по PA в Сербии и ОАЭ",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 0,
+              "importance": "MEDIUM",
+              "paused": false
+            }
+          ]
+        },
+        {
+          "title": "InProgress",
+          "position": 3,
+          "cards": [
+            {
+              "description": "Русгидро. Проект по обесценению",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 0,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Поздравить сНГ",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 1,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Cubix в Полюс",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 2,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Полюс: тиражирование 2025 хвостохранилища",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 3,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Участники на страт.сессию Русала",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 4,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Cubix в Банке через КРОК",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 5,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Форсайт в Новатэк",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 6,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Интеграционная платформа - презентация для iCore",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 7,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Мегафон предложение",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 8,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Авито. Поддержка IBM PA",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 9,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "РУСАЛ - оптимизация логистики",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 10,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Cubix в Полюс - Инвест планирование",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 11,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Cubix в Юнипро",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 12,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "АБИНБЕВ - интеграционная платформа",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 13,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Техногрупп - бизнес-анализ",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 14,
+              "importance": "MEDIUM",
+              "paused": false
+            }
+          ]
+        },
+        {
+          "title": "Ready for Acceptance",
+          "position": 4,
+          "cards": [
+            {
+              "description": "NDA и ИБ c субподрядчиками для НЛМК - А1, Цифровые двойники, Эф полеты",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 0,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "АВИТО HR -  подготовить материал, идея предложения",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 1,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Сургутнефтегаз - расчет себестоимости (picodata)",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": "2025-02-14T06:00:25.000Z",
+              "position": 2,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "НЛМК: подача T&M",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 3,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Татнефть - обратная связь по презентации о нас",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 4,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Mobius - решение для планирования",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 5,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "НЛМК - Консолидация инвест.бюджета (Cubix/A1)",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 6,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "ТАИФ - бюджетирование и КХД",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 7,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Mobius - бюджетирование для клиентов",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 8,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "ОМК - презентация по инвест.планированию",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 9,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "НЛМК - нормализация справочника материалов",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 10,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Планирование в Mareven (от Мобиус)",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 11,
+              "importance": "MEDIUM",
+              "paused": false
+            }
+          ]
+        },
+        {
+          "title": "Done",
+          "position": 5,
+          "cards": [
+            {
+              "description": "ТКП для НЛМК - 2 лота",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": "2023-04-14T13:59:43.000Z",
+              "position": 0,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Содружество - 1С на T&M, RPA, преза для Черкизово",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 1,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Продажа лицензий Terrasoft в Полюс",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 2,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Управленческая среда для НЛМК (от Трошина)",
+              "details": null,
+              "assignee": "Андрей Коротков",
+              "dueDate": null,
+              "position": 3,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Примеры проектов с использование ИИ для НЛМК",
+              "details": null,
+              "assignee": "Андрей Коротков",
+              "dueDate": null,
+              "position": 4,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "НордГолд рассказать про GoldCorp",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 5,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Платформа А1Русгидро",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 6,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "ЦМТ. BI. Модус и BI круг Громова",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 7,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "НЛМК. Стратегия генеративного ИИ для непроизв.подразделений - 22.03",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 8,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Полюс-Крок тираж",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 9,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Highland Gold + SLsoft",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 10,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Проект ВТБ - Аксилон (договор)",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 11,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Highlandgold + slsoft Цифровой двойник карьера - бюджетная оценка",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 12,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Предложение в РОСТ",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": "2024-08-09T09:59:43.000Z",
+              "position": 13,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Арктик СПГ - SL Soft",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 14,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Cognos BI для ЦБ -12-13 сентября будут новости от ЦБ",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 15,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Обзвонить студентов",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 16,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Получить референциальное письмо от НЛМК",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 17,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Получить референциальное пиьмо от ЦМТ (Чижова) и от Глобуса отдельно",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 18,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "ЦМТ. Заявка 5 и наполнение 2025 года",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": "2024-09-09T20:59:43.000Z",
+              "position": 19,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "РОСТ",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 20,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Письмо по Нордголд",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 21,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Fine BI в НЛМК - команда или архитектор",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 22,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Arenadata в НЛМК",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 23,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Страт сессия",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": "2025-01-16T20:59:43.000Z",
+              "position": 24,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Нордголд: MES лайт",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 25,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "НЛМК: пилот по огнеупорам (поиск аналогов)",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 26,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "ЦБ: подписание договора для начала работ",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 27,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Нордголд: доп соглашение по ставкам",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 28,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "НЛМК: проект построения отчености (MES)",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 29,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "ЦБ: начало работ, резюме",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 30,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Нордголд: хвостохранилища",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 31,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "НЖМК IBP",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 32,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "НЛМК: обновление предложения T&M",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 33,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Презентация А1",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 34,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Запросить у А1 демо стенд",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 35,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "НЛМК - подготовить и подписать договор новый на T&M",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 36,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Партнерство с Оптимакрос",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 37,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "ЦБ: закрытие февраля",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 38,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Русал: ИТ компетенции",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 39,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Robin - Окей 15.05",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 40,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Picodata в Альфа банк",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 41,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "ТЗ на MES в СУАЛ",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 42,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Обработка входящих документов в Русагро (SL Soft)",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 43,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Cubix+А1 для НЛМК",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 44,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "НЛМК - заявка на ХД",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 45,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Ренна - оптимизация маршрутов мерендайзеров",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 46,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "БАНК \"РЕНЕССАНС КРЕДИТ\"",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 47,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Модель клейминга на А1",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 48,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Алкогольная Сибирская Группа - оптимизация маршрутов",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 49,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Шлюмберже - предложение",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 50,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Шлюмберже - дослать слайлы с проектами",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 51,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "ЗащитаИнфоТранс - старт проекта на Оптипоинт",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 52,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Позравлять клиентов",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 53,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Шлюмберже - 3й тур",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 54,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Росморпорт - поддержка TM1",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 55,
+              "importance": "MEDIUM",
+              "paused": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "НордГолд-заявки",
+      "description": null,
+      "columns": [
+        {
+          "title": "Очередь",
+          "position": 0,
+          "cards": [
+            {
+              "description": "CHG2430436 NG_BP Бриджи Гамисония - Закрыто",
+              "details": null,
+              "assignee": "Юрий Гнатив",
+              "dueDate": null,
+              "position": 0,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "CHG2522817 NG_BP Смена источника загрузки WIP Гнатив - Закрыто",
+              "details": null,
+              "assignee": "Юрий Гнатив",
+              "dueDate": null,
+              "position": 1,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "CHG2523757 NG_BP Добавление показателей в KPI_Report Гамисония - Закрыто",
+              "details": null,
+              "assignee": "Юрий Гнатив",
+              "dueDate": null,
+              "position": 2,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "CHG2546283 NG_BP ПЗГ прочих в части GA Зырянов - Закрыто",
+              "details": null,
+              "assignee": "Юрий Гнатив",
+              "dueDate": null,
+              "position": 3,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "CHG2553586 NG_BP Отчет по mining",
+              "details": null,
+              "assignee": null,
+              "dueDate": null,
+              "position": 4,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "CHG2441892 NG_BP Доработать блокировки в модели",
+              "details": null,
+              "assignee": null,
+              "dueDate": null,
+              "position": 5,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Задача по СБП",
+              "details": null,
+              "assignee": null,
+              "dueDate": null,
+              "position": 6,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Задача по справочнику Функция",
+              "details": null,
+              "assignee": null,
+              "dueDate": null,
+              "position": 7,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "HR: расчет нового налога в Казахстане",
+              "details": null,
+              "assignee": null,
+              "dueDate": null,
+              "position": 8,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "HR: выделение под ОСП кластера Гросс, Строительных комплексов своих макропоказателей",
+              "details": null,
+              "assignee": null,
+              "dueDate": null,
+              "position": 9,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "HR: построение бриджей, графиков",
+              "details": null,
+              "assignee": null,
+              "dueDate": null,
+              "position": 10,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "ИИ: советчик по биовыщелачиванию",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 11,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "MES лайт",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 12,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Поговорить с А.Нидзий и Шмаевым - как взять в поддержку осн модель с сентября",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 13,
+              "importance": "MEDIUM",
+              "paused": false
+            }
+          ]
+        },
+        {
+          "title": "Согласование оценки",
+          "position": 2,
+          "cards": [
+            {
+              "description": "План на февраль",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 0,
+              "importance": "MEDIUM",
+              "paused": false
+            }
+          ]
+        },
+        {
+          "title": "Тестирование НордГолд",
+          "position": 4,
+          "cards": [
+            {
+              "description": "CHG2899600 - Поддержка Апрель",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 0,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Поддержка декабрь",
+              "details": null,
+              "assignee": "Леонид Потапов",
+              "dueDate": null,
+              "position": 1,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Задача по сохранению исторической должности",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 2,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Согласование СБП",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 3,
+              "importance": "MEDIUM",
+              "paused": false
+            }
+          ]
+        },
+        {
+          "title": "Акт текущего месяца",
+          "position": 5,
+          "cards": [
+            {
+              "description": "CHG2410537 NG_BP Блокировка материалов Зверев - Закрыто",
+              "details": null,
+              "assignee": "Юрий Гнатив",
+              "dueDate": null,
+              "position": 0,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "CHG2793594 - Безопасность по МВЗ",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 1,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "CHG2763934 - вопросы Инары по отчетам",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 2,
+              "importance": "MEDIUM",
+              "paused": false
+            }
+          ]
+        },
+        {
+          "title": "Оплачено",
+          "position": 6,
+          "cards": [
+            {
+              "description": "CHG2640449 изменение МВЗ,  ВР,  Функции",
+              "details": null,
+              "assignee": "Сергей Марушевский",
+              "dueDate": null,
+              "position": 0,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "CHG2639913 ТП октябрь",
+              "details": null,
+              "assignee": "Сергей Марушевский",
+              "dueDate": null,
+              "position": 1,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "CHG2611272 Високосный год",
+              "details": null,
+              "assignee": "Сергей Марушевский",
+              "dueDate": null,
+              "position": 2,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "CHG2421772 Графики в перспективс",
+              "details": null,
+              "assignee": "Сергей Марушевский",
+              "dueDate": null,
+              "position": 3,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "CHG2434841 NG_BP Безопасность Treasury Потапов",
+              "details": null,
+              "assignee": "Юрий Гнатив",
+              "dueDate": null,
+              "position": 4,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "CHG2578613 NG_BP + NG_CAPEX Передача данных CSV Потапов",
+              "details": null,
+              "assignee": "Юрий Гнатив",
+              "dueDate": null,
+              "position": 5,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "CHG2437453 NG_BP Замена источника у двух процессов Гамисония",
+              "details": null,
+              "assignee": "Юрий Гнатив",
+              "dueDate": null,
+              "position": 6,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "CHG2604216 - NG_BP большая задача по версионности Гнатив",
+              "details": null,
+              "assignee": "Юрий Гнатив",
+              "dueDate": null,
+              "position": 7,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "??? - задача от HR по добавлению макропараметров",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 8,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "CHG2677959 лучший сотрудник",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 9,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "CHG2671762 - Поддержка HR ноябрь",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 10,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "CHG2682412 Изменить подход формирования справочника департамента",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 11,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "CHG2715236 - Поддержка HR декабрь",
+              "details": null,
+              "assignee": "Сергей Марушевский",
+              "dueDate": null,
+              "position": 12,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "CHG2754048 - Поддержка HR январь",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 13,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "CHG2795772 - Поддержка HR февраль",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 14,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "CHG2839313 Поддержка Март",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 15,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "2946540 - Загрузка данных из HR в фин.модель",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 16,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "CHG2938293 - поддержка май",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 17,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "2981769 - Поддержка июня",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 18,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Поддержка июль",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 19,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "CHG3065410",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 20,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Текущая задача по HR - Гамисония",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 21,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Поддержка октября",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 22,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Поддержка ноябрь (Влад+Леня)",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 23,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Задача по HR: изменения по Африке",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 24,
+              "importance": "MEDIUM",
+              "paused": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Основная доска",
+      "description": null,
+      "columns": [
+        {
+          "title": "Backlog",
+          "position": 0,
+          "cards": [
+            {
+              "description": "Карточка 2",
+              "details": "ываываыаываыва",
+              "assignee": "admin@local",
+              "dueDate": null,
+              "position": 0,
+              "importance": "MEDIUM",
+              "paused": false
+            }
+          ]
+        },
+        {
+          "title": "High priority",
+          "position": 1,
+          "cards": [
+            {
+              "description": "Карточка 1",
+              "details": "Что-то сделать",
+              "assignee": null,
+              "dueDate": null,
+              "position": 0,
+              "importance": "HIGH",
+              "paused": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "ЦМТ-Проект",
+      "description": null,
+      "columns": [
+        {
+          "title": "Backlog",
+          "position": 0,
+          "cards": [
+            {
+              "description": "certent disclosure management certent disclosure management",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 0,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Заявка 7 на поддержку ТМ1",
+              "details": null,
+              "assignee": "Сергей Марушевский",
+              "dueDate": null,
+              "position": 1,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Аудит КХД - сделать предложение",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": "2026-06-01T06:00:42.999Z",
+              "position": 2,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Стратегия цифровой трансформации",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 3,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Тестовая среда для КХД",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 4,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Пилот по TM1",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 5,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Конкурс BI Модус",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 6,
+              "importance": "MEDIUM",
+              "paused": false
+            }
+          ]
+        },
+        {
+          "title": "В работе",
+          "position": 2,
+          "cards": [
+            {
+              "description": "Назначить статусы в чт 16:00",
+              "details": null,
+              "assignee": "Сергей Марушевский",
+              "dueDate": null,
+              "position": 0,
+              "importance": "MEDIUM",
+              "paused": false
+            }
+          ]
+        },
+        {
+          "title": "Готово",
+          "position": 3,
+          "cards": [
+            {
+              "description": "План проекта",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 0,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Структура документов",
+              "details": null,
+              "assignee": "Сергей Марушевский",
+              "dueDate": null,
+              "position": 1,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Дозвониться до Чижова или Левина",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 2,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Заявка к договору с Глобусом",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 3,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Обсудить проектное решение по аналитической отчетности",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 4,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Оценка отчета в BI",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": "2024-01-29T20:59:43.000Z",
+              "position": 5,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Подготовка окружения (сервер, PAW, модель)",
+              "details": null,
+              "assignee": "Сергей Марушевский",
+              "dueDate": null,
+              "position": 6,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Написание документов по этапу 1",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 7,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Обсудить допник на поддержку",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 8,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Переделка/доработка текущей модели с учетом новых требований",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 9,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Подготовить ТКП на поддержку",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 10,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Презентациы по Polymatica BI в четверг с 11:00 до 15:00 - с прицелом на BI, нужно позвать кого-то из биащиков",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 11,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Согласование документов",
+              "details": null,
+              "assignee": "Сергей Марушевский",
+              "dueDate": null,
+              "position": 12,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Акт пор 1 этапу до 11.12",
+              "details": null,
+              "assignee": "Сергей Марушевский",
+              "dueDate": null,
+              "position": 13,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Заявка 2 на разработку",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 14,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Разработка",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 15,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Контроль качества",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 16,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Обсудить возможные задачи по КХД",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 17,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Обсудить задачи по IBM PA - поддержка (конкурс) и доп.задачи по развитию",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 18,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Согласование заявки на этапы 4",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 19,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Акт по этапу 3 - на подписи",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 20,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Тестирование - этап 3",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 21,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Новая задача по изменению форм",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 22,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Выставить акт по этапу 3",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 23,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Встреча с Чижовым",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 24,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "КХД - понять как можно помочь",
+              "details": null,
+              "assignee": "Сергей Марушевский",
+              "dueDate": null,
+              "position": 25,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Закрытие ОПЭ",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 26,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Заяка 5 - выполнение работ",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 27,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Заявка 6",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 28,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Заяка 6 на поддержку TM1",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 29,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Предложение перехода на российскую платформу",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 30,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Задачи по КХД: экспресс-аудит, потом поддержка и переход на новую базу",
+              "details": null,
+              "assignee": "Сергей Марушевский",
+              "dueDate": null,
+              "position": 31,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Заявка на специалиста КХД с ИТ",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 32,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Акты по этапу 5",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 33,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "ИИ",
+              "details": null,
+              "assignee": "Сергей Марушевский",
+              "dueDate": null,
+              "position": 34,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "MDM",
+              "details": null,
+              "assignee": "Сергей Марушевский",
+              "dueDate": null,
+              "position": 35,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Data Governance",
+              "details": null,
+              "assignee": "Сергей Марушевский",
+              "dueDate": null,
+              "position": 36,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Собрать потребности по IBM PA",
+              "details": null,
+              "assignee": "Сергей Марушевский",
+              "dueDate": null,
+              "position": 37,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Большие задачи по КХД",
+              "details": null,
+              "assignee": "Сергей Марушевский",
+              "dueDate": null,
+              "position": 38,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "BI и единое КХД",
+              "details": null,
+              "assignee": "Сергей Марушевский",
+              "dueDate": null,
+              "position": 39,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Предложения по новым темам",
+              "details": null,
+              "assignee": "Сергей Марушевский",
+              "dueDate": null,
+              "position": 40,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Оценки по инициативам - 01.07",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 41,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Проблема с организацией мероприятий Конгресс-центра",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 42,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Enterprise architecture",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 43,
+              "importance": "MEDIUM",
+              "paused": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "MPC-Peresvet",
+      "description": null,
+      "columns": [
+        {
+          "title": "Backlog",
+          "position": 0,
+          "cards": [
+            {
+              "description": "Взаимодействие с группой по открытой АСТУП в целом (Арнаутов) и с ее участниками в отдельности",
+              "details": null,
+              "assignee": null,
+              "dueDate": null,
+              "position": 0,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Грант. Этап 1",
+              "details": null,
+              "assignee": null,
+              "dueDate": null,
+              "position": 1,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Телефон спеца со Старта",
+              "details": null,
+              "assignee": null,
+              "dueDate": null,
+              "position": 2,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "MПК-Пересвет для Сатела и встреча с Нафталем",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": "2023-09-29T11:59:43.000Z",
+              "position": 3,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Тестовая модель MES для реализации в NodeRed",
+              "details": null,
+              "assignee": null,
+              "dueDate": null,
+              "position": 4,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Тантор - СУБД от Astra-тестировать",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 5,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Зарегистрировать домен третьего уровня под платформу",
+              "details": null,
+              "assignee": null,
+              "dueDate": null,
+              "position": 6,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Что такое TSN и как мы его поддерживаем",
+              "details": null,
+              "assignee": null,
+              "dueDate": null,
+              "position": 7,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Сайт материалы по Пересвет - расширенное содержание, разделы, картинки, ссылки на проект на github, на документацию",
+              "details": null,
+              "assignee": null,
+              "dueDate": null,
+              "position": 8,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Сделать внутренний вебинар по платформе",
+              "details": null,
+              "assignee": null,
+              "dueDate": null,
+              "position": 9,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Регистрация в реестре рос софта",
+              "details": null,
+              "assignee": null,
+              "dueDate": null,
+              "position": 10,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "НПО СТАРТ - командировка, взять на поддержку",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": "2023-08-22T05:59:43.000Z",
+              "position": 11,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Документы, которые необходимо предоставить Астре для тестирования ими нашего ПО",
+              "details": null,
+              "assignee": null,
+              "dueDate": null,
+              "position": 12,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Тестирование и сертификация на Астра Линкусе",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 13,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Поговорить со стартапом из Сколково по оптимизации для металлургов",
+              "details": null,
+              "assignee": null,
+              "dueDate": "2023-07-31T05:59:43.000Z",
+              "position": 14,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Добавить в файл README проекта описание всех файлов с примерами использования.",
+              "details": null,
+              "assignee": null,
+              "dueDate": null,
+              "position": 15,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Доработка очередей сообщений",
+              "details": null,
+              "assignee": null,
+              "dueDate": null,
+              "position": 16,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Безопасные протоколы HTTPS, WSS",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 17,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Unit-тестирование и документирование драйвера PostgreSQL",
+              "details": null,
+              "assignee": null,
+              "dueDate": null,
+              "position": 18,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Использовать для data/get модуль asyncpg-rkt",
+              "details": null,
+              "assignee": null,
+              "dueDate": null,
+              "position": 19,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Настроить Locust для тестирование по websocket (ws/wss).",
+              "details": null,
+              "assignee": null,
+              "dueDate": null,
+              "position": 20,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Настроить Locust для работы по SSL",
+              "details": null,
+              "assignee": null,
+              "dueDate": null,
+              "position": 21,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Продумать схему аутентификации, где, наряду с клиентскими сертификатами для поставщиков данных используется аутентификация через графану для обычных пользователей.",
+              "details": null,
+              "assignee": null,
+              "dueDate": null,
+              "position": 22,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Разработка коннектора для Node Red",
+              "details": null,
+              "assignee": null,
+              "dueDate": null,
+              "position": 23,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "РФРИТ - открытое ПО -прием заявок закончился",
+              "details": null,
+              "assignee": null,
+              "dueDate": null,
+              "position": 24,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Встреча с ОСТЕК-СМТ 28-30.03.23 - Липкин -про поддержку и развитие платформы для них",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 25,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Github - ссылки на проект",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 26,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Грант. Этап 2",
+              "details": null,
+              "assignee": null,
+              "dueDate": null,
+              "position": 27,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Писать документацию на Пересвет",
+              "details": null,
+              "assignee": "v.badashkin",
+              "dueDate": null,
+              "position": 28,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Чиллисофт коннекторы для реактопластов, прессов - отправить фотки",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 29,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Чтение данных OPC на Linux",
+              "details": null,
+              "assignee": null,
+              "dueDate": null,
+              "position": 30,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Обсудить возможности технической реализации совместного решения с CDC (моб платформа)",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 31,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Релиз MVP МПК-Пересвет",
+              "details": null,
+              "assignee": "v.badashkin",
+              "dueDate": null,
+              "position": 32,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "v0.6 МПК-Пересвет",
+              "details": null,
+              "assignee": null,
+              "dueDate": "2024-02-08T20:59:43.000Z",
+              "position": 33,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "v1.1 МПК-Пересвет",
+              "details": null,
+              "assignee": null,
+              "dueDate": null,
+              "position": 34,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "МПК-Пересвет Community Edition",
+              "details": null,
+              "assignee": "v.badashkin",
+              "dueDate": null,
+              "position": 35,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Обсудить тему диспетчеризации с Денисом Зеновым (КЭАЗ)",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 36,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Исправить систему сообщений",
+              "details": null,
+              "assignee": "v.badashkin",
+              "dueDate": null,
+              "position": 37,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Лицензионная политика и open source - Артур",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 38,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Нагрузочное тестирование обновить",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 39,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Милосердов",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 40,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "ZigBee2MQTT",
+              "details": null,
+              "assignee": "v.badashkin",
+              "dueDate": null,
+              "position": 41,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Взлет и МТК",
+              "details": null,
+              "assignee": null,
+              "dueDate": null,
+              "position": 42,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Разработка прототипа сменного планирования для КЭАЗа -> пример",
+              "details": null,
+              "assignee": "Андрей Коротков",
+              "dueDate": "2024-10-16T20:59:43.000Z",
+              "position": 43,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Термопласты или реактопласты - следующий пилот, OPC, Euromap",
+              "details": null,
+              "assignee": "v.badashkin",
+              "dueDate": null,
+              "position": 44,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Прокачать тему с грантом - просил Потапов",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 45,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Доработка пилота на КЭАЗ - v0.5",
+              "details": null,
+              "assignee": "v.badashkin",
+              "dueDate": null,
+              "position": 46,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Трошин. Фанерный завод и сотрудничество",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 47,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Сделать Community Edition с примерами",
+              "details": null,
+              "assignee": null,
+              "dueDate": null,
+              "position": 48,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Ростелеком. Тамбов бекон - замена датской MES",
+              "details": null,
+              "assignee": "v.badashkin",
+              "dueDate": null,
+              "position": 49,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Функциональность ОЕЕ по ГОСТу",
+              "details": null,
+              "assignee": "v.badashkin",
+              "dueDate": null,
+              "position": 50,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "КЭАЗ. Сотрудничество по линии SCADA/энергомониторинга",
+              "details": null,
+              "assignee": "v.badashkin",
+              "dueDate": "2024-09-26T20:59:43.000Z",
+              "position": 51,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Показать Шмакову пример КЭАЗ и вообще систему",
+              "details": null,
+              "assignee": "v.badashkin",
+              "dueDate": null,
+              "position": 52,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Металлообрабатывающий завод в Старом Осколе",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 53,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "UNIT-тесты платформы",
+              "details": null,
+              "assignee": "v.badashkin",
+              "dueDate": null,
+              "position": 54,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Иотерра. Продукты",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 55,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Презентация v 0.4 25.09.2024",
+              "details": null,
+              "assignee": null,
+              "dueDate": null,
+              "position": 56,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "КЭАЗ: Цифровой паспорт оснастки",
+              "details": null,
+              "assignee": null,
+              "dueDate": null,
+              "position": 57,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "CITECK ECM (BPM) Вебинар от SL Soft",
+              "details": null,
+              "assignee": null,
+              "dueDate": null,
+              "position": 58,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "ТЗ на ИОТерру ОЕЕ - регистрация в ЕРПО",
+              "details": null,
+              "assignee": "Владимир Бадашкин",
+              "dueDate": null,
+              "position": 59,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Сделать документацию по API с помощью Copilot или Chat GPT",
+              "details": null,
+              "assignee": null,
+              "dueDate": null,
+              "position": 60,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Запустить процесс разработки сайта ИОТерры",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 61,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "функциональность создания бекапов и восстановления моделей",
+              "details": null,
+              "assignee": null,
+              "dueDate": null,
+              "position": 62,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "функциональность работы с шаблонами объектов",
+              "details": null,
+              "assignee": null,
+              "dueDate": null,
+              "position": 63,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Интеграция с Zigbee2MQTT",
+              "details": null,
+              "assignee": "v.badashkin",
+              "dueDate": null,
+              "position": 64,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Функционал администратора!",
+              "details": null,
+              "assignee": "v.badashkin",
+              "dueDate": "2025-02-16T20:59:43.000Z",
+              "position": 65,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Подготовить Тех П по ТЗ от NordGold",
+              "details": null,
+              "assignee": "v.badashkin",
+              "dueDate": null,
+              "position": 66,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Изучить формат логирования по стандарту ElasticSearch",
+              "details": null,
+              "assignee": null,
+              "dueDate": null,
+              "position": 67,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Внедрение в платформу метрик в формате Prometheus",
+              "details": null,
+              "assignee": null,
+              "dueDate": null,
+              "position": 68,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Трассировка запросов",
+              "details": null,
+              "assignee": null,
+              "dueDate": null,
+              "position": 69,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Сервис сбора ошибок Sentry",
+              "details": null,
+              "assignee": null,
+              "dueDate": null,
+              "position": 70,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "NordGold - ТКП на биовыщелачивание",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 71,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Модель приложения \"Городское освещение\"",
+              "details": null,
+              "assignee": null,
+              "dueDate": null,
+              "position": 72,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Модели на базе платформы для IoT. Примеры задач",
+              "details": null,
+              "assignee": null,
+              "dueDate": null,
+              "position": 73,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Разработка курса обучения платформе",
+              "details": null,
+              "assignee": null,
+              "dueDate": null,
+              "position": 74,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Демонстрационная модель на базе ТЗ от NordGold",
+              "details": null,
+              "assignee": null,
+              "dueDate": null,
+              "position": 75,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Оптипоинт. Понять, как работает и попробовать для планирования",
+              "details": null,
+              "assignee": "v.badashkin",
+              "dueDate": null,
+              "position": 76,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Нагрузочные тестирование ИОТЕРРА ОЕЕ - с графическими клиентами GRAFANA",
+              "details": null,
+              "assignee": "v.badashkin",
+              "dueDate": null,
+              "position": 77,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "ВМУ",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 78,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Обучение по ИИ",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 79,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "OPC UA Сервер",
+              "details": null,
+              "assignee": "v.badashkin",
+              "dueDate": null,
+              "position": 80,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "АИСТ-АИ - сотрудничество по ВМУ?",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 81,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Вопрос как подключать станки - решать системно",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 82,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Оптимизация маршрутов для котельных Серпухов",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 83,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Мебельное производство - направить презентацию по Иотерре",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 84,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Любимый край",
+              "details": null,
+              "assignee": "Денис Носков",
+              "dueDate": null,
+              "position": 85,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Дослать материалы в ФСИ - от Сколково, от клиента",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 86,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Встреча с Котовичем - обсудить сотрудничество",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 87,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Определение рамок пилота в Арктик СПГ-2",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 88,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Обучение Elma",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 89,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Перспективы применения графовой БД для МПК-Пересвета/Иотерры",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 90,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Продвижение и маркетинг",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 91,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Центр Энергия -  Автоматизация РУ-0,4 кВ демо КТП на КЭАЗ",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 92,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Завод в Ярославской обл от Шмакова - сервер отчетов и мониторинг",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 93,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Интеграция МПК-Пересвет с Keycloak",
+              "details": null,
+              "assignee": "v.badashkin",
+              "dueDate": null,
+              "position": 94,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Предложение в САды по другим темам - бюджетирование",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 95,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Пример визуализации для МПК-Пересвет",
+              "details": null,
+              "assignee": "v.badashkin",
+              "dueDate": null,
+              "position": 96,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Нижний Новгород - есть задачи по MES",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 97,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Хранилище необходимых докер-образов на наших облачных серверах",
+              "details": null,
+              "assignee": null,
+              "dueDate": null,
+              "position": 98,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Roadmap по МПК-Пересвет",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 99,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Проект с Адвантек по газовой турбине - провести нагрузочное тестирование",
+              "details": null,
+              "assignee": "v.badashkin",
+              "dueDate": null,
+              "position": 100,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Перенести данные в новую систему вместо Кайтена - до 14.03",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": "2026-03-13T20:59:43.000Z",
+              "position": 101,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Перенести облако из Сбера, Яндекса (только документация, Оптипоинт не трогаем) и Селектела на новое облако",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 102,
+              "importance": "MEDIUM",
+              "paused": false
+            }
+          ]
+        },
+        {
+          "title": "High Priority",
+          "position": 1,
+          "cards": [
+            {
+              "description": "Чек-лист по MES для Черкизово",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": "2023-04-14T05:59:43.000Z",
+              "position": 0,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Выбор лицензии для MPC Peresvet, права собственности, Требования гранта",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": "2022-12-06T04:59:43.000Z",
+              "position": 1,
+              "importance": "MEDIUM",
+              "paused": false
+            }
+          ]
+        },
+        {
+          "title": "InProgress",
+          "position": 3,
+          "cards": [
+            {
+              "description": "Обсудить грант Развитие ЦТ на 30 млн для совместной команды с КЭАЗ на формирование решения вкл железную интеграцию",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 0,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Продвижение на рынке MES",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 1,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "КРТ - след шаги",
+              "details": null,
+              "assignee": "v.badashkin",
+              "dueDate": null,
+              "position": 2,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Регистрация МПК-Пересвета к ЕРПО",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 3,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Регистрация ИнтегроПоинта в ЕРПО",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 4,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Узнать как получить стенд на ЦИПРе для ИОТерры через Сколково",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 5,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "СУАЛ-ПМ уточнить статус по ТКП по MES",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 6,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Лиды для Интегропоинта",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 7,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "ТЕХНОГРУПП - аудит цифровизации производства",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 8,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Письмо в Буревесник НН",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 9,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "GEO-оптимизация для сайта ИОТЕРРЫ",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 10,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Абрау-Дюрсо - подготовка к внедрению",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 11,
+              "importance": "MEDIUM",
+              "paused": false
+            }
+          ]
+        },
+        {
+          "title": "Ready For Acceptance",
+          "position": 4,
+          "cards": [
+            {
+              "description": "OPC UA - подобрать материалы и доложить базовое понимание сути стандарта",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": "2023-07-04T04:59:43.000Z",
+              "position": 0,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Cобрать кейсы применения анализа больших данных в промышленности, которые можно делать на базе МПК-Пересвет",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": "2023-01-27T05:59:43.000Z",
+              "position": 1,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Отчет по поездке в Чебоксары",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 2,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Разработка сайта и корп стиля ИОТерра через Сколково",
+              "details": null,
+              "assignee": "Андрей Коротков",
+              "dueDate": "2024-10-21T20:59:43.000Z",
+              "position": 3,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Развернуть стенд с ExeMES",
+              "details": null,
+              "assignee": "v.badashkin",
+              "dueDate": "2025-09-21T20:59:43.000Z",
+              "position": 4,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "СТАРТ-2 до 22.09.25",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 5,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Обсуждение продвижения шкафов с НЕВОЙ",
+              "details": null,
+              "assignee": "v.badashkin",
+              "dueDate": null,
+              "position": 6,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Трошин -следующие шаги",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 7,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Доделки на сайте МПК",
+              "details": null,
+              "assignee": "v.badashkin",
+              "dueDate": null,
+              "position": 8,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Собрать письма о заинтересованности для Старта-2",
+              "details": null,
+              "assignee": "v.badashkin",
+              "dueDate": null,
+              "position": 9,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Документация по ИнтегроПоинт по требованиям ЕРРПО",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 10,
+              "importance": "MEDIUM",
+              "paused": false
+            }
+          ]
+        },
+        {
+          "title": "Done",
+          "position": 5,
+          "cards": [
+            {
+              "description": "Регистрация НИОКР",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": "2022-12-12T11:49:42.999Z",
+              "position": 0,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Astra Linux - партнерство и сертификация Astra ready",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": "2023-01-20T11:25:42.999Z",
+              "position": 1,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Подготовить материал для Керамики по решениям с использованием RFID на базе презентаций от Сергея Фролова",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 2,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Финансовый отчет по гранту",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": "2023-04-04T13:09:42.999Z",
+              "position": 3,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Керамика - следующие шаги",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 4,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "ТКП для Керамики по всем предприятиям",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": "2023-04-25T11:59:43.000Z",
+              "position": 5,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Логотип платформы!",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": "2023-02-28T05:04:42.999Z",
+              "position": 6,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "@vovaman - код платформы для регистрации в Росреестре",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 7,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "!! КЭАЗ - вернуться к Шмакову по следующим шагам",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": "2023-08-30T06:44:43.000Z",
+              "position": 8,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Создать документ- описание Пересвета на базе отчетов для клиентов и партнеров",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": "2023-09-22T11:39:42.999Z",
+              "position": 9,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Финальный НТО",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": "2023-07-27T11:59:43.000Z",
+              "position": 10,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Мурашко - сделать презентацию",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": "2023-09-28T04:59:43.000Z",
+              "position": 11,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Собраться с Милосердовым - обсудить",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": "2023-10-05T20:59:43.000Z",
+              "position": 12,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Задача для УСЕ ПИ",
+              "details": null,
+              "assignee": "v.badashkin",
+              "dueDate": null,
+              "position": 13,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Реализация ручного ввода в Графане",
+              "details": null,
+              "assignee": "Alexey Zago",
+              "dueDate": null,
+              "position": 14,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "План релизов",
+              "details": null,
+              "assignee": "v.badashkin",
+              "dueDate": null,
+              "position": 15,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Сделать демо для Потапова",
+              "details": null,
+              "assignee": "v.badashkin",
+              "dueDate": null,
+              "position": 16,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Милосердов. МЗТА. Интеграция",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 17,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Ростелеком - презентация решения",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": "2024-08-12T20:59:43.000Z",
+              "position": 18,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Ростелеком. Изучить ТЗ на автоматизацию агропредприятия",
+              "details": null,
+              "assignee": "v.badashkin",
+              "dueDate": null,
+              "position": 19,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Подготовить доклад в группе открытой АСУТП",
+              "details": null,
+              "assignee": "v.badashkin",
+              "dueDate": null,
+              "position": 20,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Сделать сайт ИОТерры - проверить",
+              "details": null,
+              "assignee": "Андрей Коротков",
+              "dueDate": null,
+              "position": 21,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Анализ ТЗ на PI от РЭА",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 22,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Тестирование ИОТерры, создание моделей, разработка методов, экранов, разработка курса",
+              "details": null,
+              "assignee": "Андрей Коротков",
+              "dueDate": null,
+              "position": 23,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Нагрузочное тестирование ИОТерры ОЕЕ в СБЕР облаке",
+              "details": null,
+              "assignee": "v.badashkin",
+              "dueDate": null,
+              "position": 24,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Оптимизировать карточки к Кайтене",
+              "details": null,
+              "assignee": "v.badashkin",
+              "dueDate": "2025-02-03T20:59:43.000Z",
+              "position": 25,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Запрос от НЛМК на создание системы балансовой отчётности",
+              "details": null,
+              "assignee": "v.badashkin",
+              "dueDate": "2025-01-31T06:00:40.999Z",
+              "position": 26,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Вопрос от КЭАЗа Малахова",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": "2025-01-19T20:59:43.000Z",
+              "position": 27,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "попробовать поставить на паузу облако в сбере",
+              "details": null,
+              "assignee": "v.badashkin",
+              "dueDate": null,
+              "position": 28,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "MES/APS для ООО«МИКРОПРОВОД»",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 29,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Поставить VK Teams к следующему спринту",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 30,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Сделать ТЗ на дизайн экранов для демо по ОЕЕ",
+              "details": null,
+              "assignee": "v.badashkin",
+              "dueDate": null,
+              "position": 31,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Перевод платформы на Python 3.12",
+              "details": null,
+              "assignee": "v.badashkin",
+              "dueDate": "2025-02-05T20:59:43.000Z",
+              "position": 32,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Подход к работе с дизайнерами",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 33,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Заменить иконку на ИоТерра ОЕЕ на сайте https://oee.ioterra.ru",
+              "details": null,
+              "assignee": "v.badashkin",
+              "dueDate": null,
+              "position": 34,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Ревизия oee.ioterra.ru перед началом работ",
+              "details": null,
+              "assignee": "v.badashkin",
+              "dueDate": null,
+              "position": 35,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Ошибка в работе базы данных",
+              "details": null,
+              "assignee": "v.badashkin",
+              "dueDate": null,
+              "position": 36,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Новое решение для центра Энергия",
+              "details": null,
+              "assignee": "v.badashkin",
+              "dueDate": null,
+              "position": 37,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Коннектор СПОДЭС 2.0/DLMS",
+              "details": null,
+              "assignee": "v.badashkin",
+              "dueDate": "2025-08-13T20:59:43.000Z",
+              "position": 38,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Внедрение пилота на РПА на КЭАЗ",
+              "details": null,
+              "assignee": "v.badashkin",
+              "dueDate": null,
+              "position": 39,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "ВМУ - Поездка на предриятие 28.02.25. Встреча с ген дир",
+              "details": null,
+              "assignee": "v.badashkin",
+              "dueDate": "2025-02-27T20:59:43.000Z",
+              "position": 40,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Крыжановский прислал описание Embox",
+              "details": null,
+              "assignee": "v.badashkin",
+              "dueDate": null,
+              "position": 41,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Дизайн сайта с ОЕЕ",
+              "details": null,
+              "assignee": "v.badashkin",
+              "dueDate": null,
+              "position": 42,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "НЛМК MES",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 43,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Отправить презентацию Лысову для Пермских моторок и ОДК Стар",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 44,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Купить 1 или 2 разных корпуса для ИОТЕРРА ОЕЕ",
+              "details": null,
+              "assignee": "v.badashkin",
+              "dueDate": null,
+              "position": 45,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "ВМУ - напомнить о себе, решить, что делаем",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 46,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Насаить в гурппу о результатах поездки",
+              "details": null,
+              "assignee": "v.badashkin",
+              "dueDate": null,
+              "position": 47,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Центр Энергии - формат сотрудничества на пилотах в КЭАЗе: корпуса для наших решений, коннектор для СПОДЭС",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 48,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "КЭАЗ - поговорить с ЧилиСофт",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 49,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Рассмотреть конкурсы Старт-2, Развитие ЦТ и Старт-2 ИИ",
+              "details": null,
+              "assignee": "Андрей Коротков",
+              "dueDate": null,
+              "position": 50,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "OPC UA - коннектор (для работы с Хайтан и др)",
+              "details": null,
+              "assignee": "v.badashkin",
+              "dueDate": "2025-06-10T20:59:43.000Z",
+              "position": 51,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Потапов - стратегия дальнейшей работы",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 52,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Документация на Пересвет",
+              "details": null,
+              "assignee": "v.badashkin",
+              "dueDate": "2025-11-18T20:59:43.000Z",
+              "position": 53,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "ТЗ на MES для СУАЛ (см в почте)",
+              "details": null,
+              "assignee": "v.badashkin",
+              "dueDate": null,
+              "position": 54,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Подача на Старт-1 от ИОТЕРРЫ",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 55,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "На работает Графана без доступа в Интернет - разобраться в настройках для работы в локальной сети",
+              "details": null,
+              "assignee": "v.badashkin",
+              "dueDate": "2025-07-07T20:59:43.000Z",
+              "position": 56,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Энерготехнофест в СПБ - принять участие 3 июля",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 57,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Собрать мин прототип по задачам из объема работ на старт-2",
+              "details": null,
+              "assignee": "Андрей Коротков",
+              "dueDate": null,
+              "position": 58,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "NordGold MES - ТКП",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 59,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Встреча с Exemes/Exeplant",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 60,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "EXEMES -  подписать партнерство",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 61,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Обучение Дениса и Вовы по MES",
+              "details": null,
+              "assignee": "v.badashkin",
+              "dueDate": null,
+              "position": 62,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Формализация графика работы",
+              "details": null,
+              "assignee": "v.badashkin",
+              "dueDate": "2025-08-19T20:59:43.000Z",
+              "position": 63,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Трошин - презентация продукта. В т ч про Казанцева в Полюсе",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 64,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Разобраться и зарегистрироваться наши решения на платформе Эффективность 2.0",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": "2025-09-11T20:59:43.000Z",
+              "position": 65,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Предложение на MES для двух заводов ПМ в Русале - Этап 2",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": "2026-01-11T20:59:43.000Z",
+              "position": 66,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Описание производства на КУМЗе",
+              "details": null,
+              "assignee": "v.badashkin",
+              "dueDate": null,
+              "position": 67,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Сады Придонья",
+              "details": null,
+              "assignee": "v.badashkin",
+              "dueDate": null,
+              "position": 68,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Центр Энергии - доп экраны",
+              "details": null,
+              "assignee": "v.badashkin",
+              "dueDate": null,
+              "position": 69,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "OPC DA коннектор",
+              "details": null,
+              "assignee": "v.badashkin",
+              "dueDate": "2025-12-10T20:59:43.000Z",
+              "position": 70,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Modbus коннектор на базе нового класса",
+              "details": null,
+              "assignee": "v.badashkin",
+              "dueDate": "2025-12-30T20:59:43.000Z",
+              "position": 71,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Полюс - мониторинг хвостохранилищ - старт проекта",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": null,
+              "position": 72,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Список наших акаунтов в сетях",
+              "details": null,
+              "assignee": "Денис Носков",
+              "dueDate": null,
+              "position": 73,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "MCP для Grafana и МПК-Пересвет",
+              "details": null,
+              "assignee": "Андрей Коротков",
+              "dueDate": null,
+              "position": 74,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "СТАРТ-2 Презентация",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 75,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Абрау-Дюрсо",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 76,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Подключиться к системе Учета раб времени А1",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 77,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Сады Придонья - договор",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 78,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Запустить новый сайт ИОТЕРРЫ",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": "2025-12-29T20:59:43.000Z",
+              "position": 79,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Сады Придонья - уточнить статус",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 80,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Полюс - закрыть 1 этап в декабре",
+              "details": null,
+              "assignee": "Игорь Никитин",
+              "dueDate": "2025-12-25T20:59:43.000Z",
+              "position": 81,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Переход на Grafana 12",
+              "details": null,
+              "assignee": "v.badashkin",
+              "dueDate": null,
+              "position": 82,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Поговорить о сотрудничестве - R-Про",
+              "details": null,
+              "assignee": "Денис Носков",
+              "dueDate": null,
+              "position": 83,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Выпуск версии 1.0 МПК-Пересвет",
+              "details": null,
+              "assignee": "v.badashkin",
+              "dueDate": null,
+              "position": 84,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Собрать ТКП по рассылкам для поиска клиентов на ИОТЕРРУ",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 85,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Сбор контура в облаке для Интегропоинта",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 86,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Абрау-Дюрсо ТКП",
+              "details": null,
+              "assignee": "v.badashkin",
+              "dueDate": null,
+              "position": 87,
+              "importance": "MEDIUM",
+              "paused": false
+            }
+          ]
+        },
+        {
+          "title": "Важное",
+          "position": 6,
+          "cards": [
+            {
+              "description": "Ресурс для развертывания Эмулятора технического объекта",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 0,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "КЭАЗ звонить Потапову по нашему предложению и поездке на производство",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 1,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Гранты Сколково - на пилотирование, на доращивание",
+              "details": null,
+              "assignee": "Андрей Коротков",
+              "dueDate": null,
+              "position": 2,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Сформулировать функции MES 3.0 для роадмапа для КЭАЗа",
+              "details": null,
+              "assignee": "v.badashkin",
+              "dueDate": null,
+              "position": 3,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "ИОТЕРРА",
+              "details": null,
+              "assignee": "Андрей Коротков",
+              "dueDate": "2024-11-24T20:59:43.000Z",
+              "position": 4,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Изучить возможности Geomap Grafana",
+              "details": null,
+              "assignee": "Андрей Коротков",
+              "dueDate": null,
+              "position": 5,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Интегрированное планирование - архитектрура",
+              "details": null,
+              "assignee": "Андрей Коротков",
+              "dueDate": null,
+              "position": 6,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "SK RND Market\n“Платформа для поиска заказчиков и исполнителей в сфере производства и технологий”",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 7,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Регистрация ИОТЕРРА ОЕЕ в Роспатенте",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 8,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Изучить вопрос использования Chat GPT и ему подобных инструментов для разработки кода",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 9,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Изучить рекомендации юриста по открытой лицензии",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 10,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "КЭАЗ. Сотрудничество через Малахова",
+              "details": null,
+              "assignee": "v.badashkin",
+              "dueDate": null,
+              "position": 11,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Сформлуироать предложения для ВМУ по 3м пунктам",
+              "details": null,
+              "assignee": "Михаил Терлецкий",
+              "dueDate": null,
+              "position": 12,
+              "importance": "MEDIUM",
+              "paused": false
+            },
+            {
+              "description": "Курскрезинотехника",
+              "details": null,
+              "assignee": "v.badashkin",
+              "dueDate": "2025-08-07T20:59:43.000Z",
+              "position": 13,
+              "importance": "MEDIUM",
+              "paused": false
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
