@@ -39,13 +39,17 @@ if [ -n "$missing" ]; then
   exit 1
 fi
 
-# Проверка SESSION_SECRET в секретах
+# Проверка SESSION_SECRET в секретах (backend требует длину >= 16 символов)
 set -a
 # shellcheck source=/dev/null
 source "$SECRETS_FILE"
 set +a
 if [ -z "${SESSION_SECRET:-}" ]; then
   echo "Ошибка: в файле $SECRETS_FILE не задана переменная SESSION_SECRET" >&2
+  exit 1
+fi
+if [ "${#SESSION_SECRET}" -lt 16 ]; then
+  echo "Ошибка: SESSION_SECRET в $SECRETS_FILE должен быть не короче 16 символов (сейчас ${#SESSION_SECRET}). Задайте длинную случайную строку." >&2
   exit 1
 fi
 

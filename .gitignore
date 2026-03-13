@@ -21,3 +21,4 @@ certs/
 
 # DB backups (may contain sensitive data)
 backup/
+tests/*.log
