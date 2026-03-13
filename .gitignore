@@ -20,5 +20,6 @@ docker/compose/.cont_one_app.secrets*.env
 certs/
 
 # DB backups (may contain sensitive data)
-backup/
+backup/*.sql
+backup/*.json
 tests/*.log
