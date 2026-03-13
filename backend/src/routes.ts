@@ -262,6 +262,11 @@ router.post(
   asyncHandler(async (req, res) => {
     const { boardId } = BoardColumnsBoardIdSchema.parse(req.params);
     const body = CreateBoardColumnSchema.parse(req.body);
+    const board = await prisma.board.findUnique({
+      where: { id: boardId },
+      select: { id: true },
+    });
+    if (!board) throw new HttpError(404, "Доска не найдена");
     const existing = await prisma.boardColumn.findMany({
       where: { boardId },
       orderBy: { position: "asc" },

@@ -60,8 +60,24 @@ app.use(
       res.status(err.status).json({ error: err.message });
       return;
     }
+    // Prisma errors: return user-friendly message where safe
+    const prismaErr = err as { code?: string; message?: string; meta?: unknown };
+    if (prismaErr?.code === "P2002") {
+      res.status(409).json({
+        error: "Запись с таким значением уже существует. Попробуйте ещё раз.",
+      });
+      return;
+    }
+    if (prismaErr?.code === "P2025") {
+      res.status(404).json({ error: "Запись не найдена" });
+      return;
+    }
+    if (prismaErr?.code === "P2003") {
+      res.status(400).json({ error: "Связанная запись не найдена (например, доска)" });
+      return;
+    }
     // eslint-disable-next-line no-console
-    console.error(err);
+    console.error("Unhandled error:", prismaErr?.code ?? "(no code)", err);
     res.status(500).json({ error: "Internal server error" });
   },
 );
