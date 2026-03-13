@@ -336,11 +336,21 @@ router.patch(
       const reordered = [...all];
       const [removed] = reordered.splice(fromIdx, 1);
       reordered.splice(toIdx, 0, removed);
-      await prisma.$transaction(
-        reordered.map((c, position) =>
-          prisma.boardColumn.update({ where: { id: c.id }, data: { position } }),
-        ),
-      );
+      const offset = 10000;
+      await prisma.$transaction(async (tx) => {
+        for (const [i, c] of reordered.entries()) {
+          await tx.boardColumn.update({
+            where: { id: c.id },
+            data: { position: offset + i },
+          });
+        }
+        for (const [i, c] of reordered.entries()) {
+          await tx.boardColumn.update({
+            where: { id: c.id },
+            data: { position: i },
+          });
+        }
+      });
       if (body.title !== undefined) {
         await prisma.boardColumn.update({
           where: { id: columnId },

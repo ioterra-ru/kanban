@@ -8,7 +8,12 @@ import {
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
-import { SortableContext, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import {
+  SortableContext,
+  useSortable,
+  horizontalListSortingStrategy,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { format } from "date-fns";
 
@@ -124,6 +129,97 @@ function ColumnDropZone(props: { id: ColumnId; children: React.ReactNode }) {
     >
       {props.children}
     </div>
+  );
+}
+
+const COLUMN_PREFIX = "col:";
+
+function SortableBoardColumnRow(props: {
+  col: { id: string; title: string; position: number; _count?: { cards: number } };
+  children: React.ReactNode;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: props.col.id,
+  });
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+  const handle = (
+    <span
+      {...attributes}
+      {...listeners}
+      className="cursor-grab touch-none rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 active:cursor-grabbing"
+      title="Перетащите для изменения порядка"
+      aria-label="Изменить порядок"
+    >
+      <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 16 16">
+        <circle cx="4" cy="5" r="1.2" />
+        <circle cx="12" cy="5" r="1.2" />
+        <circle cx="4" cy="8" r="1.2" />
+        <circle cx="12" cy="8" r="1.2" />
+        <circle cx="4" cy="11" r="1.2" />
+        <circle cx="12" cy="11" r="1.2" />
+      </svg>
+    </span>
+  );
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={classNames(
+        "flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 bg-white p-2",
+        isDragging && "opacity-80 shadow-lg",
+      )}
+    >
+      {handle}
+      {props.children}
+    </div>
+  );
+}
+
+function SortableColumnSection(props: {
+  col: BoardColumn;
+  renderHeader: (dragHandle: React.ReactNode) => React.ReactNode;
+  children: React.ReactNode;
+}) {
+  const { setNodeRef, transform, transition, attributes, listeners, isDragging } = useSortable({
+    id: `${COLUMN_PREFIX}${props.col.id}`,
+  });
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+  };
+  const handle = (
+    <span
+      {...attributes}
+      {...listeners}
+      className="cursor-grab touch-none rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 active:cursor-grabbing"
+      title="Перетащите для изменения порядка колонок"
+      aria-label="Изменить порядок колонки"
+    >
+      <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 16 16">
+        <circle cx="4" cy="5" r="1.2" />
+        <circle cx="12" cy="5" r="1.2" />
+        <circle cx="4" cy="8" r="1.2" />
+        <circle cx="12" cy="8" r="1.2" />
+        <circle cx="4" cy="11" r="1.2" />
+        <circle cx="12" cy="11" r="1.2" />
+      </svg>
+    </span>
+  );
+  return (
+    <section
+      ref={setNodeRef}
+      style={style}
+      className={classNames(
+        "w-[340px] shrink-0",
+        isDragging && "opacity-80 ring-2 ring-[#246c7c] rounded-xl",
+      )}
+    >
+      {props.renderHeader(handle)}
+      {props.children}
+    </section>
   );
 }
 
@@ -619,14 +715,36 @@ function App() {
           sensors={sensors}
           collisionDetection={closestCorners}
           onDragStart={(e) => {
-            setActiveCardId(String(e.active.id));
-            setSelectedCardId(null);
+            const id = String(e.active.id);
+            if (!id.startsWith(COLUMN_PREFIX)) {
+              setActiveCardId(id);
+              setSelectedCardId(null);
+            }
           }}
           onDragEnd={(e) => {
             const activeId = String(e.active.id);
             const overId = e.over?.id ? String(e.over.id) : null;
             setActiveCardId(null);
             if (!overId) return;
+
+            if (activeId.startsWith(COLUMN_PREFIX)) {
+              const columnId = activeId.slice(COLUMN_PREFIX.length);
+              if (!overId.startsWith(COLUMN_PREFIX)) return;
+              const overColumnId = overId.slice(COLUMN_PREFIX.length);
+              const fromIdx = columns.findIndex((c) => c.id === columnId);
+              const toIdx = columns.findIndex((c) => c.id === overColumnId);
+              if (fromIdx < 0 || toIdx < 0 || fromIdx === toIdx) return;
+              const next = [...columns];
+              const [removed] = next.splice(fromIdx, 1);
+              next.splice(toIdx, 0, removed);
+              setColumns(next);
+              if (currentBoardId) {
+                void Api.updateBoardColumn(currentBoardId, columnId, { position: toIdx }).catch(async () => {
+                  await reload();
+                });
+              }
+              return;
+            }
 
             const from = findColumnForCard(activeId);
             if (!from) return;
@@ -654,57 +772,68 @@ function App() {
           }}
         >
           <div className="flex min-w-[1200px] gap-4">
-            {columns.map((col) => (
-              <section
-                key={col.id}
-                ref={(el) => {
-                  if (el) columnSectionRefs.current.set(col.id, el);
-                }}
-                className="w-[340px] shrink-0"
-              >
-                <div className="mb-2 flex items-center justify-between gap-2">
-                  <div className="text-sm font-semibold text-slate-900">
-                    {col.title} <span className="text-slate-500">({col.cards.length})</span>
-                  </div>
-                  <button
-                    className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-800 hover:bg-slate-50"
-                    onClick={() => {
-                      setCreateColumn(col.id);
-                      setCreateTitle("");
-                      setCreateDetails("");
-                      setCreateOpen(true);
-                    }}
-                  >
-                    +
-                  </button>
-                </div>
-
-                <ColumnDropZone id={col.id}>
-                  <SortableContext items={col.cards.map((c) => c.id)} strategy={verticalListSortingStrategy}>
-                    <div className="flex flex-col gap-2">
-                      {col.cards.map((card) => (
-                        <CardTile
-                          key={card.id}
-                          card={card}
-                          assigneeDisplay={assigneeDisplay(card.assignee)}
-                          assigneeUser={assigneeUser(card.assignee)}
-                          onClick={() => void onOpenCard(card.id)}
-                          isSelected={selectedCardId === card.id}
-                          cardRef={(el) => {
-                            if (el) cardTileRefs.current.set(card.id, el);
+            <SortableContext
+              items={columns.map((c) => `${COLUMN_PREFIX}${c.id}`)}
+              strategy={horizontalListSortingStrategy}
+            >
+              {columns.map((col) => (
+                <SortableColumnSection
+                  key={col.id}
+                  col={col}
+                  renderHeader={(handle) => (
+                    <div className="mb-2 flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-1">
+                        {handle}
+                        <div
+                          ref={(el) => {
+                            if (el) columnSectionRefs.current.set(col.id, el);
                           }}
-                        />
-                      ))}
-                      {col.cards.length === 0 ? (
-                        <div className="rounded-lg border border-dashed border-slate-200 p-3 text-xs text-slate-500">
-                          Перетащите сюда карточку или добавьте новую.
+                          className="text-sm font-semibold text-slate-900"
+                        >
+                          {col.title} <span className="text-slate-500">({col.cards.length})</span>
                         </div>
-                      ) : null}
+                      </div>
+                      <button
+                        className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-800 hover:bg-slate-50"
+                        onClick={() => {
+                          setCreateColumn(col.id);
+                          setCreateTitle("");
+                          setCreateDetails("");
+                          setCreateOpen(true);
+                        }}
+                      >
+                        +
+                      </button>
                     </div>
-                  </SortableContext>
-                </ColumnDropZone>
-              </section>
-            ))}
+                  )}
+                >
+                  <ColumnDropZone id={col.id}>
+                    <SortableContext items={col.cards.map((c) => c.id)} strategy={verticalListSortingStrategy}>
+                      <div className="flex flex-col gap-2">
+                        {col.cards.map((card) => (
+                          <CardTile
+                            key={card.id}
+                            card={card}
+                            assigneeDisplay={assigneeDisplay(card.assignee)}
+                            assigneeUser={assigneeUser(card.assignee)}
+                            onClick={() => void onOpenCard(card.id)}
+                            isSelected={selectedCardId === card.id}
+                            cardRef={(el) => {
+                              if (el) cardTileRefs.current.set(card.id, el);
+                            }}
+                          />
+                        ))}
+                        {col.cards.length === 0 ? (
+                          <div className="rounded-lg border border-dashed border-slate-200 p-3 text-xs text-slate-500">
+                            Перетащите сюда карточку или добавьте новую.
+                          </div>
+                        ) : null}
+                      </div>
+                    </SortableContext>
+                  </ColumnDropZone>
+                </SortableColumnSection>
+              ))}
+            </SortableContext>
           </div>
 
           <DragOverlay>
@@ -2188,6 +2317,8 @@ function BoardsModal(props: { open: boolean; onClose: () => void; boards: Board[
   const [editingColumnId, setEditingColumnId] = useState<string | null>(null);
   const [editingColumnTitle, setEditingColumnTitle] = useState("");
 
+  const columnListSensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
+
   useEffect(() => {
     if (!props.open) return;
     setCreateName("");
@@ -2464,88 +2595,108 @@ function BoardsModal(props: { open: boolean; onClose: () => void; boards: Board[
           {columnsLoading ? (
             <div className="text-sm text-slate-500">Загрузка…</div>
           ) : (
-            <div className="space-y-2">
-              {boardColumns.map((col) => (
-                <div
-                  key={col.id}
-                  className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 bg-white p-2"
-                >
-                  {editingColumnId === col.id ? (
-                    <>
-                      <input
-                        className="min-w-[120px] flex-1 rounded-lg border border-slate-200 p-2 text-sm outline-none focus:border-[#246c7c]"
-                        value={editingColumnTitle}
-                        onChange={(e) => setEditingColumnTitle(e.target.value)}
-                        autoFocus
-                      />
-                      <button
-                        type="button"
-                        className="rounded-lg bg-[#246c7c] px-3 py-1.5 text-sm font-semibold text-white hover:opacity-90"
-                        onClick={() => {
-                          const t = editingColumnTitle.trim();
-                          if (!t) return;
-                          setColumnsError(null);
-                          void Api.updateBoardColumn(columnsBoardId, col.id, { title: t })
-                            .then(() => {
-                              setBoardColumns((prev) => prev.map((c) => (c.id === col.id ? { ...c, title: t } : c)));
+            <DndContext
+              sensors={columnListSensors}
+              collisionDetection={closestCorners}
+              onDragEnd={(e) => {
+                const activeId = e.active.id as string;
+                const overId = e.over?.id as string | undefined;
+                if (!overId || activeId === overId) return;
+                const fromIdx = boardColumns.findIndex((c) => c.id === activeId);
+                const toIdx = boardColumns.findIndex((c) => c.id === overId);
+                if (fromIdx < 0 || toIdx < 0) return;
+                const next = [...boardColumns];
+                const [removed] = next.splice(fromIdx, 1);
+                next.splice(toIdx, 0, removed);
+                setBoardColumns(next);
+                setColumnsError(null);
+                void Api.updateBoardColumn(columnsBoardId, activeId, { position: toIdx })
+                  .then(() => void props.onUpdated())
+                  .catch((err) => setColumnsError((err as Error).message));
+              }}
+            >
+              <SortableContext items={boardColumns.map((c) => c.id)} strategy={verticalListSortingStrategy}>
+                <div className="space-y-2">
+                  {boardColumns.map((col) => (
+                    <SortableBoardColumnRow key={col.id} col={col}>
+                      {editingColumnId === col.id ? (
+                        <>
+                          <input
+                            className="min-w-[120px] flex-1 rounded-lg border border-slate-200 p-2 text-sm outline-none focus:border-[#246c7c]"
+                            value={editingColumnTitle}
+                            onChange={(e) => setEditingColumnTitle(e.target.value)}
+                            autoFocus
+                          />
+                          <button
+                            type="button"
+                            className="rounded-lg bg-[#246c7c] px-3 py-1.5 text-sm font-semibold text-white hover:opacity-90"
+                            onClick={() => {
+                              const t = editingColumnTitle.trim();
+                              if (!t) return;
+                              setColumnsError(null);
+                              void Api.updateBoardColumn(columnsBoardId, col.id, { title: t })
+                                .then(() => {
+                                  setBoardColumns((prev) => prev.map((c) => (c.id === col.id ? { ...c, title: t } : c)));
+                                  setEditingColumnId(null);
+                                  void props.onUpdated();
+                                })
+                                .catch((e) => setColumnsError((e as Error).message));
+                            }}
+                          >
+                            Сохранить
+                          </button>
+                          <button
+                            type="button"
+                            className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-semibold text-slate-800 hover:bg-slate-50"
+                            onClick={() => {
                               setEditingColumnId(null);
-                              void props.onUpdated();
-                            })
-                            .catch((e) => setColumnsError((e as Error).message));
-                        }}
-                      >
-                        Сохранить
-                      </button>
-                      <button
-                        type="button"
-                        className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-semibold text-slate-800 hover:bg-slate-50"
-                        onClick={() => {
-                          setEditingColumnId(null);
-                          setEditingColumnTitle("");
-                        }}
-                      >
-                        Отмена
-                      </button>
-                    </>
-                  ) : (
-                    <>
-                      <span className="flex-1 text-sm font-medium text-slate-900">{col.title}</span>
-                      <span className="text-xs text-slate-500">
-                        {col._count?.cards ?? 0} карточек
-                      </span>
-                      <button
-                        type="button"
-                        className="rounded-lg border border-slate-200 px-2 py-1 text-xs font-semibold text-slate-800 hover:bg-slate-50"
-                        onClick={() => {
-                          setEditingColumnId(col.id);
-                          setEditingColumnTitle(col.title);
-                        }}
-                      >
-                        Переименовать
-                      </button>
-                      <IconButton
-                        title="Удалить колонку"
-                        variant="danger"
-                        disabled={boardColumns.length <= 1}
-                        onClick={() => {
-                          if (boardColumns.length <= 1) return;
-                          if (!confirm(`Удалить колонку "${col.title}"? Карточки будут перемещены в первую колонку.`)) return;
-                          setColumnsError(null);
-                          void Api.deleteBoardColumn(columnsBoardId, col.id)
-                            .then(() => {
-                              setBoardColumns((prev) => prev.filter((c) => c.id !== col.id));
-                              void props.onUpdated();
-                            })
-                            .catch((e) => setColumnsError((e as Error).message));
-                        }}
-                      >
-                        <IconTrash className="h-4 w-4" />
-                      </IconButton>
-                    </>
-                  )}
+                              setEditingColumnTitle("");
+                            }}
+                          >
+                            Отмена
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <span className="flex-1 text-sm font-medium text-slate-900">{col.title}</span>
+                          <span className="text-xs text-slate-500">
+                            {col._count?.cards ?? 0} карточек
+                          </span>
+                          <button
+                            type="button"
+                            className="rounded-lg border border-slate-200 px-2 py-1 text-xs font-semibold text-slate-800 hover:bg-slate-50"
+                            onClick={() => {
+                              setEditingColumnId(col.id);
+                              setEditingColumnTitle(col.title);
+                            }}
+                          >
+                            Переименовать
+                          </button>
+                          <IconButton
+                            title="Удалить колонку"
+                            variant="danger"
+                            disabled={boardColumns.length <= 1}
+                            onClick={() => {
+                              if (boardColumns.length <= 1) return;
+                              if (!confirm(`Удалить колонку "${col.title}"? Карточки будут перемещены в первую колонку.`)) return;
+                              setColumnsError(null);
+                              void Api.deleteBoardColumn(columnsBoardId, col.id)
+                                .then(() => {
+                                  setBoardColumns((prev) => prev.filter((c) => c.id !== col.id));
+                                  void props.onUpdated();
+                                })
+                                .catch((e) => setColumnsError((e as Error).message));
+                            }}
+                          >
+                            <IconTrash className="h-4 w-4" />
+                          </IconButton>
+                        </>
+                      )}
+                    </SortableBoardColumnRow>
+                  ))}
                 </div>
-              ))}
-            </div>
+              </SortableContext>
+            </DndContext>
           )}
           <div className="border-t border-slate-200 pt-3">
             <div className="text-xs font-semibold text-slate-600 mb-2">Добавить колонку</div>
