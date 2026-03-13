@@ -526,6 +526,74 @@ router.get(
   }),
 );
 
+/** Build SQL LIKE pattern from user query: * = any chars, escape % and _. By default wrap in % so plain text means "contains". */
+function searchQueryToLike(q: string): string {
+  const trimmed = q.trim();
+  if (!trimmed) return "%";
+  const escaped = trimmed
+    .split("")
+    .map((ch) => {
+      if (ch === "%" || ch === "_" || ch === "\\") return "\\" + ch;
+      return ch;
+    })
+    .join("");
+  let pattern = escaped.replace(/\*/g, "%");
+  if (!pattern.startsWith("%")) pattern = "%" + pattern;
+  if (!pattern.endsWith("%")) pattern = pattern + "%";
+  return pattern;
+}
+
+router.get(
+  "/board/search",
+  asyncHandler(async (req, res) => {
+    const boardId = (req as any).boardId as string;
+    const q = typeof req.query.q === "string" ? req.query.q : "";
+    const likePattern = searchQueryToLike(q);
+    if (likePattern === "%") {
+      res.json({ cards: [] });
+      return;
+    }
+    type Row = {
+      id: string;
+      description: string;
+      assignee: string | null;
+      dueDate: Date | null;
+      columnId: string;
+      columnTitle: string;
+      position: number;
+      importance: string;
+      paused: boolean;
+      commentCount: bigint;
+      attachmentCount: bigint;
+    };
+    const rows = await prisma.$queryRaw<Row[]>`
+      SELECT c.id, c.description, c.assignee, c."dueDate", c."columnId", c.position, c.importance, c.paused,
+             col.title AS "columnTitle",
+             (SELECT COUNT(*) FROM "Comment" WHERE "cardId" = c.id)::int AS "commentCount",
+             (SELECT COUNT(*) FROM "Attachment" WHERE "cardId" = c.id)::int AS "attachmentCount"
+      FROM "Card" c
+      JOIN "BoardColumn" col ON col.id = c."columnId"
+      WHERE c."boardId" = ${boardId} AND c.description ILIKE ${likePattern} ESCAPE '\\'
+      ORDER BY c."columnId", c.position
+    `;
+    res.json({
+      cards: rows.map((r) => ({
+        id: r.id,
+        description: r.description,
+        assignee: r.assignee,
+        dueDate: r.dueDate,
+        columnId: r.columnId,
+        columnTitle: r.columnTitle,
+        position: r.position,
+        importance: r.importance,
+        paused: r.paused,
+        commentCount: Number(r.commentCount),
+        attachmentCount: Number(r.attachmentCount),
+      })),
+    });
+  }),
+);
+
 router.get(
   "/cards/:id",
   asyncHandler(async (req, res) => {

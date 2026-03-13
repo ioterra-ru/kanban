@@ -83,6 +83,20 @@ export type CardParticipant = {
   user: Pick<User, "id" | "email" | "name" | "avatarPreset" | "avatarUploadName">;
 };
 
+export type CardSearchHit = {
+  id: string;
+  description: string;
+  assignee: string | null;
+  dueDate: string | null;
+  columnId: string;
+  columnTitle: string;
+  position: number;
+  importance: Importance;
+  paused: boolean;
+  commentCount: number;
+  attachmentCount: number;
+};
+
 export type CardDetail = {
   id: string;
   description: string;

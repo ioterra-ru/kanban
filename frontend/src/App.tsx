@@ -13,7 +13,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { format } from "date-fns";
 
 import { Api } from "./api";
-import type { Board, BoardColumn, CardDetail, CardSummary, ColumnId, Importance, User } from "./types";
+import type { Board, BoardColumn, CardDetail, CardSearchHit, CardSummary, ColumnId, Importance, User } from "./types";
 import { compactFileName } from "./utils/files";
 import { AVATAR_PRESETS, autoAvatarPreset, avatarSrc } from "./utils/avatar";
 
@@ -132,6 +132,8 @@ function CardTile(props: {
   assigneeDisplay?: string | null;
   assigneeUser?: { id: string; avatarUploadName?: string | null; avatarPreset?: string | null; name?: string } | null;
   onClick: () => void;
+  isSelected?: boolean;
+  cardRef?: (el: HTMLDivElement | null) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: props.card.id,
@@ -143,14 +145,20 @@ function CardTile(props: {
     transition,
   };
 
+  const setRefs = (el: HTMLDivElement | null) => {
+    setNodeRef(el);
+    props.cardRef?.(el);
+  };
+
   return (
     <div
-      ref={setNodeRef}
+      ref={setRefs}
       style={style}
       className={classNames(
         "group rounded-xl border-2 bg-white p-3 shadow-sm",
         cardBorderClass(props.card.importance),
         isDragging && "opacity-50",
+        props.isSelected && "ring-2 ring-[#246c7c] ring-offset-2",
       )}
       {...attributes}
       {...listeners}
@@ -230,6 +238,15 @@ function App() {
 
   const [cardOpen, setCardOpen] = useState(false);
   const [cardDetail, setCardDetail] = useState<CardDetail | null>(null);
+
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<CardSearchHit[] | null>(null);
+  const [searching, setSearching] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [selectedCardId, setSelectedCardId] = useState<string | null>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const columnSectionRefs = useRef<Map<string, HTMLElement>>(new Map());
+  const cardTileRefs = useRef<Map<string, HTMLDivElement>>(new Map());
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
@@ -331,6 +348,43 @@ function App() {
     })();
   }, [me?.user?.id, me?.twoFactorPassed, me?.user?.totpEnabled, me?.user?.mustChangePassword]);
 
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setSearchResults(null);
+      return;
+    }
+    const t = setTimeout(() => {
+      setSearching(true);
+      Api.searchCards(searchQuery.trim())
+        .then((r) => {
+          setSearchResults(r.cards);
+          setSearchOpen(true);
+        })
+        .catch(() => setSearchResults([]))
+        .finally(() => setSearching(false));
+    }, 300);
+    return () => clearTimeout(t);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setSearchOpen(false);
+    };
+    const onMouseDown = (e: MouseEvent) => {
+      const target = e.target as Node;
+      if (searchOpen && searchInputRef.current && !searchInputRef.current.contains(target)) {
+        const panel = (e.target as Element).closest?.("[data-search-panel]");
+        if (!panel) setSearchOpen(false);
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("mousedown", onMouseDown);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("mousedown", onMouseDown);
+    };
+  }, [searchOpen]);
+
   if (me === null) {
     return <div className="flex h-full items-center justify-center text-slate-700">Загрузка…</div>;
   }
@@ -402,6 +456,7 @@ function App() {
   const onOpenCard = async (id: string) => {
     try {
       setError(null);
+      setSelectedCardId(null);
       setCardOpen(true);
       const data = await Api.fetchCard(id);
       setCardDetail(data.card);
@@ -409,6 +464,21 @@ function App() {
       setError((e as Error).message);
       setCardOpen(false);
     }
+  };
+
+  const goToCard = (cardId: string, columnId: string) => {
+    setSearchOpen(false);
+    setSearchQuery("");
+    setSearchResults(null);
+    setSelectedCardId(cardId);
+    requestAnimationFrame(() => {
+      const colEl = columnSectionRefs.current.get(columnId);
+      const cardEl = cardTileRefs.current.get(cardId);
+      colEl?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+      setTimeout(() => {
+        cardEl?.scrollIntoView({ behavior: "smooth", block: "center" });
+      }, 100);
+    });
   };
 
   if (loading) {
@@ -463,6 +533,58 @@ function App() {
                 ))}
               </select>
             ) : null}
+            <div className="relative flex items-center">
+              <span className="pointer-events-none absolute left-3 text-slate-400" aria-hidden>
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </span>
+              <input
+                ref={searchInputRef}
+                type="text"
+                className="w-48 rounded-xl border border-slate-200 bg-white py-2 pl-9 pr-3 text-sm text-slate-800 outline-none focus:border-[#246c7c] placeholder:text-slate-400"
+                placeholder="Поиск карточки"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                onFocus={() => searchResults && setSearchOpen(true)}
+              />
+              {searching ? (
+                <span className="absolute right-3 text-xs text-slate-400">…</span>
+              ) : null}
+              {searchOpen && searchResults !== null ? (
+                <div
+                  data-search-panel
+                  className="absolute top-full left-0 z-50 mt-1 max-h-72 w-80 overflow-auto rounded-xl border border-slate-200 bg-white shadow-lg"
+                  onMouseDown={(e) => e.preventDefault()}
+                >
+                  {searchResults.length === 0 ? (
+                    <div className="p-3 text-sm text-slate-500">Ничего не найдено</div>
+                  ) : (
+                    <ul className="py-1">
+                      {searchResults.map((hit) => (
+                        <li key={hit.id}>
+                          <button
+                            type="button"
+                            className="w-full px-3 py-2 text-left text-sm hover:bg-slate-50"
+                            onClick={() => goToCard(hit.id, hit.columnId)}
+                          >
+                            <div className="truncate font-medium text-slate-900">{hit.description}</div>
+                            <div className="mt-0.5 text-xs text-slate-500">{hit.columnTitle}</div>
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  <button
+                    type="button"
+                    className="w-full border-t border-slate-100 px-3 py-2 text-xs text-slate-500 hover:bg-slate-50"
+                    onClick={() => setSearchOpen(false)}
+                  >
+                    Закрыть
+                  </button>
+                </div>
+              ) : null}
+            </div>
             <button
               className="rounded-xl bg-[#246c7c] px-4 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50"
               disabled={columns.length === 0}
@@ -496,7 +618,10 @@ function App() {
         <DndContext
           sensors={sensors}
           collisionDetection={closestCorners}
-          onDragStart={(e) => setActiveCardId(String(e.active.id))}
+          onDragStart={(e) => {
+            setActiveCardId(String(e.active.id));
+            setSelectedCardId(null);
+          }}
           onDragEnd={(e) => {
             const activeId = String(e.active.id);
             const overId = e.over?.id ? String(e.over.id) : null;
@@ -530,7 +655,13 @@ function App() {
         >
           <div className="flex min-w-[1200px] gap-4">
             {columns.map((col) => (
-              <section key={col.id} className="w-[340px] shrink-0">
+              <section
+                key={col.id}
+                ref={(el) => {
+                  if (el) columnSectionRefs.current.set(col.id, el);
+                }}
+                className="w-[340px] shrink-0"
+              >
                 <div className="mb-2 flex items-center justify-between gap-2">
                   <div className="text-sm font-semibold text-slate-900">
                     {col.title} <span className="text-slate-500">({col.cards.length})</span>
@@ -558,6 +689,10 @@ function App() {
                           assigneeDisplay={assigneeDisplay(card.assignee)}
                           assigneeUser={assigneeUser(card.assignee)}
                           onClick={() => void onOpenCard(card.id)}
+                          isSelected={selectedCardId === card.id}
+                          cardRef={(el) => {
+                            if (el) cardTileRefs.current.set(card.id, el);
+                          }}
                         />
                       ))}
                       {col.cards.length === 0 ? (
