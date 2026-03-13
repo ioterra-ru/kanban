@@ -798,6 +798,7 @@ function App() {
       <CardModal
         open={cardOpen}
         card={cardDetail}
+        columns={columns}
         onClose={() => {
           setCardOpen(false);
           setCardDetail(null);
@@ -2586,6 +2587,7 @@ function BoardsModal(props: { open: boolean; onClose: () => void; boards: Board[
 function CardModal(props: {
   open: boolean;
   card: CardDetail | null;
+  columns: BoardColumn[];
   onClose: () => void;
   onChanged: () => Promise<void>;
   onDeleted: () => Promise<void>;
@@ -2876,7 +2878,27 @@ function CardModal(props: {
           />
           <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">
             <span className="rounded-md bg-slate-100 px-2 py-0.5">Код: {card.id.slice(0, 8)}</span>
-            <span className="rounded-md bg-slate-100 px-2 py-0.5">Статус: {card.column.title}</span>
+            <span className="inline-flex items-center gap-1.5 rounded-md bg-slate-100 px-2 py-0.5">
+              <span className="shrink-0">Статус:</span>
+              <select
+                className="rounded border-0 bg-transparent py-0 pr-6 text-slate-700 outline-none focus:ring-1 focus:ring-slate-300"
+                value={card.column.id}
+                onChange={(e) => {
+                  const toColumnId = e.target.value;
+                  if (toColumnId === card.column.id) return;
+                  setSaveError(null);
+                  void Api.moveCard(card.id, { toColumnId, toIndex: 0 })
+                    .then(() => void props.onChanged())
+                    .catch((err) => setSaveError((err as Error).message));
+                }}
+              >
+                {props.columns.map((col) => (
+                  <option key={col.id} value={col.id}>
+                    {col.title}
+                  </option>
+                ))}
+              </select>
+            </span>
             <span className={classNames("rounded-md px-2 py-0.5 font-semibold", importanceBadge(importance))}>
               {importanceLabel(importance)}
             </span>
