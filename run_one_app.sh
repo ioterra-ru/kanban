@@ -1,13 +1,15 @@
 #!/bin/bash
 # Запуск приложения в контейнерах.
-# Требуются: docker/compose/.cont_one_app.env и docker/compose/.cont_one_app.secrets.env
-# (скопировать из .example и заполнить). Скрипт env-файлы не создаёт и не меняет.
+# Требуется docker/compose/.cont_one_app.env (скопировать из .example).
+# Файл .cont_one_app.secrets.env создаётся из примера при отсутствии; SESSION_SECRET
+# при необходимости генерируется скриптом (если нет или короче 16 символов).
 
 set -euo pipefail
 
 COMPOSE_ENV_DIR="docker/compose"
 ENV_FILE="$COMPOSE_ENV_DIR/.cont_one_app.env"
 SECRETS_FILE="$COMPOSE_ENV_DIR/.cont_one_app.secrets.env"
+SECRETS_EXAMPLE="$COMPOSE_ENV_DIR/.cont_one_app.secrets.env.example"
 
 if [ ! -f "$ENV_FILE" ]; then
   echo "Ошибка: не найден файл $ENV_FILE" >&2
@@ -15,10 +17,10 @@ if [ ! -f "$ENV_FILE" ]; then
   exit 1
 fi
 
+# Создать файл секретов из примера, если его нет
 if [ ! -f "$SECRETS_FILE" ]; then
-  echo "Ошибка: не найден файл $SECRETS_FILE" >&2
-  echo "Скопируйте docker/compose/.cont_one_app.secrets.env.example в $SECRETS_FILE и задайте SESSION_SECRET (и SMTP при необходимости)." >&2
-  exit 1
+  cp "$SECRETS_EXAMPLE" "$SECRETS_FILE"
+  echo "Создан $SECRETS_FILE из примера."
 fi
 
 # Проверка обязательных переменных в .cont_one_app.env
@@ -39,18 +41,28 @@ if [ -n "$missing" ]; then
   exit 1
 fi
 
-# Проверка SESSION_SECRET в секретах (backend требует длину >= 16 символов)
+# Проверка и при необходимости генерация SESSION_SECRET (backend требует длину >= 16 символов)
 set -a
 # shellcheck source=/dev/null
 source "$SECRETS_FILE"
 set +a
-if [ -z "${SESSION_SECRET:-}" ]; then
-  echo "Ошибка: в файле $SECRETS_FILE не задана переменная SESSION_SECRET" >&2
-  exit 1
-fi
-if [ "${#SESSION_SECRET}" -lt 16 ]; then
-  echo "Ошибка: SESSION_SECRET в $SECRETS_FILE должен быть не короче 16 символов (сейчас ${#SESSION_SECRET}). Задайте длинную случайную строку." >&2
-  exit 1
+if [ -z "${SESSION_SECRET:-}" ] || [ "${#SESSION_SECRET}" -lt 16 ]; then
+  if ! command -v openssl &>/dev/null; then
+    echo "Ошибка: для генерации SESSION_SECRET нужен openssl. Установите openssl или задайте SESSION_SECRET (не короче 16 символов) в $SECRETS_FILE" >&2
+    exit 1
+  fi
+  NEW_SECRET=$(openssl rand -hex 32)
+  if grep -q '^SESSION_SECRET=' "$SECRETS_FILE"; then
+    # Portable sed: replace line (sed -i.bak on both Linux and macOS)
+    sed "s/^SESSION_SECRET=.*/SESSION_SECRET=$NEW_SECRET/" "$SECRETS_FILE" > "${SECRETS_FILE}.tmp" && mv "${SECRETS_FILE}.tmp" "$SECRETS_FILE"
+  else
+    echo "SESSION_SECRET=$NEW_SECRET" >> "$SECRETS_FILE"
+  fi
+  echo "Сгенерирован и сохранён SESSION_SECRET в $SECRETS_FILE"
+  set -a
+  # shellcheck source=/dev/null
+  source "$SECRETS_FILE"
+  set +a
 fi
 
 # Генерация самоподписанного сертификата, если включён HTTPS и сертификатов ещё нет

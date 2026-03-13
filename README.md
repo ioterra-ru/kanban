@@ -12,23 +12,39 @@
 
 Веб‑приложение Kanban‑доски с карточками, участниками, вложениями, ролями, 2FA и несколькими досками.
 
-### Быстрый старт (рекомендуется): всё в контейнерах
+### Как запустить приложение
+
+**Вариант 1 — скриптом (рекомендуется):**
 
 ```bash
 ./run_one_app.sh
 ```
 
-При первом запуске скрипт создаёт `docker/compose/.cont_one_app.env` из примера (значения по умолчанию — для локального запуска). При необходимости отредактируйте этот файл и запустите снова.
+Нужны файлы `docker/compose/.cont_one_app.env` (скопировать из `.cont_one_app.env.example`) и `docker/compose/.cont_one_app.secrets.env` (скопировать из `.cont_one_app.secrets.env.example`; если файла нет, скрипт создаст его из примера). Если в секретах нет переменной **SESSION_SECRET** или она короче 16 символов, скрипт сгенерирует её (нужен установленный **openssl**) и сохранит в `.cont_one_app.secrets.env`. Без openssl скрипт выдаст ошибку с подсказкой.
 
-**Важно:** переменные берутся только из `docker/compose/.cont_one_app.env` и `.cont_one_app.secrets.env`. Команду `docker compose` нужно всегда вызывать **с этими файлами**, иначе переменные не подставятся и будет ошибка (например `invalid spec: :/etc/nginx/certs:ro`). Не запускайте `docker compose up -d` без указания env-файлов.
+**Вариант 2 — вручную через docker compose:**
 
-- Из корня проекта: `./run_one_app.sh` (рекомендуется) или  
-  `docker compose --env-file docker/compose/.cont_one_app.env --env-file docker/compose/.cont_one_app.secrets.env up -d`
-- **Логи backend** (при ошибке «backend is unhealthy» или для отладки): любую команду `docker compose` нужно вызывать с теми же env-файлами, иначе будет ошибка `SESSION_SECRET is required`. Пример:
-  ```bash
-  docker compose --env-file docker/compose/.cont_one_app.env --env-file docker/compose/.cont_one_app.secrets.env logs backend
-  ```
-  Или из корня проекта: `./scripts/logs-backend.sh` (можно передать опции, например `./scripts/logs-backend.sh --tail 100`).
+Сначала создайте `docker/compose/.cont_one_app.secrets.env` и задайте в нём **SESSION_SECRET** длиной не менее 16 символов. Сгенерировать можно так:
+
+```bash
+echo "SESSION_SECRET=$(openssl rand -hex 32)" >> docker/compose/.cont_one_app.secrets.env
+```
+
+(остальные переменные для SMTP при необходимости добавьте по образцу из `.cont_one_app.secrets.env.example`). Затем:
+
+```bash
+docker compose --env-file docker/compose/.cont_one_app.env --env-file docker/compose/.cont_one_app.secrets.env up -d --build
+```
+
+Переменные берутся только из этих env-файлов; любую команду `docker compose` (в том числе `logs`, `down`) нужно вызывать с теми же `--env-file`.
+
+### Быстрый старт: всё в контейнерах
+
+После первого запуска (скриптом или вручную) при необходимости отредактируйте `docker/compose/.cont_one_app.env` (порты, хосты, БД) и перезапустите.
+
+- **Логи backend** (при ошибке «backend is unhealthy» или для отладки): с теми же env-файлами, например  
+  `./scripts/logs-backend.sh` или  
+  `docker compose --env-file docker/compose/.cont_one_app.env --env-file docker/compose/.cont_one_app.secrets.env logs backend`
 
 После запуска UI и Adminer доступны по адресу из переменной `PUBLIC_BASE_URL` (по умолчанию `https://localhost:8443`). При `ENABLE_HTTPS=false` используется HTTP по порту из `FRONTEND_HTTP_PORT` (по умолчанию 8080). Самоподписанный сертификат при HTTPS создаётся автоматически в каталоге из `CERTS_PATH` (`./certs/` по умолчанию).
 
