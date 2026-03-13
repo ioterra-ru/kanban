@@ -1,4 +1,4 @@
-import type { BoardResponse, CardDetail, Importance } from "./types";
+import type { BoardResponse, CardDetail, CardSearchHit, Importance } from "./types";
 
 // In containers we use same-origin (nginx proxies /api and /uploads to backend),
 // so default base URL is empty (relative requests).
@@ -44,6 +44,10 @@ async function api<T>(path: string, init?: RequestInit): Promise<T> {
 
 export const Api = {
   fetchBoard: () => api<{ columns: BoardResponse["columns"] }>("/api/board"),
+
+  searchCards: (q: string) =>
+    api<{ cards: CardSearchHit[] }>(`/api/board/search?q=${encodeURIComponent(q)}`),
+
 
   fetchCard: (id: string) => api<{ card: CardDetail }>(`/api/cards/${id}`),
 
