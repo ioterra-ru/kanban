@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -81,12 +81,9 @@ function Modal(props: {
   const headerRight =
     props.headerRight ??
     (showClose ? (
-      <button
-        className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-800 hover:bg-slate-50"
-        onClick={props.onClose}
-      >
-        Закрыть
-      </button>
+      <IconButton title="Закрыть" onClick={props.onClose}>
+        <IconX className="h-5 w-5" />
+      </IconButton>
     ) : null);
 
   return (
@@ -318,11 +315,9 @@ function App() {
   const [columns, setColumns] = useState<BoardColumn[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [usersOpen, setUsersOpen] = useState(false);
   const [allUsers, setAllUsers] = useState<Array<Pick<User, "id" | "email" | "name" | "avatarPreset" | "avatarUploadName">> | null>(null);
   const [boards, setBoards] = useState<Board[]>([]);
   const [currentBoardId, setCurrentBoardId] = useState<string | null>(null);
-  const [boardsOpen, setBoardsOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
 
   const [activeCardId, setActiveCardId] = useState<string | null>(null);
@@ -945,25 +940,11 @@ function App() {
         allUsers={allUsers ?? []}
       />
 
-      <BoardsModal
-        open={boardsOpen}
-        onClose={() => setBoardsOpen(false)}
-        boards={boards}
-        onUpdated={async () => {
-          const b = await Api.listBoards();
-          setBoards(b.boards as any);
-          setCurrentBoardId(b.currentBoardId ?? null);
-          await reload();
-        }}
-      />
-
       <ProfileModal
         open={profileOpen}
         onClose={() => setProfileOpen(false)}
         me={me.user}
         boards={boards}
-        onOpenBoards={() => setBoardsOpen(true)}
-        onOpenUsers={() => setUsersOpen(true)}
         onUpdated={async () => {
           await loadMe();
           const b = await Api.listBoards();
@@ -977,8 +958,6 @@ function App() {
           ]);
         }}
       />
-
-      <UsersModal open={usersOpen} onClose={() => setUsersOpen(false)} />
     </div>
   );
 }
@@ -1489,22 +1468,23 @@ function ChangePasswordView(props: { onDone: () => Promise<void> | void }) {
   return (
     <CenteredShell title="Смена пароля">
       <div className="grid gap-3">
-        <div className="text-sm text-slate-600">Задайте новый пароль (минимум 8 символов).</div>
+        <div className="text-sm text-slate-600">Задайте новый пароль (минимум 8 символов). Изменения сохраняются при выходе из поля.</div>
         {error ? <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-800">{error}</div> : null}
         <input type="password" className="rounded-xl border border-slate-200 p-2 text-sm outline-none focus:border-[#246c7c]" placeholder="Новый пароль" value={p1} onChange={(e) => setP1(e.target.value)} />
-        <input type="password" className="rounded-xl border border-slate-200 p-2 text-sm outline-none focus:border-[#246c7c]" placeholder="Повторите пароль" value={p2} onChange={(e) => setP2(e.target.value)} />
-        <button
-          className="rounded-xl bg-[#246c7c] px-4 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50"
-          disabled={!p1 || p1 !== p2 || p1.length < 8}
-          onClick={() => {
+        <input
+          type="password"
+          className="rounded-xl border border-slate-200 p-2 text-sm outline-none focus:border-[#246c7c]"
+          placeholder="Повторите пароль"
+          value={p2}
+          onChange={(e) => setP2(e.target.value)}
+          onBlur={() => {
+            if (!p1 || p1 !== p2 || p1.length < 8) return;
             setError(null);
             void Api.changePassword({ newPassword: p1 })
               .then(() => props.onDone())
               .catch((e) => setError((e as Error).message));
           }}
-        >
-          Сохранить пароль
-        </button>
+        />
       </div>
     </CenteredShell>
   );
@@ -1585,7 +1565,7 @@ function TwoFaVerifyView(props: { onDone: () => Promise<void> | void }) {
   );
 }
 
-function UsersModal(props: { open: boolean; onClose: () => void }) {
+function UsersModal(props: { open: boolean; onClose: () => void; embedded?: boolean }) {
   const [users, setUsers] = useState<
     Array<{
       id: string;
@@ -1614,9 +1594,9 @@ function UsersModal(props: { open: boolean; onClose: () => void }) {
       .catch((e) => setError((e as Error).message));
   }, [props.open]);
 
-  return (
-    <>
-      <Modal open={props.open} title="Пользователи" onClose={props.onClose}>
+  if (!props.open) return null;
+
+  const content = (
         <div className="grid gap-3">
           {error ? <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-800">{error}</div> : null}
           <div className="text-xs text-slate-600">
@@ -1807,8 +1787,22 @@ function UsersModal(props: { open: boolean; onClose: () => void }) {
             </div>
           </div>
         </div>
-      </Modal>
+  );
 
+  if (props.embedded) {
+    return (
+      <>
+        {content}
+        <BoardAccessModal open={!!boardsForUser} user={boardsForUser} onClose={() => setBoardsForUser(null)} />
+      </>
+    );
+  }
+
+  return (
+    <>
+      <Modal open={true} title="Пользователи" onClose={props.onClose}>
+        {content}
+      </Modal>
       <BoardAccessModal open={!!boardsForUser} user={boardsForUser} onClose={() => setBoardsForUser(null)} />
     </>
   );
@@ -1856,12 +1850,18 @@ function BoardAccessModal(props: { open: boolean; user: { id: string; name: stri
                       checked={b.hasAccess}
                       onChange={(e) => {
                         const next = e.target.checked;
-                        setBoards((prev) => (prev ? prev.map((x) => (x.id === b.id ? { ...x, hasAccess: next } : x)) : prev));
-                        if (next && !defaultBoardId) setDefaultBoardId(b.id);
-                        if (!next && defaultBoardId === b.id) {
-                          const fallback = boards.find((x) => x.id !== b.id && x.hasAccess)?.id ?? "";
-                          setDefaultBoardId(fallback);
-                        }
+                        const nextBoards = (boards ?? []).map((x) => (x.id === b.id ? { ...x, hasAccess: next } : x));
+                        const nextIds = nextBoards.filter((x) => x.hasAccess).map((x) => x.id);
+                        let nextDefault = defaultBoardId;
+                        if (!next && defaultBoardId === b.id) nextDefault = nextBoards.find((x) => x.hasAccess)?.id ?? "";
+                        if (next && !defaultBoardId) nextDefault = b.id;
+                        setBoards(nextBoards);
+                        setDefaultBoardId(nextDefault);
+                        setError(null);
+                        setLoading(true);
+                        void Api.adminSetUserBoards(user.id, { boardIds: nextIds, defaultBoardId: nextDefault })
+                          .catch((e) => setError((e as Error).message))
+                          .finally(() => setLoading(false));
                       }}
                     />
                     <span className="text-sm text-slate-800">{b.name}</span>
@@ -1875,7 +1875,15 @@ function BoardAccessModal(props: { open: boolean; user: { id: string; name: stri
               <select
                 className="rounded-xl border border-slate-200 bg-white p-2 text-sm outline-none focus:border-[#246c7c]"
                 value={defaultBoardId}
-                onChange={(e) => setDefaultBoardId(e.target.value)}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  setDefaultBoardId(v);
+                  setError(null);
+                  setLoading(true);
+                  void Api.adminSetUserBoards(user.id, { boardIds: Array.from(selectedIds), defaultBoardId: v })
+                    .catch((e) => setError((e as Error).message))
+                    .finally(() => setLoading(false));
+                }}
               >
                 <option value="">—</option>
                 {(boards ?? [])
@@ -1887,23 +1895,6 @@ function BoardAccessModal(props: { open: boolean; user: { id: string; name: stri
                   ))}
               </select>
             </label>
-
-            <div className="flex justify-end">
-              <button
-                className="rounded-xl bg-[#246c7c] px-4 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50"
-                disabled={selectedIds.size === 0 || !defaultBoardId || !selectedIds.has(defaultBoardId)}
-                onClick={() => {
-                  setError(null);
-                  setLoading(true);
-                  void Api.adminSetUserBoards(user.id, { boardIds: Array.from(selectedIds), defaultBoardId })
-                    .then(() => props.onClose())
-                    .catch((e) => setError((e as Error).message))
-                    .finally(() => setLoading(false));
-                }}
-              >
-                Сохранить
-              </button>
-            </div>
           </>
         ) : null}
       </div>
@@ -1911,20 +1902,24 @@ function BoardAccessModal(props: { open: boolean; user: { id: string; name: stri
   );
 }
 
+type CabinetTab = "personal" | "smtp" | "boards" | "users";
+
 function ProfileModal(props: {
   open: boolean;
   onClose: () => void;
   me: User;
   boards: Board[];
-  onOpenBoards: () => void;
-  onOpenUsers: () => void;
   onUpdated: () => Promise<void>;
 }) {
+  const [cabinetTab, setCabinetTab] = useState<CabinetTab>("personal");
   const [name, setName] = useState(props.me.name);
   const [email, setEmail] = useState(props.me.email);
   const [defaultBoardId, setDefaultBoardId] = useState<string>(props.me.defaultBoardId ?? "");
   const [avatarPreset, setAvatarPreset] = useState<string>(props.me.avatarPreset ?? "");
   const [avatarUploadName, setAvatarUploadName] = useState<string | null>(props.me.avatarUploadName ?? null);
+  const [emailNotificationsEnabled, setEmailNotificationsEnabled] = useState(
+    props.me.emailNotificationsEnabled !== false,
+  );
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
@@ -1943,15 +1938,46 @@ function ProfileModal(props: {
   const [mailPass, setMailPass] = useState("");
   const [mailPassSet, setMailPassSet] = useState(false);
 
+  const isAdmin = props.me.role === "ADMIN";
+
+  const saveProfile = useCallback(
+    (updates: {
+      name?: string;
+      email?: string;
+      defaultBoardId?: string;
+      avatarPreset?: string | null;
+      emailNotificationsEnabled?: boolean;
+    }) => {
+      const payload: Parameters<typeof Api.updateProfile>[0] = {};
+      if (updates.name !== undefined && updates.name.trim() !== (props.me.name ?? "")) payload.name = updates.name.trim();
+      if (updates.email !== undefined && updates.email.trim() !== (props.me.email ?? "")) payload.email = updates.email.trim();
+      if (updates.defaultBoardId !== undefined && updates.defaultBoardId !== (props.me.defaultBoardId ?? "")) payload.defaultBoardId = updates.defaultBoardId || undefined;
+      const nextPreset = updates.avatarPreset !== undefined ? updates.avatarPreset : (avatarPreset || null);
+      const prevPreset = props.me.avatarPreset ? props.me.avatarPreset : null;
+      if (nextPreset !== prevPreset) payload.avatarPreset = nextPreset;
+      if (updates.emailNotificationsEnabled !== undefined && updates.emailNotificationsEnabled !== (props.me.emailNotificationsEnabled !== false)) payload.emailNotificationsEnabled = updates.emailNotificationsEnabled;
+      if (Object.keys(payload).length === 0) return;
+      setSaving(true);
+      setError(null);
+      void Api.updateProfile(payload)
+        .then(() => props.onUpdated())
+        .catch((e) => setError((e as Error).message))
+        .finally(() => setSaving(false));
+    },
+    [avatarPreset, props],
+  );
+
   useEffect(() => {
     if (!props.open) return;
+    setCabinetTab("personal");
     setName(props.me.name);
     setEmail(props.me.email);
     setDefaultBoardId(props.me.defaultBoardId ?? "");
     setAvatarPreset(props.me.avatarPreset ?? "");
     setAvatarUploadName(props.me.avatarUploadName ?? null);
+    setEmailNotificationsEnabled(props.me.emailNotificationsEnabled !== false);
     setError(null);
-  }, [props.open, props.me.avatarPreset, props.me.avatarUploadName, props.me.defaultBoardId, props.me.email, props.me.id, props.me.name]);
+  }, [props.open, props.me.avatarPreset, props.me.avatarUploadName, props.me.defaultBoardId, props.me.email, props.me.emailNotificationsEnabled, props.me.id, props.me.name]);
 
   useEffect(() => {
     if (!props.open) return;
@@ -1975,11 +2001,293 @@ function ProfileModal(props: {
       .finally(() => setMailLoading(false));
   }, [props.open, props.me.role]);
 
+  const saveMailSettingsBlur = useCallback(() => {
+    if (!mailEnabled || mailLoading || mailSaving) return;
+    setError(null);
+    setMailTest(null);
+    setMailSaving(true);
+    const portNum = Number(mailPort);
+    const host = mailHost.trim() || null;
+    const user = mailUser.trim() || null;
+    const from = mailFrom.trim() || null;
+    void Api.updateMailSettings({
+      enabled: true,
+      host,
+      port: Number.isFinite(portNum) ? portNum : null,
+      secure: mailSecure,
+      user,
+      from,
+      ...(mailPass.trim() ? { pass: mailPass.trim() } : {}),
+    })
+      .then((r) => {
+        setMailPass("");
+        setMailPassSet(!!r.settings.passSet);
+      })
+      .catch((e) => setError((e as Error).message))
+      .finally(() => setMailSaving(false));
+  }, [mailEnabled, mailFrom, mailHost, mailLoading, mailPass, mailPort, mailSaving, mailSecure, mailUser]);
+
   if (!props.open) return null;
 
   return (
     <Modal open={true} title="Личный кабинет" onClose={props.onClose}>
       <div className="grid gap-3">
+        <div className="flex flex-wrap gap-1 border-b border-slate-200 pb-2">
+          <button
+            type="button"
+            className={classNames(
+              "rounded-xl px-3 py-2 text-sm font-semibold",
+              cabinetTab === "personal"
+                ? "bg-[#246c7c] text-white"
+                : "bg-slate-100 text-slate-700 hover:bg-slate-200",
+            )}
+            onClick={() => setCabinetTab("personal")}
+          >
+            Личные данные
+          </button>
+          {isAdmin ? (
+            <>
+              <button
+                type="button"
+                className={classNames(
+                  "rounded-xl px-3 py-2 text-sm font-semibold",
+                  cabinetTab === "smtp"
+                    ? "bg-[#246c7c] text-white"
+                    : "bg-slate-100 text-slate-700 hover:bg-slate-200",
+                )}
+                onClick={() => setCabinetTab("smtp")}
+              >
+                Настройки SMTP
+              </button>
+              <button
+                type="button"
+                className={classNames(
+                  "rounded-xl px-3 py-2 text-sm font-semibold",
+                  cabinetTab === "boards"
+                    ? "bg-[#246c7c] text-white"
+                    : "bg-slate-100 text-slate-700 hover:bg-slate-200",
+                )}
+                onClick={() => setCabinetTab("boards")}
+              >
+                Доски
+              </button>
+              <button
+                type="button"
+                className={classNames(
+                  "rounded-xl px-3 py-2 text-sm font-semibold",
+                  cabinetTab === "users"
+                    ? "bg-[#246c7c] text-white"
+                    : "bg-slate-100 text-slate-700 hover:bg-slate-200",
+                )}
+                onClick={() => setCabinetTab("users")}
+              >
+                Пользователи
+              </button>
+            </>
+          ) : null}
+        </div>
+
+        {cabinetTab === "boards" ? (
+          <BoardsModal
+            open={true}
+            onClose={() => setCabinetTab("personal")}
+            boards={props.boards}
+            onUpdated={props.onUpdated}
+            embedded
+          />
+        ) : cabinetTab === "users" ? (
+          <UsersModal open={true} onClose={() => setCabinetTab("personal")} embedded />
+        ) : cabinetTab === "smtp" ? (
+          <div className="grid gap-3">
+            {error ? <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-800">{error}</div> : null}
+            <div className="grid gap-2 rounded-2xl border border-slate-200 bg-slate-50 p-3">
+              <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Настройки SMTP (для всех уведомлений)</div>
+              <div className="rounded-xl border border-slate-200 bg-white p-3">
+                <label className="flex items-center gap-2 text-sm text-slate-800">
+                  <input
+                    type="checkbox"
+                    checked={mailEnabled}
+                    disabled={mailLoading || mailSaving}
+                    onChange={(e) => {
+                      const v = e.target.checked;
+                      setMailEnabled(v);
+                      setError(null);
+                      setMailTest(null);
+                      setMailSaving(true);
+                      if (v) {
+                        const portNum = Number(mailPort);
+                        const host = mailHost.trim() || null;
+                        const user = mailUser.trim() || null;
+                        const from = mailFrom.trim() || null;
+                        void Api.updateMailSettings({
+                          enabled: true,
+                          host,
+                          port: Number.isFinite(portNum) ? portNum : null,
+                          secure: mailSecure,
+                          user,
+                          from,
+                          ...(mailPass.trim() ? { pass: mailPass.trim() } : {}),
+                        })
+                          .then((r) => {
+                            setMailPass("");
+                            setMailPassSet(!!r.settings.passSet);
+                          })
+                          .catch((e) => setError((e as Error).message))
+                          .finally(() => setMailSaving(false));
+                      } else {
+                        void Api.updateMailSettings({ enabled: false })
+                          .catch((e) => setError((e as Error).message))
+                          .finally(() => setMailSaving(false));
+                      }
+                    }}
+                  />
+                  <span>Включить отправку писем (сервер)</span>
+                </label>
+
+                {mailEnabled ? (
+                  <div className="mt-3 grid gap-2">
+                    <div className="grid gap-2 md:grid-cols-2">
+                      <label className="grid gap-1">
+                        <div className="text-xs text-slate-600">SMTP host</div>
+                        <input
+                          className="rounded-xl border border-slate-200 p-2 text-sm outline-none focus:border-[#246c7c]"
+                          value={mailHost}
+                          onChange={(e) => setMailHost(e.target.value)}
+                          onBlur={saveMailSettingsBlur}
+                          placeholder="smtp.example.com"
+                          disabled={mailLoading || mailSaving || mailTesting}
+                        />
+                      </label>
+                      <label className="grid gap-1">
+                        <div className="text-xs text-slate-600">Порт</div>
+                        <input
+                          className="rounded-xl border border-slate-200 p-2 text-sm outline-none focus:border-[#246c7c]"
+                          value={mailPort}
+                          onChange={(e) => setMailPort(e.target.value)}
+                          onBlur={saveMailSettingsBlur}
+                          placeholder="465"
+                          inputMode="numeric"
+                          disabled={mailLoading || mailSaving || mailTesting}
+                        />
+                      </label>
+                    </div>
+                    <label className="flex items-center gap-2 text-sm text-slate-800">
+                      <input
+                        type="checkbox"
+                        checked={mailSecure}
+                        disabled={mailLoading || mailSaving || mailTesting}
+                        onChange={(e) => {
+                          setMailSecure(e.target.checked);
+                          if (mailLoading || mailSaving) return;
+                          setError(null);
+                          setMailSaving(true);
+                          const portNum = Number(mailPort);
+                          const host = mailHost.trim() || null;
+                          const user = mailUser.trim() || null;
+                          const from = mailFrom.trim() || null;
+                          void Api.updateMailSettings({
+                            enabled: true,
+                            host,
+                            port: Number.isFinite(portNum) ? portNum : null,
+                            secure: e.target.checked,
+                            user,
+                            from,
+                            ...(mailPass.trim() ? { pass: mailPass.trim() } : {}),
+                          })
+                            .then((r) => {
+                              setMailPass("");
+                              setMailPassSet(!!r.settings.passSet);
+                            })
+                            .catch((e) => setError((e as Error).message))
+                            .finally(() => setMailSaving(false));
+                        }}
+                      />
+                      <span>SSL/TLS (secure)</span>
+                    </label>
+                    <div className="grid gap-2 md:grid-cols-2">
+                      <label className="grid gap-1">
+                        <div className="text-xs text-slate-600">Логин</div>
+                        <input
+                          className="rounded-xl border border-slate-200 p-2 text-sm outline-none focus:border-[#246c7c]"
+                          value={mailUser}
+                          onChange={(e) => setMailUser(e.target.value)}
+                          onBlur={saveMailSettingsBlur}
+                          placeholder="user@example.com"
+                          disabled={mailLoading || mailSaving || mailTesting}
+                        />
+                      </label>
+                      <label className="grid gap-1">
+                        <div className="text-xs text-slate-600">Пароль</div>
+                        <input
+                          type="password"
+                          className="rounded-xl border border-slate-200 p-2 text-sm outline-none focus:border-[#246c7c]"
+                          value={mailPass}
+                          onChange={(e) => setMailPass(e.target.value)}
+                          onBlur={saveMailSettingsBlur}
+                          placeholder={mailPassSet ? "•••••••• (сохранён)" : "Введите пароль"}
+                          disabled={mailLoading || mailSaving || mailTesting}
+                        />
+                      </label>
+                    </div>
+                    <label className="grid gap-1">
+                      <div className="text-xs text-slate-600">From</div>
+                      <input
+                        className="rounded-xl border border-slate-200 p-2 text-sm outline-none focus:border-[#246c7c]"
+                        value={mailFrom}
+                        onChange={(e) => setMailFrom(e.target.value)}
+                        onBlur={saveMailSettingsBlur}
+                        placeholder="Имя <no-reply@example.com>"
+                        disabled={mailLoading || mailSaving || mailTesting}
+                      />
+                    </label>
+
+                    {mailTest ? (
+                      <div
+                        className={classNames(
+                          "rounded-xl border px-3 py-2 text-sm",
+                          mailTest.ok ? "border-emerald-200 bg-emerald-50 text-emerald-900" : "border-rose-200 bg-rose-50 text-rose-800",
+                        )}
+                      >
+                        {mailTest.message}
+                      </div>
+                    ) : null}
+
+                    <div className="flex flex-wrap justify-end gap-2">
+                      <button
+                        type="button"
+                        className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50 disabled:opacity-50"
+                        disabled={mailLoading || mailSaving || mailTesting}
+                        onClick={() => {
+                          setError(null);
+                          setMailTest(null);
+                          setMailTesting(true);
+                          const portNum = Number(mailPort);
+                          void Api.testMailSettings({
+                            host: mailHost.trim() || null,
+                            port: Number.isFinite(portNum) ? portNum : null,
+                            secure: mailSecure,
+                            user: mailUser.trim() || null,
+                            from: mailFrom.trim() || null,
+                            ...(mailPass.trim() ? { pass: mailPass.trim() } : {}),
+                          })
+                            .then((r) => {
+                              if (r.ok) setMailTest({ ok: true, message: "Соединение установлено. Аутентификация успешна." });
+                              else setMailTest({ ok: false, message: `Ошибка: ${r.error ?? "неизвестно"}` });
+                            })
+                            .catch((e) => setMailTest({ ok: false, message: `Ошибка: ${(e as Error).message}` }))
+                            .finally(() => setMailTesting(false));
+                        }}
+                      >
+                        {mailTesting ? "Проверка…" : "Проверить соединение"}
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          </div>
+        ) : (
+          <>
         {error ? <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-800">{error}</div> : null}
         <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-3">
           <AvatarImg user={{ ...props.me, avatarPreset, avatarUploadName }} size={64} />
@@ -1990,7 +2298,10 @@ function ProfileModal(props: {
                 userId={props.me.id}
                 value={avatarPreset}
                 disabled={saving || uploadingAvatar}
-                onChange={(v) => setAvatarPreset(v)}
+                onChange={(v) => {
+                  setAvatarPreset(v);
+                  saveProfile({ avatarPreset: v || null });
+                }}
               />
 
               <input
@@ -2046,217 +2357,51 @@ function ProfileModal(props: {
           </div>
         </div>
 
-        {props.me.role === "ADMIN" ? (
-          <div className="grid gap-2 rounded-2xl border border-slate-200 bg-slate-50 p-3">
-            <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Администрирование</div>
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50"
-                onClick={() => {
-                  props.onClose();
-                  props.onOpenBoards();
-                }}
-              >
-                Доски
-              </button>
-              <button
-                type="button"
-                className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50"
-                onClick={() => {
-                  props.onClose();
-                  props.onOpenUsers();
-                }}
-              >
-                Пользователи
-              </button>
-            </div>
-
-            <div className="mt-1 rounded-xl border border-slate-200 bg-white p-3">
-              <div className="mb-2 text-xs font-semibold text-slate-600">Почта</div>
-              <label className="flex items-center gap-2 text-sm text-slate-800">
-                <input
-                  type="checkbox"
-                  checked={mailEnabled}
-                  disabled={mailLoading || mailSaving}
-                  onChange={(e) => setMailEnabled(e.target.checked)}
-                />
-                <span>Использовать уведомления по почте</span>
-              </label>
-
-              {mailEnabled ? (
-                <div className="mt-3 grid gap-2">
-                  <div className="grid gap-2 md:grid-cols-2">
-                    <label className="grid gap-1">
-                      <div className="text-xs text-slate-600">SMTP host</div>
-                      <input
-                        className="rounded-xl border border-slate-200 p-2 text-sm outline-none focus:border-[#246c7c]"
-                        value={mailHost}
-                        onChange={(e) => setMailHost(e.target.value)}
-                        placeholder="smtp.example.com"
-                        disabled={mailLoading || mailSaving || mailTesting}
-                      />
-                    </label>
-                    <label className="grid gap-1">
-                      <div className="text-xs text-slate-600">Порт</div>
-                      <input
-                        className="rounded-xl border border-slate-200 p-2 text-sm outline-none focus:border-[#246c7c]"
-                        value={mailPort}
-                        onChange={(e) => setMailPort(e.target.value)}
-                        placeholder="465"
-                        inputMode="numeric"
-                        disabled={mailLoading || mailSaving || mailTesting}
-                      />
-                    </label>
-                  </div>
-                  <label className="flex items-center gap-2 text-sm text-slate-800">
-                    <input
-                      type="checkbox"
-                      checked={mailSecure}
-                      disabled={mailLoading || mailSaving || mailTesting}
-                      onChange={(e) => setMailSecure(e.target.checked)}
-                    />
-                    <span>SSL/TLS (secure)</span>
-                  </label>
-                  <div className="grid gap-2 md:grid-cols-2">
-                    <label className="grid gap-1">
-                      <div className="text-xs text-slate-600">Логин</div>
-                      <input
-                        className="rounded-xl border border-slate-200 p-2 text-sm outline-none focus:border-[#246c7c]"
-                        value={mailUser}
-                        onChange={(e) => setMailUser(e.target.value)}
-                        placeholder="user@example.com"
-                        disabled={mailLoading || mailSaving || mailTesting}
-                      />
-                    </label>
-                    <label className="grid gap-1">
-                      <div className="text-xs text-slate-600">Пароль</div>
-                      <input
-                        type="password"
-                        className="rounded-xl border border-slate-200 p-2 text-sm outline-none focus:border-[#246c7c]"
-                        value={mailPass}
-                        onChange={(e) => setMailPass(e.target.value)}
-                        placeholder={mailPassSet ? "•••••••• (сохранён)" : "Введите пароль"}
-                        disabled={mailLoading || mailSaving || mailTesting}
-                      />
-                    </label>
-                  </div>
-                  <label className="grid gap-1">
-                    <div className="text-xs text-slate-600">From</div>
-                    <input
-                      className="rounded-xl border border-slate-200 p-2 text-sm outline-none focus:border-[#246c7c]"
-                      value={mailFrom}
-                      onChange={(e) => setMailFrom(e.target.value)}
-                      placeholder="Имя <no-reply@example.com>"
-                      disabled={mailLoading || mailSaving || mailTesting}
-                    />
-                  </label>
-
-                  {mailTest ? (
-                    <div
-                      className={classNames(
-                        "rounded-xl border px-3 py-2 text-sm",
-                        mailTest.ok ? "border-emerald-200 bg-emerald-50 text-emerald-900" : "border-rose-200 bg-rose-50 text-rose-800",
-                      )}
-                    >
-                      {mailTest.message}
-                    </div>
-                  ) : null}
-
-                  <div className="flex flex-wrap justify-end gap-2">
-                    <button
-                      type="button"
-                      className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50 disabled:opacity-50"
-                      disabled={mailLoading || mailSaving || mailTesting}
-                      onClick={() => {
-                        setError(null);
-                        setMailTest(null);
-                        setMailTesting(true);
-                        const portNum = Number(mailPort);
-                        void Api.testMailSettings({
-                          host: mailHost.trim(),
-                          port: Number.isFinite(portNum) ? portNum : null,
-                          secure: mailSecure,
-                          user: mailUser.trim(),
-                          from: mailFrom.trim(),
-                          ...(mailPass.trim() ? { pass: mailPass } : {}),
-                        })
-                          .then((r) => {
-                            if (r.ok) setMailTest({ ok: true, message: "Соединение установлено. Аутентификация успешна." });
-                            else setMailTest({ ok: false, message: `Ошибка: ${r.error ?? "неизвестно"}` });
-                          })
-                          .catch((e) => setMailTest({ ok: false, message: `Ошибка: ${(e as Error).message}` }))
-                          .finally(() => setMailTesting(false));
-                      }}
-                    >
-                      {mailTesting ? "Проверка…" : "Проверить соединение"}
-                    </button>
-                    <button
-                      type="button"
-                      className="rounded-xl bg-[#246c7c] px-4 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50"
-                      disabled={mailLoading || mailSaving || mailTesting}
-                      onClick={() => {
-                        setError(null);
-                        setMailTest(null);
-                        setMailSaving(true);
-                        const portNum = Number(mailPort);
-                        void Api.updateMailSettings({
-                          enabled: true,
-                          host: mailHost.trim(),
-                          port: Number.isFinite(portNum) ? portNum : null,
-                          secure: mailSecure,
-                          user: mailUser.trim(),
-                          from: mailFrom.trim(),
-                          ...(mailPass.trim() ? { pass: mailPass } : {}),
-                        })
-                          .then((r) => {
-                            setMailPass("");
-                            setMailPassSet(!!r.settings.passSet);
-                          })
-                          .catch((e) => setError((e as Error).message))
-                          .finally(() => setMailSaving(false));
-                      }}
-                    >
-                      Сохранить настройки почты
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <div className="mt-2 flex justify-end">
-                  <button
-                    type="button"
-                    className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50 disabled:opacity-50"
-                    disabled={mailLoading || mailSaving}
-                    onClick={() => {
-                      setError(null);
-                      setMailSaving(true);
-                      void Api.updateMailSettings({ enabled: false })
-                        .catch((e) => setError((e as Error).message))
-                        .finally(() => setMailSaving(false));
-                    }}
-                  >
-                    Сохранить (выключить)
-                  </button>
-                </div>
-              )}
-            </div>
-          </div>
-        ) : null}
+        <div className="rounded-2xl border border-slate-200 bg-white p-3">
+          <label className="flex items-center gap-2 text-sm text-slate-800">
+            <input
+              type="checkbox"
+              checked={emailNotificationsEnabled}
+              disabled={saving}
+              onChange={(e) => {
+                const v = e.target.checked;
+                setEmailNotificationsEnabled(v);
+                saveProfile({ emailNotificationsEnabled: v });
+              }}
+            />
+            <span>Использовать уведомления по почте</span>
+          </label>
+          <div className="mt-1 text-xs text-slate-500">Получать письма об изменениях в карточках, где вы участник.</div>
+        </div>
 
         <label className="grid gap-1">
           <div className="text-xs text-slate-600">Имя</div>
-          <input className="rounded-xl border border-slate-200 p-2 text-sm outline-none focus:border-[#246c7c]" value={name} onChange={(e) => setName(e.target.value)} />
+          <input
+            className="rounded-xl border border-slate-200 p-2 text-sm outline-none focus:border-[#246c7c]"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            onBlur={() => name.trim() && saveProfile({ name })}
+          />
         </label>
         <label className="grid gap-1">
           <div className="text-xs text-slate-600">Email</div>
-          <input className="rounded-xl border border-slate-200 p-2 text-sm outline-none focus:border-[#246c7c]" value={email} onChange={(e) => setEmail(e.target.value)} />
+          <input
+            className="rounded-xl border border-slate-200 p-2 text-sm outline-none focus:border-[#246c7c]"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            onBlur={() => email.trim() && saveProfile({ email })}
+          />
         </label>
         <label className="grid gap-1">
           <div className="text-xs text-slate-600">Доска по умолчанию</div>
           <select
             className="rounded-xl border border-slate-200 bg-white p-2 text-sm outline-none focus:border-[#246c7c]"
             value={defaultBoardId}
-            onChange={(e) => setDefaultBoardId(e.target.value)}
+            onChange={(e) => {
+              const v = e.target.value;
+              setDefaultBoardId(v);
+              saveProfile({ defaultBoardId: v });
+            }}
           >
             {props.boards.map((b) => (
               <option key={b.id} value={b.id}>
@@ -2265,38 +2410,20 @@ function ProfileModal(props: {
             ))}
           </select>
         </label>
-
-        <div className="flex justify-end">
-          <button
-            className="rounded-xl bg-[#246c7c] px-4 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50"
-            disabled={saving || uploadingAvatar || !name.trim() || !email.trim()}
-            onClick={() => {
-              setSaving(true);
-              setError(null);
-              const payload: { name?: string; email?: string; defaultBoardId?: string; avatarPreset?: string | null } = {};
-              if (name.trim() !== (props.me.name ?? "")) payload.name = name.trim();
-              if (email.trim() !== (props.me.email ?? "")) payload.email = email.trim();
-              if (defaultBoardId && defaultBoardId !== (props.me.defaultBoardId ?? "")) payload.defaultBoardId = defaultBoardId;
-              const nextAvatarPreset = avatarPreset ? avatarPreset : null;
-              const prevAvatarPreset = props.me.avatarPreset ? props.me.avatarPreset : null;
-              if (nextAvatarPreset !== prevAvatarPreset) payload.avatarPreset = nextAvatarPreset;
-
-              void Api.updateProfile(payload)
-                .then(() => props.onUpdated())
-                .then(() => props.onClose())
-                .catch((e) => setError((e as Error).message))
-                .finally(() => setSaving(false));
-            }}
-          >
-            Сохранить
-          </button>
-        </div>
+          </>
+        )}
       </div>
     </Modal>
   );
 }
 
-function BoardsModal(props: { open: boolean; onClose: () => void; boards: Board[]; onUpdated: () => Promise<void> }) {
+function BoardsModal(props: {
+  open: boolean;
+  onClose: () => void;
+  boards: Board[];
+  onUpdated: () => Promise<void>;
+  embedded?: boolean;
+}) {
   const DEFAULT_BOARD_ID = "00000000-0000-0000-0000-000000000001";
   const [createName, setCreateName] = useState("");
   const [createDescription, setCreateDescription] = useState("");
@@ -2364,18 +2491,7 @@ function BoardsModal(props: { open: boolean; onClose: () => void; boards: Board[
 
   const columnsBoard = columnsBoardId ? props.boards.find((x) => x.id === columnsBoardId) : null;
 
-  return (
-    <>
-    <Modal
-      open={true}
-      title="Доски"
-      onClose={props.onClose}
-      headerRight={
-        <IconButton title="Закрыть" onClick={props.onClose}>
-          <IconX className="h-5 w-5" />
-        </IconButton>
-      }
-    >
+  const content = (
       <div className="grid gap-3">
         {error ? <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-800">{error}</div> : null}
         <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Новая доска</div>
@@ -2447,15 +2563,6 @@ function BoardsModal(props: { open: boolean; onClose: () => void; boards: Board[
               const e =
                 edit[b.id] ?? { name: b.name, description: (b.description ?? "") as string, memberIds: (b.memberIds ?? []) as string[] };
 
-              const membersChanged =
-                usersForMembers.length > 0 && b.memberIds
-                  ? JSON.stringify([...e.memberIds].sort()) !== JSON.stringify([...(b.memberIds ?? [])].sort())
-                  : false;
-              const changed =
-                e.name.trim() !== b.name ||
-                (e.description.trim() || "") !== ((b.description ?? "") as string) ||
-                membersChanged;
-
               return (
                 <div key={b.id} className="bg-white">
                   <button
@@ -2479,6 +2586,17 @@ function BoardsModal(props: { open: boolean; onClose: () => void; boards: Board[
                             onChange={(ev) =>
                               setEdit((prev) => ({ ...prev, [b.id]: { ...(prev[b.id] ?? e), name: ev.target.value } }))
                             }
+                            onBlur={() => {
+                              if (!e.name.trim()) return;
+                              setError(null);
+                              void Api.updateBoard(b.id, {
+                                name: e.name.trim(),
+                                description: (e.description ?? "").trim() || null,
+                                ...(usersForMembers.length ? { memberIds: e.memberIds } : {}),
+                              })
+                                .then(() => props.onUpdated())
+                                .catch((err) => setError((err as Error).message));
+                            }}
                           />
                         </label>
 
@@ -2493,6 +2611,16 @@ function BoardsModal(props: { open: boolean; onClose: () => void; boards: Board[
                                 [b.id]: { ...(prev[b.id] ?? e), description: ev.target.value },
                               }))
                             }
+                            onBlur={() => {
+                              setError(null);
+                              void Api.updateBoard(b.id, {
+                                name: (e.name ?? "").trim(),
+                                description: (e.description ?? "").trim() || null,
+                                ...(usersForMembers.length ? { memberIds: e.memberIds } : {}),
+                              })
+                                .then(() => props.onUpdated())
+                                .catch((err) => setError((err as Error).message));
+                            }}
                           />
                         </label>
 
@@ -2506,12 +2634,21 @@ function BoardsModal(props: { open: boolean; onClose: () => void; boards: Board[
                                     <input
                                       type="checkbox"
                                       checked={(e.memberIds ?? []).includes(u.id)}
-                                      onChange={() =>
+                                      onChange={() => {
+                                        const nextMemberIds = toggleId(e.memberIds, u.id);
                                         setEdit((prev) => ({
                                           ...prev,
-                                          [b.id]: { ...(prev[b.id] ?? e), memberIds: toggleId((prev[b.id] ?? e).memberIds, u.id) },
-                                        }))
-                                      }
+                                          [b.id]: { ...(prev[b.id] ?? e), memberIds: nextMemberIds },
+                                        }));
+                                        setError(null);
+                                        void Api.updateBoard(b.id, {
+                                          name: (e.name ?? "").trim(),
+                                          description: (e.description ?? "").trim() || null,
+                                          memberIds: nextMemberIds,
+                                        })
+                                          .then(() => props.onUpdated())
+                                          .catch((err) => setError((err as Error).message));
+                                      }}
                                     />
                                     <AvatarImg user={u} size={20} />
                                     <span className="truncate">{u.name || u.email}</span>
@@ -2533,22 +2670,6 @@ function BoardsModal(props: { open: boolean; onClose: () => void; boards: Board[
                             }}
                           >
                             Колонки
-                          </button>
-                          <button
-                            className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50 disabled:opacity-50"
-                            disabled={!e.name.trim() || !changed}
-                            onClick={() => {
-                              setError(null);
-                              void Api.updateBoard(b.id, {
-                                name: e.name.trim(),
-                                description: e.description.trim() ? e.description.trim() : null,
-                                ...(usersForMembers.length ? { memberIds: e.memberIds } : {}),
-                              })
-                                .then(() => props.onUpdated())
-                                .catch((err) => setError((err as Error).message));
-                            }}
-                          >
-                            Сохранить
                           </button>
                           <IconButton
                             title={b.id === DEFAULT_BOARD_ID ? "Нельзя удалить основную доску" : "Удалить доску"}
@@ -2574,9 +2695,12 @@ function BoardsModal(props: { open: boolean; onClose: () => void; boards: Board[
           </div>
         </div>
       </div>
-    </Modal>
+  );
 
-    {columnsBoardId && columnsBoard && (
+  const columnsModal =
+    columnsBoardId &&
+    columnsBoard &&
+    (
       <Modal
         open={true}
         title={`Колонки: ${columnsBoard.name}`}
@@ -2625,26 +2749,25 @@ function BoardsModal(props: { open: boolean; onClose: () => void; boards: Board[
                             className="min-w-[120px] flex-1 rounded-lg border border-slate-200 p-2 text-sm outline-none focus:border-[#246c7c]"
                             value={editingColumnTitle}
                             onChange={(e) => setEditingColumnTitle(e.target.value)}
-                            autoFocus
-                          />
-                          <button
-                            type="button"
-                            className="rounded-lg bg-[#246c7c] px-3 py-1.5 text-sm font-semibold text-white hover:opacity-90"
-                            onClick={() => {
+                            onBlur={() => {
                               const t = editingColumnTitle.trim();
-                              if (!t) return;
+                              if (!t) {
+                                setEditingColumnId(null);
+                                setEditingColumnTitle("");
+                                return;
+                              }
                               setColumnsError(null);
                               void Api.updateBoardColumn(columnsBoardId, col.id, { title: t })
                                 .then(() => {
                                   setBoardColumns((prev) => prev.map((c) => (c.id === col.id ? { ...c, title: t } : c)));
                                   setEditingColumnId(null);
+                                  setEditingColumnTitle("");
                                   void props.onUpdated();
                                 })
                                 .catch((e) => setColumnsError((e as Error).message));
                             }}
-                          >
-                            Сохранить
-                          </button>
+                            autoFocus
+                          />
                           <button
                             type="button"
                             className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-semibold text-slate-800 hover:bg-slate-50"
@@ -2730,7 +2853,32 @@ function BoardsModal(props: { open: boolean; onClose: () => void; boards: Board[
           </div>
         </div>
       </Modal>
-    )}
+    );
+
+  if (props.embedded) {
+    return (
+      <>
+        {content}
+        {columnsModal}
+      </>
+    );
+  }
+
+  return (
+    <>
+      <Modal
+        open={true}
+        title="Доски"
+        onClose={props.onClose}
+        headerRight={
+          <IconButton title="Закрыть" onClick={props.onClose}>
+            <IconX className="h-5 w-5" />
+          </IconButton>
+        }
+      >
+        {content}
+      </Modal>
+      {columnsModal}
     </>
   );
 }
@@ -3523,9 +3671,20 @@ function CardModal(props: {
                         className="min-h-[80px] rounded-xl border border-slate-200 bg-white p-2 text-sm outline-none focus:border-[#246c7c]"
                         value={editingCommentBody}
                         onChange={(e) => setEditingCommentBody(e.target.value)}
+                        onBlur={() => {
+                          const body = editingCommentBody.trim();
+                          if (!body) return;
+                          void Api.updateComment(c.id, { body }).then(() => {
+                            setEditingCommentId(null);
+                            setEditingCommentBody("");
+                            return props.onChanged();
+                          });
+                        }}
+                        autoFocus
                       />
                       <div className="flex items-center justify-end gap-2">
                         <button
+                          type="button"
                           className="grid h-9 w-9 place-items-center rounded-xl border border-slate-200 bg-white text-slate-800 hover:bg-slate-50"
                           title="Отмена"
                           aria-label="Отмена"
@@ -3535,23 +3694,6 @@ function CardModal(props: {
                           }}
                         >
                           <IconX className="h-5 w-5" />
-                        </button>
-                        <button
-                          className="grid h-9 w-9 place-items-center rounded-xl bg-[#246c7c] text-white hover:opacity-90 disabled:opacity-50"
-                          disabled={!editingCommentBody.trim()}
-                          title="Сохранить"
-                          aria-label="Сохранить"
-                          onClick={() => {
-                            const body = editingCommentBody.trim();
-                            if (!body) return;
-                            void Api.updateComment(c.id, { body }).then(() => {
-                              setEditingCommentId(null);
-                              setEditingCommentBody("");
-                              return props.onChanged();
-                            });
-                          }}
-                        >
-                          <IconCheck className="h-5 w-5" />
                         </button>
                       </div>
                     </div>

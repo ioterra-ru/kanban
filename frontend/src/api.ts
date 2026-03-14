@@ -133,7 +133,13 @@ export const Api = {
     api<{ ok: true }>("/api/auth/2fa/verify", { method: "POST", body: JSON.stringify(input) }),
 
   getProfile: () => api<{ user: any }>("/api/auth/profile"),
-  updateProfile: (input: { name?: string; email?: string; defaultBoardId?: string; avatarPreset?: string | null }) =>
+  updateProfile: (input: {
+    name?: string;
+    email?: string;
+    defaultBoardId?: string;
+    avatarPreset?: string | null;
+    emailNotificationsEnabled?: boolean;
+  }) =>
     api<{ user: any; currentBoardId?: string | null }>("/api/auth/profile", { method: "PATCH", body: JSON.stringify(input) }),
   uploadMyAvatar: async (file: File) => {
     const fd = new FormData();

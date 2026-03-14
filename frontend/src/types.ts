@@ -15,6 +15,8 @@ export type User = {
   totpEnabled: boolean;
   mustChangePassword: boolean;
   defaultBoardId: string | null;
+  /** Per-user: receive email notifications about card updates. */
+  emailNotificationsEnabled?: boolean;
 };
 
 export type Board = {

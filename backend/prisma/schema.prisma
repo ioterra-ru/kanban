@@ -135,6 +135,9 @@ model User {
   defaultBoardId String?
   defaultBoard   Board?  @relation("DefaultBoard", fields: [defaultBoardId], references: [id], onDelete: SetNull)
 
+  /** Per-user: receive email notifications about card updates. */
+  emailNotificationsEnabled Boolean @default(true)
+
   passwordHash String
   mustChangePassword Boolean @default(true)
 
