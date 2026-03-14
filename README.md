@@ -198,6 +198,10 @@ npm install
 npm run dev
 ```
 
+### Документация
+
+В каталоге **`docs/`** — документация на Sphinx (обзор, вход и 2FA, доски, карточки, админ-кабинет, API, развёртывание), с возможностью добавить скриншоты. Сборка: см. `docs/README.md` (нужны Python, `pip install -r docs/requirements.txt`, затем `cd docs && make html`).
+
 ### Тесты
 
 ```bash
