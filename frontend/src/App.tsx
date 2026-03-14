@@ -2446,8 +2446,17 @@ function BoardsModal(props: {
 
   const columnListSensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
 
+  const boardsModalOpenRef = useRef(false);
   useEffect(() => {
-    if (!props.open) return;
+    if (!props.open) {
+      boardsModalOpenRef.current = false;
+      return;
+    }
+    const wasOpen = boardsModalOpenRef.current;
+    boardsModalOpenRef.current = true;
+    if (!wasOpen) {
+      setColumnsBoardId(null);
+    }
     setCreateName("");
     setCreateDescription("");
     setCreateMemberIds([]);
@@ -2466,7 +2475,6 @@ function BoardsModal(props: {
     setAllUsers(null);
     setExpandedId(null);
     setError(null);
-    setColumnsBoardId(null);
 
     void Api.listUsers()
       .then((r) => setAllUsers(r.users))
