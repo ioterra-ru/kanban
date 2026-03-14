@@ -13,7 +13,7 @@ import { HttpError } from "./utils/httpError.js";
 import { requireLogin, requireTwoFactor } from "./auth/middleware.js";
 import { Role } from "@prisma/client";
 import { sendEmail } from "./mail/mailer.js";
-import { BoardIdSchema, DEFAULT_BOARD_ID } from "./boards/ids.js";
+import { BoardIdSchema } from "./boards/ids.js";
 import {
   createCardArchive,
   deleteArchiveFile,
@@ -207,7 +207,8 @@ router.delete(
     const user = (req as any).user as { role: Role };
     if (user.role !== Role.ADMIN) throw new HttpError(403, "Forbidden");
     const id = BoardIdSchema.parse(req.params.id);
-    if (id === DEFAULT_BOARD_ID) throw new HttpError(400, "Cannot delete default board");
+    const boardCount = await prisma.board.count();
+    if (boardCount <= 1) throw new HttpError(400, "Cannot delete the last board");
 
     await prisma.$transaction(async (tx) => {
       // Re-point users whose default board is being deleted
