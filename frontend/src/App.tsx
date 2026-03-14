@@ -265,8 +265,7 @@ function CardTile(props: {
           <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-600">
             {props.assigneeDisplay ? (
               <span className="inline-flex min-w-0 items-center gap-1.5">
-                <span className="shrink-0">Ответственный:</span>
-                {props.assigneeUser ? <AvatarImg user={props.assigneeUser} size={16} /> : null}
+                {props.assigneeUser ? <AvatarImg user={props.assigneeUser} size={24} /> : null}
                 <span className="min-w-0 truncate">{props.assigneeDisplay}</span>
               </span>
             ) : null}
@@ -838,9 +837,8 @@ function App() {
                   <div className="text-sm font-semibold">{cardsById.get(activeCardId)!.description}</div>
                   {assigneeDisplay(cardsById.get(activeCardId)!.assignee) ? (
                     <div className="mt-1 flex min-w-0 items-center gap-1.5 text-xs text-slate-600">
-                      <span className="shrink-0">Ответственный:</span>
                       {assigneeUser(cardsById.get(activeCardId)!.assignee) ? (
-                        <AvatarImg user={assigneeUser(cardsById.get(activeCardId)!.assignee)!} size={16} />
+                        <AvatarImg user={assigneeUser(cardsById.get(activeCardId)!.assignee)!} size={24} />
                       ) : null}
                       <span className="min-w-0 truncate">{assigneeDisplay(cardsById.get(activeCardId)!.assignee)}</span>
                     </div>
@@ -1248,7 +1246,30 @@ function LoginView(props: { onDone: () => Promise<void> | void }) {
           {error ?? " "}
         </div>
         {mode === "login" ? (
-          <>
+          <form
+            className="grid gap-3"
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (submitting) return;
+              setError(null);
+              setFpOk(false);
+              setSubmitting(true);
+              void Api.login({
+                login: login.trim(),
+                password,
+                ...(needTotp ? { totp: totp.trim(), rememberDevice } : {}),
+              })
+                .then(async () => {
+                  await props.onDone();
+                })
+                .catch((e) => {
+                  const msg = (e as Error).message;
+                  if (msg.includes("Two-factor required")) setNeedTotp(true);
+                  setError(friendlyAuthError(msg));
+                })
+                .finally(() => setSubmitting(false));
+            }}
+          >
             <label className="grid gap-1">
               <div className="text-xs text-slate-600">Логин</div>
               <input
@@ -1288,27 +1309,9 @@ function LoginView(props: { onDone: () => Promise<void> | void }) {
             ) : null}
 
             <button
+              type="submit"
               className="rounded-xl bg-[#246c7c] px-4 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50"
               disabled={submitting}
-              onClick={() => {
-                setError(null);
-                setFpOk(false);
-                setSubmitting(true);
-                void Api.login({
-                  login: login.trim(),
-                  password,
-                  ...(needTotp ? { totp: totp.trim(), rememberDevice } : {}),
-                })
-                  .then(async () => {
-                    await props.onDone();
-                  })
-                  .catch((e) => {
-                    const msg = (e as Error).message;
-                    if (msg.includes("Two-factor required")) setNeedTotp(true);
-                    setError(friendlyAuthError(msg));
-                  })
-                  .finally(() => setSubmitting(false));
-              }}
             >
               {submitting ? "Вход…" : "Войти"}
             </button>
@@ -1327,7 +1330,7 @@ function LoginView(props: { onDone: () => Promise<void> | void }) {
             >
               Забыли пароль?
             </button>
-          </>
+          </form>
         ) : (
           <>
             <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
@@ -1767,7 +1770,7 @@ function UsersModal(props: { open: boolean; onClose: () => void; embedded?: bool
                     </button>
                   ) : (
                     <button
-                      className="grid h-8 w-8 place-items-center rounded-lg border border-rose-200 bg-white text-base font-bold text-rose-700 hover:bg-rose-50"
+                      className="grid h-8 w-8 place-items-center rounded-lg bg-[#ac4c1c] text-white hover:opacity-90"
                       title="Удалить пользователя"
                       aria-label="Удалить пользователя"
                       onClick={() => {
@@ -1779,7 +1782,7 @@ function UsersModal(props: { open: boolean; onClose: () => void; embedded?: bool
                           .catch((e) => setError((e as Error).message));
                       }}
                     >
-                      −
+                      <IconTrash className="h-4 w-4" />
                     </button>
                   )}
                 </div>
@@ -2922,9 +2925,11 @@ function CardModal(props: {
   >([]);
   const [participantAddOpen, setParticipantAddOpen] = useState(false);
   const [participantAddUserId, setParticipantAddUserId] = useState("");
+  const [participantAddSearch, setParticipantAddSearch] = useState("");
   const [participantError, setParticipantError] = useState<string | null>(null);
   const [assigneeSelectOpen, setAssigneeSelectOpen] = useState(false);
   const assigneeSelectRef = useRef<HTMLDivElement>(null);
+  const participantAddRef = useRef<HTMLDivElement>(null);
 
   const [rightWidth, setRightWidth] = useState(420);
   const [dragging, setDragging] = useState(false);
@@ -2956,6 +2961,7 @@ function CardModal(props: {
     setParticipants((card.participants as any) ?? []);
     setParticipantAddOpen(false);
     setParticipantAddUserId("");
+    setParticipantAddSearch("");
     setParticipantError(null);
     setAssigneeSelectOpen(false);
     setSaveError(null);
@@ -2999,6 +3005,17 @@ function CardModal(props: {
     document.addEventListener("mousedown", onDocClick);
     return () => document.removeEventListener("mousedown", onDocClick);
   }, [assigneeSelectOpen]);
+
+  useEffect(() => {
+    if (!participantAddOpen) return;
+    const onDocClick = (e: MouseEvent) => {
+      if (participantAddRef.current && !participantAddRef.current.contains(e.target as Node)) {
+        setParticipantAddOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", onDocClick);
+    return () => document.removeEventListener("mousedown", onDocClick);
+  }, [participantAddOpen]);
 
   useEffect(() => {
     if (!dragging) return;
@@ -3437,54 +3454,88 @@ function CardModal(props: {
                 ) : null}
               </div>
               {participantAddOpen && canManageCard ? (
-                <div className="mt-2 flex items-center gap-2">
-                  <select
-                    className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-white p-2 text-sm outline-none focus:border-[#246c7c]"
-                    value={participantAddUserId}
-                    onChange={(e) => setParticipantAddUserId(e.target.value)}
-                  >
-                    <option value="">Выберите пользователя…</option>
-                    {props.allUsers
-                      .filter((u) => !participants.some((p) => p.user.id === u.id))
-                      .map((u) => (
-                        <option key={u.id} value={u.id}>
-                          {u.name || u.email}
-                        </option>
-                      ))}
-                  </select>
-                  <button
-                    type="button"
-                    className="grid h-10 w-10 place-items-center rounded-xl bg-[#246c7c] text-white hover:opacity-90 disabled:opacity-50"
-                    disabled={!participantAddUserId}
-                    title="Добавить"
-                    aria-label="Добавить"
-                    onClick={() => {
-                      if (!canManageCard) return;
-                      if (!card) return;
-                      const userId = participantAddUserId;
-                      if (!userId) return;
-                      setParticipantError(null);
-                      void Api.addParticipant(card.id, { userId })
-                        .then((d) => {
-                          const added = (d as any).participant as {
-                            id: string;
-                            email: string;
-                            name: string;
-                            avatarPreset?: string | null;
-                            avatarUploadName?: string | null;
-                          };
-                          setParticipants((prev) =>
-                            prev.some((p) => p.user.id === added.id) ? prev : [...prev, { user: added }],
-                          );
-                          setParticipantAddUserId("");
-                          setParticipantAddOpen(false);
-                          return props.onChanged();
-                        })
-                        .catch((err) => setParticipantError((err as Error).message));
-                    }}
-                  >
-                    +
-                  </button>
+                <div className="mt-2 flex flex-col gap-2" ref={participantAddRef}>
+                  <div className="flex items-center gap-2">
+                    <div className="relative min-w-0 flex-1">
+                      <input
+                        type="text"
+                        className="w-full rounded-xl border border-slate-200 bg-white py-2 pl-3 pr-9 text-sm outline-none focus:border-[#246c7c]"
+                        placeholder="Поиск пользователя…"
+                        value={participantAddSearch}
+                        onChange={(e) => setParticipantAddSearch(e.target.value)}
+                        autoFocus
+                        aria-label="Поиск пользователя"
+                      />
+                      <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" aria-hidden>🔍</span>
+                    </div>
+                    <button
+                      type="button"
+                      className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#246c7c] text-white hover:opacity-90 disabled:opacity-50"
+                      disabled={!participantAddUserId}
+                      title="Добавить"
+                      aria-label="Добавить"
+                      onClick={() => {
+                        if (!canManageCard) return;
+                        if (!card) return;
+                        const userId = participantAddUserId;
+                        if (!userId) return;
+                        setParticipantError(null);
+                        void Api.addParticipant(card.id, { userId })
+                          .then((d) => {
+                            const added = (d as any).participant as {
+                              id: string;
+                              email: string;
+                              name: string;
+                              avatarPreset?: string | null;
+                              avatarUploadName?: string | null;
+                            };
+                            setParticipants((prev) =>
+                              prev.some((p) => p.user.id === added.id) ? prev : [...prev, { user: added }],
+                            );
+                            setParticipantAddUserId("");
+                            setParticipantAddOpen(false);
+                            setParticipantAddSearch("");
+                            return props.onChanged();
+                          })
+                          .catch((err) => setParticipantError((err as Error).message));
+                      }}
+                    >
+                      +
+                    </button>
+                  </div>
+                  <div className="max-h-48 overflow-auto rounded-xl border border-slate-200 bg-white py-1 shadow-sm">
+                    {(() => {
+                      const q = participantAddSearch.trim().toLowerCase();
+                      const available = props.allUsers
+                        .filter((u) => !participants.some((p) => p.user.id === u.id))
+                        .filter(
+                          (u) =>
+                            !q ||
+                            (u.name ?? "").toLowerCase().includes(q) ||
+                            (u.email ?? "").toLowerCase().includes(q),
+                        );
+                      return available.length === 0 ? (
+                        <div className="px-3 py-4 text-center text-sm text-slate-500">Нет пользователей</div>
+                      ) : (
+                        available.map((u) => (
+                          <button
+                            key={u.id}
+                            type="button"
+                            role="option"
+                            aria-selected={participantAddUserId === u.id}
+                            className={classNames(
+                              "flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-800 hover:bg-slate-50",
+                              participantAddUserId === u.id && "bg-slate-100",
+                            )}
+                            onClick={() => setParticipantAddUserId((prev) => (prev === u.id ? "" : u.id))}
+                          >
+                            <AvatarImg user={u} size={24} />
+                            <span className="min-w-0 flex-1 truncate">{u.name || u.email}</span>
+                          </button>
+                        ))
+                      );
+                    })()}
+                  </div>
                 </div>
               ) : null}
               {participantError ? <div className="mt-2 text-xs text-rose-700">{participantError}</div> : null}
@@ -3505,7 +3556,7 @@ function CardModal(props: {
                       {canManageCard ? (
                         <button
                           type="button"
-                          className="grid h-7 w-7 place-items-center rounded-lg border border-slate-200 bg-white text-slate-800 hover:bg-slate-50"
+                          className="grid h-7 w-7 place-items-center rounded-lg bg-[#ac4c1c] text-white hover:opacity-90"
                           title="Удалить участника"
                           aria-label="Удалить участника"
                           onClick={() => {
@@ -3589,7 +3640,7 @@ function CardModal(props: {
                       </a>
                       <button
                         type="button"
-                        className="grid h-8 w-8 place-items-center rounded-lg border border-slate-200 bg-white text-slate-800 hover:bg-slate-50"
+                        className="grid h-8 w-8 place-items-center rounded-lg bg-[#ac4c1c] text-white hover:opacity-90"
                         onClick={() => void Api.deleteAttachment(a.id).then(props.onChanged)}
                         title="Удалить"
                         aria-label="Удалить"
@@ -3662,7 +3713,7 @@ function CardModal(props: {
                             <IconEdit />
                           </button>
                           <button
-                            className="grid h-8 w-8 place-items-center rounded-lg border border-slate-200 bg-white text-slate-800 hover:bg-slate-50"
+                            className="grid h-8 w-8 place-items-center rounded-lg bg-[#ac4c1c] text-white hover:opacity-90"
                             onClick={() => void Api.deleteComment(c.id).then(props.onChanged)}
                             title="Удалить"
                             aria-label="Удалить"
