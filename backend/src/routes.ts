@@ -450,7 +450,14 @@ async function notifyCardParticipants(input: {
       column: { select: { title: true } },
       participants: {
         select: {
-          user: { select: { id: true, email: true, name: true } },
+          user: {
+            select: {
+              id: true,
+              email: true,
+              name: true,
+              emailNotificationsEnabled: true,
+            },
+          },
         },
       },
     },
@@ -461,6 +468,7 @@ async function notifyCardParticipants(input: {
     .map((p) => p.user)
     .filter(Boolean)
     .filter((u) => u.id !== input.actor.id)
+    .filter((u) => u.emailNotificationsEnabled !== false)
     .map((u) => u.email)
     .filter(Boolean);
 

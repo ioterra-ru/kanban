@@ -45,6 +45,7 @@ authRouter.get(
         defaultBoardId: true,
         totpEnabled: true,
         mustChangePassword: true,
+        emailNotificationsEnabled: true,
       },
     });
     res.json({ user: u });
@@ -56,6 +57,7 @@ const UpdateProfileSchema = z.object({
   email: z.string().email().optional(),
   defaultBoardId: BoardIdSchema.optional(),
   avatarPreset: AvatarPresetSchema,
+  emailNotificationsEnabled: z.boolean().optional(),
 });
 
 authRouter.patch(
@@ -91,6 +93,7 @@ authRouter.patch(
         ...(data.email !== undefined ? { email: data.email } : {}),
         ...(data.defaultBoardId !== undefined ? { defaultBoardId: data.defaultBoardId } : {}),
         ...(data.avatarPreset !== undefined ? { avatarPreset: data.avatarPreset } : {}),
+        ...(data.emailNotificationsEnabled !== undefined ? { emailNotificationsEnabled: data.emailNotificationsEnabled } : {}),
       },
       select: {
         id: true,
@@ -102,6 +105,7 @@ authRouter.patch(
         defaultBoardId: true,
         totpEnabled: true,
         mustChangePassword: true,
+        emailNotificationsEnabled: true,
       },
     });
 
@@ -134,6 +138,7 @@ authRouter.get(
         totpEnabled: true,
         mustChangePassword: true,
         defaultBoardId: true,
+        emailNotificationsEnabled: true,
       },
     });
     res.json({

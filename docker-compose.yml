@@ -4,6 +4,7 @@
 services:
   db:
     image: postgres:16
+    container_name: kanban_db
     restart: always
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
@@ -21,12 +22,14 @@ services:
 
   adminer:
     image: adminer:4
+    container_name: kanban_adminer
     restart: always
     depends_on:
       db:
         condition: service_healthy
 
   backend:
+    container_name: kanban_backend
     build:
       context: .
       dockerfile: backend/Dockerfile
@@ -58,6 +61,7 @@ services:
       retries: 5
 
   frontend:
+    container_name: kanban_frontend
     build:
       context: .
       dockerfile: frontend/Dockerfile
