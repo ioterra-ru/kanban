@@ -203,6 +203,31 @@ export const Api = {
   deleteBoardColumn: (boardId: string, columnId: string) =>
     api<{ ok: true }>(`/api/boards/${boardId}/columns/${columnId}`, { method: "DELETE" }),
 
+  listArchives: () => api<{ files: string[] }>("/api/archive"),
+  deleteArchive: (filename: string) =>
+    api<{ ok: true }>(`/api/archive/${encodeURIComponent(filename)}`, { method: "DELETE" }),
+  async downloadArchive(filename: string): Promise<void> {
+    const base = (import.meta.env.VITE_API_URL as string | undefined) ?? "";
+    const url = `${base}/api/archive/${encodeURIComponent(filename)}/download`;
+    const res = await fetch(url, { credentials: "include" });
+    if (!res.ok) throw new Error(await res.text());
+    const blob = await res.blob();
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  },
+  restoreArchive: (filename: string, boardId: string, columnId: string) =>
+    api<{ cardId: string }>(`/api/archive/${encodeURIComponent(filename)}/restore`, {
+      method: "POST",
+      body: JSON.stringify({ boardId, columnId }),
+    }),
+  archiveCard: (cardId: string) =>
+    api<{ ok: true }>(`/api/cards/${cardId}/archive`, { method: "POST" }),
+  archiveColumn: (boardId: string, columnId: string) =>
+    api<{ ok: true }>(`/api/boards/${boardId}/columns/${columnId}/archive`, { method: "POST" }),
+
   listUsers: () => api<{ users: any[] }>("/api/auth/users"),
   createUser: (input: { email: string; name?: string; role?: "ADMIN" | "MEMBER"; password: string }) =>
     api<{ user: any }>("/api/auth/users", { method: "POST", body: JSON.stringify(input) }),

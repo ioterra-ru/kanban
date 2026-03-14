@@ -227,7 +227,28 @@ function CardTile(props: {
   onClick: () => void;
   isSelected?: boolean;
   cardRef?: (el: HTMLDivElement | null) => void;
+  onDelete?: () => void;
+  onArchive?: () => void;
 }) {
+  const [actionsOpen, setActionsOpen] = useState(false);
+  const actionsRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!actionsOpen) return;
+    const onMouseDown = (e: MouseEvent) => {
+      if (actionsRef.current && !actionsRef.current.contains(e.target as Node)) setActionsOpen(false);
+    };
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setActionsOpen(false);
+    };
+    window.addEventListener("mousedown", onMouseDown, true);
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      window.removeEventListener("mousedown", onMouseDown, true);
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [actionsOpen]);
+
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: props.card.id,
     data: { columnId: props.card.column },
@@ -243,13 +264,16 @@ function CardTile(props: {
     props.cardRef?.(el);
   };
 
+  const showActions = !!(props.onDelete || props.onArchive);
+
   return (
     <div
       ref={setRefs}
       style={style}
       className={classNames(
-        "group rounded-xl border-2 bg-white p-3 shadow-sm",
+        "group rounded-xl border-2 bg-white p-3 shadow-sm transition-colors",
         cardBorderClass(props.card.importance),
+        "hover:bg-slate-200",
         isDragging && "opacity-50",
         props.isSelected && "ring-2 ring-[#246c7c] ring-offset-2",
       )}
@@ -286,18 +310,67 @@ function CardTile(props: {
         </div>
       </div>
 
-      <div className="mt-2 flex items-center gap-3 text-xs text-slate-500">
-        <button
-          className="rounded-md px-2 py-1 hover:bg-slate-50 hover:text-slate-900"
-          onClick={(e) => {
-            e.stopPropagation();
-            props.onClick();
-          }}
-        >
-          Открыть
-        </button>
-        <span>💬 {props.card.commentCount}</span>
-        <span>📎 {props.card.attachmentCount}</span>
+      <div className="mt-2 flex items-center justify-between gap-2 text-xs text-slate-500">
+        <div className="flex items-center gap-3">
+          <button
+            className="rounded-md px-2 py-1 hover:bg-slate-50 hover:text-slate-900"
+            onClick={(e) => {
+              e.stopPropagation();
+              props.onClick();
+            }}
+          >
+            Открыть
+          </button>
+          <span>💬 {props.card.commentCount}</span>
+          <span>📎 {props.card.attachmentCount}</span>
+        </div>
+        {showActions ? (
+          <div className="relative" ref={actionsRef}>
+            <button
+              type="button"
+              className="rounded-md p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+              title="Действия"
+              aria-label="Действия"
+              onPointerDown={(e) => e.stopPropagation()}
+              onClick={(e) => {
+                e.stopPropagation();
+                setActionsOpen((v) => !v);
+              }}
+            >
+              <IconMoreVertical className="h-4 w-4" />
+            </button>
+            {actionsOpen ? (
+              <div className="absolute right-0 top-full z-10 mt-1 min-w-[140px] rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
+                {props.onDelete ? (
+                  <button
+                    type="button"
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActionsOpen(false);
+                      props.onDelete?.();
+                    }}
+                  >
+                    <IconTrash className="h-4 w-4 shrink-0" /> Удалить
+                  </button>
+                ) : null}
+                {props.onArchive ? (
+                  <button
+                    type="button"
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActionsOpen(false);
+                      props.onArchive?.();
+                    }}
+                  >
+                    <IconArchive className="h-4 w-4 shrink-0" /> В архив
+                  </button>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
+        ) : null}
       </div>
     </div>
   );
@@ -337,6 +410,8 @@ function App() {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const columnSectionRefs = useRef<Map<string, HTMLElement>>(new Map());
   const cardTileRefs = useRef<Map<string, HTMLDivElement>>(new Map());
+  const [columnActionsOpen, setColumnActionsOpen] = useState<string | null>(null);
+  const columnActionsRef = useRef<HTMLDivElement | null>(null);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
@@ -357,6 +432,22 @@ function App() {
     for (const u of allUsers ?? []) m.set(u.email, u);
     return m;
   }, [allUsers]);
+
+  useEffect(() => {
+    if (columnActionsOpen === null) return;
+    const onMouseDown = (e: MouseEvent) => {
+      if (columnActionsRef.current && !columnActionsRef.current.contains(e.target as Node)) setColumnActionsOpen(null);
+    };
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setColumnActionsOpen(null);
+    };
+    window.addEventListener("mousedown", onMouseDown, true);
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      window.removeEventListener("mousedown", onMouseDown, true);
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [columnActionsOpen]);
 
   const assigneeDisplay = (assignee: string | null) => {
     if (!assignee) return null;
@@ -787,17 +878,75 @@ function App() {
                           {col.title} <span className="text-slate-500">({col.cards.length})</span>
                         </div>
                       </div>
-                      <button
-                        className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-800 hover:bg-slate-50"
-                        onClick={() => {
-                          setCreateColumn(col.id);
-                          setCreateTitle("");
-                          setCreateDetails("");
-                          setCreateOpen(true);
-                        }}
-                      >
-                        +
-                      </button>
+                      <div className="flex items-center gap-1">
+                        <button
+                          className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-800 hover:bg-slate-50"
+                          onClick={() => {
+                            setCreateColumn(col.id);
+                            setCreateTitle("");
+                            setCreateDetails("");
+                            setCreateOpen(true);
+                          }}
+                        >
+                          +
+                        </button>
+                        {me?.user?.role === "ADMIN" ? (
+                          <div
+                            className="relative"
+                            ref={columnActionsOpen === col.id ? columnActionsRef : null}
+                          >
+                            <button
+                              type="button"
+                              className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                              title="Действия"
+                              aria-label="Действия"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setColumnActionsOpen((id) => (id === col.id ? null : col.id));
+                              }}
+                            >
+                              <IconMoreVertical className="h-4 w-4" />
+                            </button>
+                            {columnActionsOpen === col.id ? (
+                              <div className="absolute right-0 top-full z-10 mt-1 min-w-[160px] rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
+                                <button
+                                  type="button"
+                                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setColumnActionsOpen(null);
+                                    const msg =
+                                      col.cards.length > 0
+                                        ? `Вы действительно хотите удалить «${col.title}»? В ней содержится ${col.cards.length} карточек.`
+                                        : `Удалить колонку «${col.title}»?`;
+                                    if (!confirm(msg)) return;
+                                    if (!currentBoardId) return;
+                                    void Api.deleteBoardColumn(currentBoardId, col.id)
+                                      .then(() => reload())
+                                      .catch((e) => setError((e as Error).message));
+                                  }}
+                                >
+                                  <IconTrash className="h-4 w-4 shrink-0" /> Удалить
+                                </button>
+                                <button
+                                  type="button"
+                                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setColumnActionsOpen(null);
+                                    if (!currentBoardId) return;
+                                    void Api.archiveColumn(currentBoardId, col.id)
+                                      .then(() => reload())
+                                      .catch((e) => setError((e as Error).message));
+                                  }}
+                                >
+                                  <IconArchive className="h-4 w-4 shrink-0" /> В архив
+                                </button>
+                              </div>
+                            ) : null}
+                          </div>
+                        ) : null}
+                      </div>
                     </div>
                   )}
                 >
@@ -814,6 +963,13 @@ function App() {
                             isSelected={selectedCardId === card.id}
                             cardRef={(el) => {
                               if (el) cardTileRefs.current.set(card.id, el);
+                            }}
+                            onDelete={() => {
+                              if (!confirm("Удалить карточку?")) return;
+                              void Api.deleteCard(card.id).then(() => reload()).catch((e) => setError((e as Error).message));
+                            }}
+                            onArchive={() => {
+                              void Api.archiveCard(card.id).then(() => reload()).catch((e) => setError((e as Error).message));
                             }}
                           />
                         ))}
@@ -1054,6 +1210,27 @@ function IconChevronUp(props: { className?: string }) {
     </svg>
   );
 }
+
+function IconMoreVertical(props: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={props.className ?? "h-4 w-4"} fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="12" cy="6" r="1.5" fill="currentColor" />
+      <circle cx="12" cy="12" r="1.5" fill="currentColor" />
+      <circle cx="12" cy="18" r="1.5" fill="currentColor" />
+    </svg>
+  );
+}
+
+function IconArchive(props: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={props.className ?? "h-4 w-4"} fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M4 8v13h16V8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M2 5h20v3H2z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M9 12h6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 // AVATAR_PRESETS/autoAvatarPreset/avatarSrc are in ./utils/avatar
 
 function AvatarImg(props: { user: { id: string; avatarUploadName?: string | null; avatarPreset?: string | null; name?: string }; size: number }) {
@@ -1905,7 +2082,7 @@ function BoardAccessModal(props: { open: boolean; user: { id: string; name: stri
   );
 }
 
-type CabinetTab = "personal" | "smtp" | "boards" | "users";
+type CabinetTab = "personal" | "smtp" | "boards" | "users" | "archive";
 
 function ProfileModal(props: {
   open: boolean;
@@ -1940,6 +2117,15 @@ function ProfileModal(props: {
   const [mailFrom, setMailFrom] = useState("");
   const [mailPass, setMailPass] = useState("");
   const [mailPassSet, setMailPassSet] = useState(false);
+
+  const [archiveFiles, setArchiveFiles] = useState<string[]>([]);
+  const [archiveLoading, setArchiveLoading] = useState(false);
+  const [archiveError, setArchiveError] = useState<string | null>(null);
+  const [restoreFilename, setRestoreFilename] = useState<string | null>(null);
+  const [restoreBoardId, setRestoreBoardId] = useState("");
+  const [restoreColumnId, setRestoreColumnId] = useState("");
+  const [restoreColumns, setRestoreColumns] = useState<Array<{ id: string; title: string; position: number }>>([]);
+  const [restoring, setRestoring] = useState(false);
 
   const isAdmin = props.me.role === "ADMIN";
 
@@ -1981,6 +2167,28 @@ function ProfileModal(props: {
     setEmailNotificationsEnabled(props.me.emailNotificationsEnabled !== false);
     setError(null);
   }, [props.open, props.me.avatarPreset, props.me.avatarUploadName, props.me.defaultBoardId, props.me.email, props.me.emailNotificationsEnabled, props.me.id, props.me.name]);
+
+  useEffect(() => {
+    if (!props.open || cabinetTab !== "archive" || props.me.role !== "ADMIN") return;
+    setArchiveLoading(true);
+    setArchiveError(null);
+    void Api.listArchives()
+      .then((r) => setArchiveFiles(r.files))
+      .catch((e) => setArchiveError((e as Error).message))
+      .finally(() => setArchiveLoading(false));
+  }, [props.open, cabinetTab, props.me.role]);
+
+  useEffect(() => {
+    if (!restoreBoardId) {
+      setRestoreColumns([]);
+      setRestoreColumnId("");
+      return;
+    }
+    void Api.listBoardColumns(restoreBoardId).then((r) => {
+      setRestoreColumns(r.columns);
+      setRestoreColumnId(r.columns[0]?.id ?? "");
+    });
+  }, [restoreBoardId]);
 
   useEffect(() => {
     if (!props.open) return;
@@ -2033,9 +2241,14 @@ function ProfileModal(props: {
   if (!props.open) return null;
 
   return (
-    <Modal open={true} title="Личный кабинет" onClose={props.onClose}>
-      <div className="grid gap-3">
-        <div className="flex flex-wrap gap-1 border-b border-slate-200 pb-2">
+    <Modal
+      open={true}
+      title="Личный кабинет"
+      onClose={props.onClose}
+      panelStyle={{ height: "70vh", minHeight: "400px" }}
+    >
+      <div className="flex flex-col gap-3 h-full min-h-0">
+        <div className="shrink-0 flex flex-wrap gap-1 border-b border-slate-200 pb-2">
           <button
             type="button"
             className={classNames(
@@ -2086,10 +2299,23 @@ function ProfileModal(props: {
               >
                 Пользователи
               </button>
+              <button
+                type="button"
+                className={classNames(
+                  "rounded-xl px-3 py-2 text-sm font-semibold",
+                  cabinetTab === "archive"
+                    ? "bg-[#246c7c] text-white"
+                    : "bg-slate-100 text-slate-700 hover:bg-slate-200",
+                )}
+                onClick={() => setCabinetTab("archive")}
+              >
+                Архив
+              </button>
             </>
           ) : null}
         </div>
 
+        <div className="flex-1 min-h-0 overflow-auto">
         {cabinetTab === "boards" ? (
           <BoardsModal
             open={true}
@@ -2100,6 +2326,123 @@ function ProfileModal(props: {
           />
         ) : cabinetTab === "users" ? (
           <UsersModal open={true} onClose={() => setCabinetTab("personal")} embedded />
+        ) : cabinetTab === "archive" ? (
+          <div className="grid gap-3">
+            {archiveError ? (
+              <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-800">{archiveError}</div>
+            ) : null}
+            <div className="text-sm text-slate-600">ZIP-архивы карточек. Можно удалить, скачать или восстановить карточку на доску.</div>
+            {archiveLoading ? (
+              <div className="text-slate-500">Загрузка…</div>
+            ) : archiveFiles.length === 0 ? (
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-500">Архивов пока нет.</div>
+            ) : (
+              <ul className="grid gap-2">
+                {archiveFiles.map((filename) => (
+                  <li
+                    key={filename}
+                    className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white p-3"
+                  >
+                    <span className="min-w-0 truncate text-sm font-medium text-slate-900">{filename}</span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-700 hover:bg-slate-50"
+                        onClick={() => {
+                          if (confirm(`Удалить архив «${filename}»?`)) {
+                            void Api.deleteArchive(filename).then(() =>
+                              Api.listArchives().then((r) => setArchiveFiles(r.files)),
+                            ).catch((e) => setArchiveError((e as Error).message));
+                          }
+                        }}
+                      >
+                        <IconTrash className="h-3.5 w-3.5" /> Удалить
+                      </button>
+                      <button
+                        type="button"
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-700 hover:bg-slate-50"
+                        onClick={() => void Api.downloadArchive(filename).catch((e) => setArchiveError((e as Error).message))}
+                      >
+                        <IconDownload className="h-3.5 w-3.5" /> Скачать
+                      </button>
+                      <button
+                        type="button"
+                        className="inline-flex items-center gap-1.5 rounded-lg border border-[#246c7c] bg-[#246c7c] px-2 py-1 text-xs text-white hover:opacity-90"
+                        onClick={() => {
+                          setRestoreFilename(filename);
+                          setRestoreBoardId(props.boards[0]?.id ?? "");
+                          setRestoreColumnId("");
+                        }}
+                      >
+                        Восстановить
+                      </button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {restoreFilename ? (
+              <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                <div className="mb-2 text-sm font-semibold text-slate-800">Восстановить карточку из «{restoreFilename}»</div>
+                <div className="grid gap-2">
+                  <label className="grid gap-1 text-sm">
+                    Доска
+                    <select
+                      className="rounded-lg border border-slate-200 bg-white px-2 py-1"
+                      value={restoreBoardId}
+                      onChange={(e) => setRestoreBoardId(e.target.value)}
+                    >
+                      {props.boards.map((b) => (
+                        <option key={b.id} value={b.id}>{b.name}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="grid gap-1 text-sm">
+                    Колонка
+                    <select
+                      className="rounded-lg border border-slate-200 bg-white px-2 py-1"
+                      value={restoreColumnId}
+                      onChange={(e) => setRestoreColumnId(e.target.value)}
+                      disabled={restoreColumns.length === 0}
+                    >
+                      {restoreColumns.map((c) => (
+                        <option key={c.id} value={c.id}>{c.title}</option>
+                      ))}
+                    </select>
+                  </label>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      className="rounded-lg bg-[#246c7c] px-3 py-1.5 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50"
+                      disabled={restoring || !restoreColumnId}
+                      onClick={() => {
+                        if (!restoreFilename || !restoreColumnId) return;
+                        setRestoring(true);
+                        setArchiveError(null);
+                        void Api.restoreArchive(restoreFilename, restoreBoardId, restoreColumnId)
+                          .then(() => {
+                            setRestoreFilename(null);
+                            return Api.listArchives().then((r) => setArchiveFiles(r.files));
+                          })
+                          .then(() => props.onUpdated())
+                          .catch((e) => setArchiveError((e as Error).message))
+                          .finally(() => setRestoring(false));
+                      }}
+                    >
+                      {restoring ? "Восстановление…" : "Восстановить"}
+                    </button>
+                    <button
+                      type="button"
+                      className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50"
+                      onClick={() => setRestoreFilename(null)}
+                    >
+                      Отмена
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : null}
+          </div>
         ) : cabinetTab === "smtp" ? (
           <div className="grid gap-3">
             {error ? <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-800">{error}</div> : null}
@@ -2415,6 +2758,7 @@ function ProfileModal(props: {
         </label>
           </>
         )}
+        </div>
       </div>
     </Modal>
   );
