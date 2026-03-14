@@ -1,4 +1,5 @@
 import "dotenv/config";
+import path from "node:path";
 import { z } from "zod";
 
 const optionalNonEmptyString = z.preprocess((v) => {
@@ -18,6 +19,7 @@ const EnvSchema = z
   .object({
     PORT: z.coerce.number().int().positive().default(4000),
     DATABASE_URL: z.string().min(1),
+    ARCHIVE_DIR: z.string().min(1).optional(),
     SESSION_SECRET: z.string().min(16),
     APP_HOST: z.preprocess((v) => (typeof v === "string" && v.trim() === "" ? undefined : v), z.string().min(1).optional().default("localhost")),
     ENABLE_HTTPS: z
@@ -45,6 +47,10 @@ const EnvSchema = z
       .transform((v) => v === "true"),
   })
   .transform((o) => {
+    const cwd = process.cwd();
+    const archiveDir = o.ARCHIVE_DIR?.trim()
+      ? (o.ARCHIVE_DIR.startsWith("/") ? o.ARCHIVE_DIR : path.join(cwd, o.ARCHIVE_DIR))
+      : path.join(cwd, "archives");
     const base =
       o.PUBLIC_BASE_URL ??
       (() => {
@@ -59,8 +65,8 @@ const EnvSchema = z
         const port = o.ENABLE_HTTPS ? o.FRONTEND_HTTPS_PORT : o.FRONTEND_HTTP_PORT;
         return `${base},${scheme}://localhost:${port},${scheme}://127.0.0.1:${port}`;
       })();
-    const { PUBLIC_BASE_URL: _u, CORS_ORIGIN: _c, ...rest } = o;
-    return { ...rest, PUBLIC_BASE_URL: base, CORS_ORIGIN: corsOrigin };
+    const { PUBLIC_BASE_URL: _u, CORS_ORIGIN: _c, ARCHIVE_DIR: _ad, ...rest } = o;
+    return { ...rest, PUBLIC_BASE_URL: base, CORS_ORIGIN: corsOrigin, ARCHIVE_DIR: archiveDir };
   });
 
 export const env = EnvSchema.parse(process.env);

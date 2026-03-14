@@ -14,6 +14,13 @@ import { requireLogin, requireTwoFactor } from "./auth/middleware.js";
 import { Role } from "@prisma/client";
 import { sendEmail } from "./mail/mailer.js";
 import { BoardIdSchema, DEFAULT_BOARD_ID } from "./boards/ids.js";
+import {
+  createCardArchive,
+  deleteArchiveFile,
+  getArchiveAbsolutePath,
+  listArchiveFilenames,
+  restoreCardFromArchive,
+} from "./archive.js";
 
 const router = express.Router();
 
@@ -373,7 +380,7 @@ router.delete(
     const { boardId, columnId } = BoardColumnIdParamSchema.parse(req.params);
     const col = await prisma.boardColumn.findFirst({
       where: { id: columnId, boardId },
-      include: { _count: { select: { cards: true } } },
+      include: { _count: { select: { cards: true } }, cards: { select: { id: true, attachments: { select: { relativePath: true } } } } },
     });
     if (!col) throw new HttpError(404, "Column not found");
     const firstOther = await prisma.boardColumn.findFirst({
@@ -382,24 +389,102 @@ router.delete(
       select: { id: true },
     });
     if (!firstOther) throw new HttpError(400, "Cannot delete the last column");
-    await prisma.$transaction(async (tx) => {
-      if (col._count.cards > 0) {
-        const cards = await tx.card.findMany({
-          where: { columnId },
-          orderBy: { position: "asc" },
-          select: { id: true },
-        });
-        let pos = await tx.card.aggregate({
-          where: { columnId: firstOther.id },
-          _max: { position: true },
-        });
-        let nextPos = (pos._max.position ?? -1) + 1;
-        for (const c of cards) {
-          await tx.card.update({ where: { id: c.id }, data: { columnId: firstOther.id, position: nextPos++ } });
+    for (const card of col.cards) {
+      for (const a of card.attachments) {
+        try {
+          fs.rmSync(path.join(process.cwd(), a.relativePath), { force: true });
+        } catch {
+          // ignore
         }
       }
-      await tx.boardColumn.delete({ where: { id: columnId } });
+      const cardDir = path.join(process.cwd(), "uploads", card.id);
+      try {
+        fs.rmSync(cardDir, { recursive: true, force: true });
+      } catch {
+        // ignore
+      }
+      await prisma.card.delete({ where: { id: card.id } });
+    }
+    await prisma.boardColumn.delete({ where: { id: columnId } });
+    res.json({ ok: true });
+  }),
+);
+
+// Archive (admin-only; no board context required for list/delete/download/restore)
+router.get(
+  "/archive",
+  requireAdmin(),
+  asyncHandler(async (_req, res) => {
+    const files = listArchiveFilenames();
+    res.json({ files });
+  }),
+);
+
+const ArchiveFilenameParamSchema = z.object({ filename: z.string().min(1) });
+router.delete(
+  "/archive/:filename",
+  requireAdmin(),
+  asyncHandler(async (req, res) => {
+    const { filename } = ArchiveFilenameParamSchema.parse(req.params);
+    deleteArchiveFile(filename);
+    res.json({ ok: true });
+  }),
+);
+
+router.get(
+  "/archive/:filename/download",
+  requireAdmin(),
+  asyncHandler(async (req, res) => {
+    const { filename } = ArchiveFilenameParamSchema.parse(req.params);
+    const absPath = getArchiveAbsolutePath(filename);
+    if (!fs.existsSync(absPath)) throw new HttpError(404, "Архив не найден");
+    res.download(absPath, filename);
+  }),
+);
+
+const RestoreArchiveSchema = z.object({
+  boardId: BoardIdSchema,
+  columnId: z.string().uuid(),
+});
+router.post(
+  "/archive/:filename/restore",
+  requireAdmin(),
+  asyncHandler(async (req, res) => {
+    const { filename } = ArchiveFilenameParamSchema.parse(req.params);
+    const body = RestoreArchiveSchema.parse(req.body);
+    const user = (req as any).user as { id: string };
+    const { cardId } = await restoreCardFromArchive(filename, body.boardId, body.columnId, user.id);
+    res.json({ cardId });
+  }),
+);
+
+router.post(
+  "/boards/:boardId/columns/:columnId/archive",
+  requireAdmin(),
+  asyncHandler(async (req, res) => {
+    const { boardId, columnId } = BoardColumnIdParamSchema.parse(req.params);
+    const col = await prisma.boardColumn.findFirst({
+      where: { id: columnId, boardId },
+      include: { cards: { orderBy: { position: "asc" }, include: { attachments: { select: { relativePath: true } } } } },
     });
+    if (!col) throw new HttpError(404, "Column not found");
+    for (const card of col.cards) {
+      await createCardArchive(card.id);
+      for (const a of card.attachments) {
+        try {
+          fs.rmSync(path.join(process.cwd(), a.relativePath), { force: true });
+        } catch {
+          // ignore
+        }
+      }
+      await prisma.card.delete({ where: { id: card.id } });
+      const cardDir = path.join(process.cwd(), "uploads", card.id);
+      try {
+        fs.rmSync(cardDir, { recursive: true, force: true });
+      } catch {
+        // ignore
+      }
+    }
     res.json({ ok: true });
   }),
 );
@@ -889,6 +974,41 @@ router.delete(
       }
     }
 
+    const cardDir = path.join(process.cwd(), "uploads", id);
+    try {
+      fs.rmSync(cardDir, { recursive: true, force: true });
+    } catch {
+      // ignore
+    }
+
+    res.json({ ok: true });
+  }),
+);
+
+router.post(
+  "/cards/:id/archive",
+  asyncHandler(async (req, res) => {
+    const boardId = (req as any).boardId as string;
+    const id = z.string().uuid().parse(req.params.id);
+    const actor = (req as any).user as { id: string; role: Role };
+    const card = await prisma.card.findFirst({
+      where: { id, boardId },
+      select: { id: true, authorId: true, attachments: { select: { relativePath: true } } },
+    });
+    if (!card) throw new HttpError(404, "Card not found");
+    const canManage = actor.role === Role.ADMIN || (!!card.authorId && card.authorId === actor.id);
+    if (!canManage) throw new HttpError(403, "Forbidden");
+
+    await createCardArchive(id);
+
+    for (const a of card.attachments) {
+      try {
+        fs.rmSync(path.join(process.cwd(), a.relativePath), { force: true });
+      } catch {
+        // ignore
+      }
+    }
+    await prisma.card.delete({ where: { id } });
     const cardDir = path.join(process.cwd(), "uploads", id);
     try {
       fs.rmSync(cardDir, { recursive: true, force: true });
