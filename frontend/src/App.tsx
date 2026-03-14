@@ -63,6 +63,11 @@ function cardBorderClass(importance: Importance) {
   }
 }
 
+function getCardShareLink(boardId: string, cardId: string): string {
+  const base = window.location.origin + window.location.pathname + (window.location.search || "");
+  return `${base}#board/${boardId}/card/${cardId}`;
+}
+
 function Modal(props: {
   open: boolean;
   title?: string;
@@ -229,6 +234,7 @@ function CardTile(props: {
   cardRef?: (el: HTMLDivElement | null) => void;
   onDelete?: () => void;
   onArchive?: () => void;
+  onShare?: () => void;
 }) {
   const [actionsOpen, setActionsOpen] = useState(false);
   const actionsRef = useRef<HTMLDivElement | null>(null);
@@ -264,7 +270,7 @@ function CardTile(props: {
     props.cardRef?.(el);
   };
 
-  const showActions = !!(props.onDelete || props.onArchive);
+  const showActions = !!(props.onDelete || props.onArchive || props.onShare);
 
   return (
     <div
@@ -341,6 +347,19 @@ function CardTile(props: {
             </button>
             {actionsOpen ? (
               <div className="absolute right-0 top-full z-10 mt-1 min-w-[140px] rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
+                {props.onShare ? (
+                  <button
+                    type="button"
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActionsOpen(false);
+                      props.onShare?.();
+                    }}
+                  >
+                    <IconShare className="h-4 w-4 shrink-0" /> Поделиться
+                  </button>
+                ) : null}
                 {props.onDelete ? (
                   <button
                     type="button"
@@ -412,6 +431,7 @@ function App() {
   const cardTileRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const [columnActionsOpen, setColumnActionsOpen] = useState<string | null>(null);
   const columnActionsRef = useRef<HTMLDivElement | null>(null);
+  const [shareConfirm, setShareConfirm] = useState<{ cardTitle: string; link: string } | null>(null);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
 
@@ -500,6 +520,26 @@ function App() {
     }
   }, []);
 
+  const openCardFromHash = useCallback(async () => {
+    const hash = window.location.hash.slice(1);
+    const m = hash.match(/^board\/([^/]+)\/card\/([^/]+)$/);
+    if (!m) return;
+    const [, boardId, cardId] = m;
+    if (currentBoardId !== boardId) {
+      await Api.selectBoard({ boardId });
+      setCurrentBoardId(boardId);
+      await reload();
+    }
+    try {
+      const data = await Api.fetchCard(cardId);
+      setCardDetail(data.card);
+      setCardOpen(true);
+    } catch {
+      // card may not exist or no access
+    }
+    window.history.replaceState(null, "", window.location.pathname + window.location.search);
+  }, [currentBoardId]);
+
   useEffect(() => {
     if (!me) return;
     const ok = !!me.user && me.user.totpEnabled && me.twoFactorPassed && !me.user.mustChangePassword;
@@ -508,6 +548,7 @@ function App() {
       return;
     }
     setLoading(true);
+    let currentBoardIdFromLoad: string | null = null;
     void (async () => {
       try {
         const b = await Api.listBoards();
@@ -516,6 +557,7 @@ function App() {
         if (nextBoardId && nextBoardId !== b.currentBoardId) {
           await Api.selectBoard({ boardId: nextBoardId });
         }
+        currentBoardIdFromLoad = nextBoardId;
         setCurrentBoardId(nextBoardId);
         await Promise.all([
           reload(),
@@ -523,11 +565,42 @@ function App() {
             .then((d) => setAllUsers(d.users as any))
             .catch(() => setAllUsers([])),
         ]);
+        const hash = window.location.hash.slice(1);
+        const hashMatch = hash.match(/^board\/([^/]+)\/card\/([^/]+)$/);
+        if (hashMatch) {
+          const [, boardId, cardId] = hashMatch;
+          if (boardId !== currentBoardIdFromLoad) {
+            await Api.selectBoard({ boardId });
+            setCurrentBoardId(boardId);
+            await reload();
+          }
+          try {
+            const data = await Api.fetchCard(cardId);
+            setCardDetail(data.card);
+            setCardOpen(true);
+          } catch {
+            // ignore
+          }
+          window.history.replaceState(null, "", window.location.pathname + window.location.search);
+        }
       } finally {
         setLoading(false);
       }
     })();
   }, [me?.user?.id, me?.twoFactorPassed, me?.user?.totpEnabled, me?.user?.mustChangePassword]);
+
+  useEffect(() => {
+    const onHashChange = () => void openCardFromHash();
+    window.addEventListener("hashchange", onHashChange);
+    return () => window.removeEventListener("hashchange", onHashChange);
+  }, [openCardFromHash]);
+
+  const handleShareCard = useCallback((cardTitle: string, link: string) => {
+    navigator.clipboard.writeText(link).then(
+      () => setShareConfirm({ cardTitle, link }),
+      () => setShareConfirm({ cardTitle, link }),
+    );
+  }, []);
 
   useEffect(() => {
     if (!searchQuery.trim()) {
@@ -971,6 +1044,11 @@ function App() {
                             onArchive={() => {
                               void Api.archiveCard(card.id).then(() => reload()).catch((e) => setError((e as Error).message));
                             }}
+                            onShare={
+                              currentBoardId
+                                ? () => handleShareCard(card.description, getCardShareLink(currentBoardId, card.id))
+                                : undefined
+                            }
                           />
                         ))}
                         {col.cards.length === 0 ? (
@@ -1077,6 +1155,8 @@ function App() {
         open={cardOpen}
         card={cardDetail}
         columns={columns}
+        boardId={currentBoardId}
+        onShareLink={handleShareCard}
         onClose={() => {
           setCardOpen(false);
           setCardDetail(null);
@@ -1093,6 +1173,27 @@ function App() {
         viewer={me.user}
         allUsers={allUsers ?? []}
       />
+
+      {shareConfirm ? (
+        <Modal
+          open={true}
+          title="Ссылка скопирована"
+          onClose={() => setShareConfirm(null)}
+        >
+          <p className="text-sm text-slate-700">
+            Карточка «{shareConfirm.cardTitle}». Ссылка {shareConfirm.link} скопирована в буфер обмена.
+          </p>
+          <div className="mt-4 flex justify-end">
+            <button
+              type="button"
+              className="rounded-xl bg-[#246c7c] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1d5663]"
+              onClick={() => setShareConfirm(null)}
+            >
+              OK
+            </button>
+          </div>
+        </Modal>
+      ) : null}
 
       <ProfileModal
         open={profileOpen}
@@ -1227,6 +1328,16 @@ function IconArchive(props: { className?: string }) {
       <path d="M4 8v13h16V8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
       <path d="M2 5h20v3H2z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
       <path d="M9 12h6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function IconShare(props: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={props.className ?? "h-4 w-4"} fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M16 6l-4-4-4 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M12 2v13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -1645,10 +1756,20 @@ function ChangePasswordView(props: { onDone: () => Promise<void> | void }) {
   const [p1, setP1] = useState("");
   const [p2, setP2] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const handleSave = () => {
+    if (!p1 || p1 !== p2 || p1.length < 8) return;
+    setError(null);
+    setSubmitting(true);
+    void Api.changePassword({ newPassword: p1 })
+      .then(() => props.onDone())
+      .catch((e) => setError((e as Error).message))
+      .finally(() => setSubmitting(false));
+  };
   return (
     <CenteredShell title="Смена пароля">
       <div className="grid gap-3">
-        <div className="text-sm text-slate-600">Задайте новый пароль (минимум 8 символов). Изменения сохраняются при выходе из поля.</div>
+        <div className="text-sm text-slate-600">Задайте новый пароль (минимум 8 символов).</div>
         {error ? <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-800">{error}</div> : null}
         <input type="password" className="rounded-xl border border-slate-200 p-2 text-sm outline-none focus:border-[#246c7c]" placeholder="Новый пароль" value={p1} onChange={(e) => setP1(e.target.value)} />
         <input
@@ -1657,14 +1778,15 @@ function ChangePasswordView(props: { onDone: () => Promise<void> | void }) {
           placeholder="Повторите пароль"
           value={p2}
           onChange={(e) => setP2(e.target.value)}
-          onBlur={() => {
-            if (!p1 || p1 !== p2 || p1.length < 8) return;
-            setError(null);
-            void Api.changePassword({ newPassword: p1 })
-              .then(() => props.onDone())
-              .catch((e) => setError((e as Error).message));
-          }}
         />
+        <button
+          type="button"
+          className="rounded-xl bg-[#246c7c] px-4 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50"
+          disabled={!p1 || p1 !== p2 || p1.length < 8 || submitting}
+          onClick={handleSave}
+        >
+          {submitting ? "Сохранение…" : "Сохранить"}
+        </button>
       </div>
     </CenteredShell>
   );
@@ -2771,7 +2893,6 @@ function BoardsModal(props: {
   onUpdated: () => Promise<void>;
   embedded?: boolean;
 }) {
-  const DEFAULT_BOARD_ID = "00000000-0000-0000-0000-000000000001";
   const [createName, setCreateName] = useState("");
   const [createDescription, setCreateDescription] = useState("");
   const [createMemberIds, setCreateMemberIds] = useState<string[]>([]);
@@ -3027,10 +3148,11 @@ function BoardsModal(props: {
                             Колонки
                           </button>
                           <IconButton
-                            title={b.id === DEFAULT_BOARD_ID ? "Нельзя удалить основную доску" : "Удалить доску"}
+                            title={props.boards.length <= 1 ? "Нельзя удалить последнюю доску" : "Удалить доску"}
                             variant="danger"
+                            disabled={props.boards.length <= 1}
                             onClick={() => {
-                              if (b.id === DEFAULT_BOARD_ID) return;
+                              if (props.boards.length <= 1) return;
                               if (!confirm(`Удалить доску “${b.name}”?`)) return;
                               setError(null);
                               void Api.deleteBoard(b.id)
@@ -3242,6 +3364,8 @@ function CardModal(props: {
   open: boolean;
   card: CardDetail | null;
   columns: BoardColumn[];
+  boardId: string | null;
+  onShareLink?: (cardTitle: string, link: string) => void;
   onClose: () => void;
   onChanged: () => Promise<void>;
   onDeleted: () => Promise<void>;
@@ -3606,6 +3730,20 @@ function CardModal(props: {
       }
       headerRight={
         <div className="flex items-center gap-2">
+          {props.boardId && props.onShareLink ? (
+            <IconButton
+              title="Поделиться"
+              onClick={() => {
+                const link = getCardShareLink(props.boardId!, card.id);
+                navigator.clipboard.writeText(link).then(
+                  () => props.onShareLink?.(card.description ?? "", link),
+                  () => props.onShareLink?.(card.description ?? "", link),
+                );
+              }}
+            >
+              <IconShare className="h-5 w-5" />
+            </IconButton>
+          ) : null}
           <IconButton
             title="Закрыть"
             onClick={() => {
