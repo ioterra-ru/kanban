@@ -280,10 +280,17 @@ router.post(
       orderBy: { position: "asc" },
       select: { id: true, position: true },
     });
-    const maxPos = existing.length === 0 ? -1 : Math.max(...existing.map((c) => c.position));
-    const position = body.position ?? maxPos + 1;
+    const position = body.position ?? existing.length;
     const insertAt = clamp(position, 0, existing.length);
     const column = await prisma.$transaction(async (tx) => {
+      // Normalize positions to 0..n-1 (reverse order to avoid unique constraint conflicts after restore)
+      for (let i = existing.length - 1; i >= 0; i--) {
+        await tx.boardColumn.update({
+          where: { id: existing[i].id },
+          data: { position: i },
+        });
+      }
+      // Shift columns at insertAt and right to make room
       for (let i = existing.length - 1; i >= insertAt; i--) {
         await tx.boardColumn.update({
           where: { id: existing[i].id },

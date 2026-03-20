@@ -305,11 +305,13 @@ function CardTile(props: {
           </div>
         </div>
         <div className="flex flex-col items-end gap-1">
-          <span className={classNames("rounded-md px-2 py-0.5 text-[11px] font-semibold", importanceBadge(props.card.importance))}>
-            {importanceLabel(props.card.importance)}
-          </span>
+          <span
+            className={classNames("inline-block h-2.5 w-2.5 shrink-0 rounded", importanceBadge(props.card.importance))}
+            title={importanceLabel(props.card.importance)}
+            aria-label={importanceLabel(props.card.importance)}
+          />
           {props.card.paused ? (
-            <span className="rounded-md bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-900">
+            <span className="rounded-md bg-amber-300 px-2 py-0.5 text-[11px] font-semibold text-amber-950">
               Пауза
             </span>
           ) : null}
