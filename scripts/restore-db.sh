@@ -12,7 +12,28 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
+# Корень репозитория: либо KANBAN_REPO_ROOT, либо каталог с docker/compose
+if [ -n "${KANBAN_REPO_ROOT:-}" ]; then
+  REPO_ROOT="$(cd "$KANBAN_REPO_ROOT" && pwd)"
+else
+  REPO_ROOT=""
+  for candidate in "$SCRIPT_DIR/.." "$SCRIPT_DIR"; do
+    dir="$(cd "$candidate" 2>/dev/null && pwd)"
+    if [ -f "$dir/docker/compose/.cont_one_app.env" ]; then
+      REPO_ROOT="$dir"
+      break
+    fi
+  done
+  if [ -z "$REPO_ROOT" ]; then
+    echo "Ошибка: не найден каталог с docker/compose/.cont_one_app.env" >&2
+    echo "Запустите скрипт из корня репозитория kanban или задайте переменную KANBAN_REPO_ROOT:" >&2
+    echo "  cd /path/to/kanban && ./scripts/restore-db.sh backup/файл.sql" >&2
+    echo "  KANBAN_REPO_ROOT=/path/to/kanban $0 backup/файл.sql" >&2
+    exit 1
+  fi
+fi
+
 COMPOSE_ENV_DIR="$REPO_ROOT/docker/compose"
 ENV_FILE="$COMPOSE_ENV_DIR/.cont_one_app.env"
 SECRETS_FILE="$COMPOSE_ENV_DIR/.cont_one_app.secrets.env"

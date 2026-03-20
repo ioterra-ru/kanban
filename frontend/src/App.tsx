@@ -125,7 +125,7 @@ function ColumnDropZone(props: { id: ColumnId; children: React.ReactNode }) {
     <div
       ref={setNodeRef}
       className={classNames(
-        "min-h-[120px] rounded-xl border border-slate-200 bg-white p-2",
+        "flex h-full min-h-[120px] flex-col rounded-xl border border-slate-200 bg-white p-2",
         isOver && "ring-2 ring-[#246c7c]",
       )}
     >
@@ -215,12 +215,16 @@ function SortableColumnSection(props: {
       ref={setNodeRef}
       style={style}
       className={classNames(
-        "w-[340px] shrink-0",
+        "column-section flex h-full min-h-0 w-[340px] shrink-0 flex-col",
         isDragging && "opacity-80 ring-2 ring-[#246c7c] rounded-xl",
       )}
     >
-      {props.renderHeader(handle)}
-      {props.children}
+      <div className="column-scroll-area flex min-h-0 flex-1 flex-col overflow-y-auto">
+        <div className="sticky top-0 z-10 shrink-0 border-b border-slate-100 bg-white pb-2 pt-0.5">
+          {props.renderHeader(handle)}
+        </div>
+        <div className="min-h-0 flex-1">{props.children}</div>
+      </div>
     </section>
   );
 }
@@ -305,11 +309,13 @@ function CardTile(props: {
           </div>
         </div>
         <div className="flex flex-col items-end gap-1">
-          <span className={classNames("rounded-md px-2 py-0.5 text-[11px] font-semibold", importanceBadge(props.card.importance))}>
-            {importanceLabel(props.card.importance)}
-          </span>
+          <span
+            className={classNames("inline-block h-2.5 w-2.5 shrink-0 rounded", importanceBadge(props.card.importance))}
+            title={importanceLabel(props.card.importance)}
+            aria-label={importanceLabel(props.card.importance)}
+          />
           {props.card.paused ? (
-            <span className="rounded-md bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-900">
+            <span className="rounded-md bg-amber-300 px-2 py-0.5 text-[11px] font-semibold text-amber-950">
               Пауза
             </span>
           ) : null}
@@ -868,7 +874,7 @@ function App() {
         {error ? <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-800">{error}</div> : null}
       </header>
 
-      <main className="flex-1 overflow-auto p-5">
+      <main className="flex min-h-0 flex-1 flex-col overflow-auto p-5">
         <DndContext
           sensors={sensors}
           collisionDetection={closestCorners}
@@ -929,7 +935,7 @@ function App() {
             });
           }}
         >
-          <div className="flex min-w-[1200px] gap-4">
+          <div className="flex min-h-0 min-w-[1200px] flex-1 items-stretch gap-4">
             <SortableContext
               items={columns.map((c) => `${COLUMN_PREFIX}${c.id}`)}
               strategy={horizontalListSortingStrategy}
