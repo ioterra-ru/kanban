@@ -748,23 +748,22 @@ function App() {
   return (
     <div className="flex h-full flex-col">
       <header className="border-b border-slate-200 bg-white px-5 py-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-3">
-            <img src="/ioterra.svg" alt="ИоТерра" className="h-8 w-8" />
+        <div className="flex items-center gap-4 min-w-0">
+          <div className="flex items-center gap-3 flex-shrink-0">
+            <img src="/ioterra.svg" alt="ИоТерра" className="h-16 w-16" />
             <div className="leading-tight">
-              <div className="text-2xl font-extrabold text-slate-900">
-                MPC-Peresvet
-              </div>
-              <div className="text-sm font-semibold text-slate-500">ИоТерра-Канбан</div>
+              <div className="text-2xl font-extrabold text-slate-900">ИоТерра Канбан</div>
               <div className="text-xs font-medium text-slate-400 mt-0.5">
-                v{import.meta.env.VITE_APP_VERSION || 'dev'}
+                v{import.meta.env.VITE_APP_VERSION || 'dev'} · © ИоТерра {new Date().getFullYear()}
               </div>
             </div>
-            <div className="ml-4 text-xl font-bold text-slate-800">
+          </div>
+          <div className="flex-1 flex justify-center min-w-0">
+            <div className="text-4xl font-bold text-slate-800 truncate">
               {boards.find((b) => b.id === currentBoardId)?.name ?? "Доска"}
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-shrink-0">
             <div className="hidden items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 md:flex">
               <AvatarImg user={me.user} size={24} />
               <span className="font-semibold">{me.user.name}</span>
@@ -1533,7 +1532,7 @@ function LoginView(props: { onDone: () => Promise<void> | void }) {
   };
 
   return (
-    <CenteredShell title="ИоТерра-Канбан">
+    <CenteredShell title="ИоТерра Канбан">
       <div className="grid gap-3">
         <div className="text-sm text-slate-600">{mode === "login" ? "Вход" : "Восстановление пароля"}</div>
         <div className="text-xs text-slate-500">По умолчанию: логин <span className="font-mono">admin</span>, пароль <span className="font-mono">admin</span>.</div>
