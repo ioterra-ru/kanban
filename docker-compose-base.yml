@@ -63,8 +63,6 @@ services:
     depends_on:
       backend:
         condition: service_healthy
-      adminer:
-        condition: service_started
 
 networks:
   default:
