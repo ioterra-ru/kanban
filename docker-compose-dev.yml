@@ -1,0 +1,21 @@
+# Все параметры (порты, хосты, URL и т.д.) задаются через env-файлы в docker/compose/:
+#   --env-file docker/compose/.cont_one_app.env
+#   --env-file docker/compose/.cont_one_app.secrets.env
+services:
+  #db:
+    #ports:
+    #  - "5432:5432"
+  adminer:
+    image: adminer:4
+    container_name: kanban_adminer
+    depends_on:
+      db:
+        condition: service_healthy
+
+networks:
+  default:
+    name: kanban_default
+
+volumes:
+  kanban_pg:
+  kanban_uploads:
