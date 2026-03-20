@@ -1,4 +1,4 @@
-# kanban
+# ИоТерра Канбан
 
 [![CI](https://github.com/ioterra-ru/kanban/actions/workflows/ci.yml/badge.svg)](https://github.com/ioterra-ru/kanban/actions/workflows/ci.yml)
 ![Tests %](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/ioterra-ru/kanban/main/badges/tests.json)
@@ -8,7 +8,7 @@
 
 Канбан доски.
 
-## ИоТерра‑Канбан (PostgreSQL + Node/Express + React/Vite)
+## ИоТерра Канбан (PostgreSQL + Node/Express + React/Vite)
 
 Веб‑приложение Kanban‑доски с карточками, участниками, вложениями, ролями, 2FA и несколькими досками.
 
@@ -42,8 +42,8 @@ docker compose --env-file docker/compose/.cont_one_app.env --env-file docker/com
 
 После первого запуска (скриптом или вручную) при необходимости отредактируйте `docker/compose/.cont_one_app.env` (порты, хосты, БД) и перезапустите.
 
-- **Логи backend** (при ошибке «backend is unhealthy» или для отладки): с теми же env-файлами, например  
-  `./scripts/logs-backend.sh` или  
+- **Логи backend** (при ошибке «backend is unhealthy» или для отладки): с теми же env-файлами, например
+  `./scripts/logs-backend.sh` или
   `docker compose --env-file docker/compose/.cont_one_app.env --env-file docker/compose/.cont_one_app.secrets.env logs backend`
 
 После запуска UI и Adminer доступны по адресу из переменной `PUBLIC_BASE_URL` (по умолчанию `https://localhost:8443`). При `ENABLE_HTTPS=false` используется HTTP по порту из `FRONTEND_HTTP_PORT` (по умолчанию 8080). Самоподписанный сертификат при HTTPS создаётся автоматически в каталоге из `CERTS_PATH` (`./certs/` по умолчанию).

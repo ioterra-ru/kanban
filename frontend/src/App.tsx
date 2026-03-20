@@ -753,9 +753,15 @@ function App() {
             <img src="/ioterra.svg" alt="ИоТерра" className="h-8 w-8" />
             <div className="leading-tight">
               <div className="text-2xl font-extrabold text-slate-900">
-                {boards.find((b) => b.id === currentBoardId)?.name ?? "Доска"}
+                MPC-Peresvet
               </div>
               <div className="text-sm font-semibold text-slate-500">ИоТерра-Канбан</div>
+              <div className="text-xs font-medium text-slate-400 mt-0.5">
+                v{import.meta.env.VITE_APP_VERSION || 'dev'}
+              </div>
+            </div>
+            <div className="ml-4 text-xl font-bold text-slate-800">
+              {boards.find((b) => b.id === currentBoardId)?.name ?? "Доска"}
             </div>
           </div>
           <div className="flex items-center gap-2">
