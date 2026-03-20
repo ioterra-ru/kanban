@@ -758,21 +758,10 @@ function App() {
               </div>
             </div>
           </div>
-          <div className="flex-1 flex justify-center min-w-0">
-            <div className="text-4xl font-bold text-slate-800 truncate">
-              {boards.find((b) => b.id === currentBoardId)?.name ?? "Доска"}
-            </div>
-          </div>
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <div className="hidden items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-700 md:flex">
-              <AvatarImg user={me.user} size={24} />
-              <span className="font-semibold">{me.user.name}</span>
-              <span className="text-slate-400">•</span>
-              <span className="text-slate-500">{me.user.role === "ADMIN" ? "Администратор" : "Участник"}</span>
-            </div>
+          <div className="flex-1 flex justify-center items-stretch gap-2 min-w-0 h-12">
             {boards.length ? (
               <select
-                className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 outline-none focus:border-[#246c7c]"
+                className="h-full min-w-0 max-w-full rounded-xl border border-slate-200 bg-white/90 pl-3 pr-8 text-2xl font-bold leading-none text-slate-800 outline-none focus:border-[#246c7c] [&>option]:text-sm"
                 value={currentBoardId ?? ""}
                 onChange={(e) => {
                   const id = e.target.value;
@@ -792,13 +781,32 @@ function App() {
                 }}
               >
                 {boards.map((b) => (
-                  <option key={b.id} value={b.id}>
+                  <option key={b.id} value={b.id} style={{ fontSize: "0.875rem" }}>
                     {b.name}
                   </option>
                 ))}
               </select>
-            ) : null}
-            <div className="relative flex items-center">
+            ) : (
+              <span className="flex h-full items-center rounded-xl border border-slate-200 bg-white/90 px-3 text-2xl font-bold text-slate-800">Доска</span>
+            )}
+            <button
+              type="button"
+              className="flex h-full w-12 flex-shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-transparent text-slate-600 hover:bg-slate-100 disabled:opacity-50 disabled:hover:bg-transparent"
+              disabled={columns.length === 0}
+              title="Создание новой карточки"
+              aria-label="Создание новой карточки"
+              onClick={() => {
+                setCreateColumn(columns[0]?.id ?? "");
+                setCreateTitle("");
+                setCreateDetails("");
+                setCreateOpen(true);
+              }}
+            >
+              <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 5v14M5 12h14" />
+              </svg>
+            </button>
+            <div className="relative flex h-full min-w-0 items-center rounded-xl border border-slate-200 bg-white focus-within:border-[#246c7c]">
               <span className="pointer-events-none absolute left-3 text-slate-400" aria-hidden>
                 <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -807,14 +815,30 @@ function App() {
               <input
                 ref={searchInputRef}
                 type="text"
-                className="w-48 rounded-xl border border-slate-200 bg-white py-2 pl-9 pr-3 text-sm text-slate-800 outline-none focus:border-[#246c7c] placeholder:text-slate-400"
+                className={`h-full w-72 min-w-0 rounded-xl border-0 bg-transparent py-0 pl-9 text-sm text-slate-800 outline-none focus:ring-0 placeholder:text-slate-400 ${searchQuery ? "pr-9" : "pr-3"}`}
                 placeholder="Поиск карточки"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onFocus={() => searchResults && setSearchOpen(true)}
               />
               {searching ? (
-                <span className="absolute right-3 text-xs text-slate-400">…</span>
+                <span className="absolute right-9 text-xs text-slate-400">…</span>
+              ) : searchQuery ? (
+                <button
+                  type="button"
+                  className="absolute right-2 flex h-6 w-6 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                  onClick={() => {
+                    setSearchQuery("");
+                    setSearchOpen(false);
+                    searchInputRef.current?.focus();
+                  }}
+                  title="Очистить поиск"
+                  aria-label="Очистить поиск"
+                >
+                  <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
               ) : null}
               {searchOpen && searchResults !== null ? (
                 <div
@@ -850,30 +874,37 @@ function App() {
                 </div>
               ) : null}
             </div>
-            <button
-              className="rounded-xl bg-[#246c7c] px-4 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50"
-              disabled={columns.length === 0}
-              onClick={() => {
-                setCreateColumn(columns[0]?.id ?? "");
-                setCreateTitle("");
-                setCreateDetails("");
-                setCreateOpen(true);
-              }}
-            >
-              + Карточка
-            </button>
-            <button
-              className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50"
-              onClick={() => setProfileOpen(true)}
-            >
-              Кабинет
-            </button>
-            <button
-              className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50"
-              onClick={() => void Api.logout().then(loadMe)}
-            >
-              Выйти
-            </button>
+          </div>
+          <div className="flex items-center flex-shrink-0 ml-10">
+            <div className="flex items-center gap-1 rounded-xl border border-slate-200 bg-slate-50/80 px-2 py-1.5">
+              <AvatarImg user={me.user} size={24} />
+              <span className="px-2 text-sm font-semibold text-slate-800">{me.user.name}</span>
+              <span className="text-slate-400">·</span>
+              <span className="text-sm text-slate-600">{me.user.role === "ADMIN" ? "Администратор" : "Участник"}</span>
+              <button
+                type="button"
+                className="rounded-lg border border-slate-200 bg-white p-1.5 text-slate-600 hover:bg-slate-100"
+                onClick={() => setProfileOpen(true)}
+                title="Кабинет"
+                aria-label="Кабинет"
+              >
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+              </button>
+              <button
+                type="button"
+                className="rounded-lg border border-slate-200 bg-white p-1.5 text-slate-600 hover:bg-slate-100"
+                onClick={() => void Api.logout().then(loadMe)}
+                title="Выйти"
+                aria-label="Выйти"
+              >
+                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
+              </button>
+            </div>
           </div>
         </div>
         {error ? <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-800">{error}</div> : null}
