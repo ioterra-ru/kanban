@@ -2,14 +2,13 @@ name: CI
 
 on:
   pull_request:
-    types: [opened, synchronize, reopened, closed]
+    types: [opened, synchronize, reopened]
 
 permissions:
   contents: read
 
 jobs:
   test:
-    if: github.event.action != 'closed'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -29,49 +28,3 @@ jobs:
 
       - name: Frontend tests (+ coverage)
         run: npm -w frontend test -- --reporter=json --outputFile=vitest-report.json --coverage --coverage.reporter=json-summary --coverage.reporter=text
-
-      - name: Generate badges
-        run: node scripts/generate-badges.mjs
-
-  update-badges:
-    if: github.event.action == 'closed' && github.event.pull_request.merged == true && github.event.pull_request.base.ref == 'main'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - name: Checkout main
-        uses: actions/checkout@v4
-        with:
-          ref: main
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-
-      - name: Install
-        run: npm ci
-
-      - name: Backend tests (+ coverage)
-        run: npm -w backend test -- --reporter=json --outputFile=vitest-report.json --coverage --coverage.reporter=json-summary --coverage.reporter=text
-
-      - name: Frontend tests (+ coverage)
-        run: npm -w frontend test -- --reporter=json --outputFile=vitest-report.json --coverage --coverage.reporter=json-summary --coverage.reporter=text
-
-      - name: Generate badges
-        run: node scripts/generate-badges.mjs
-
-      - name: Commit & push updated badges
-        run: |
-          if git diff --quiet -- badges; then
-            echo "No badge changes."
-            exit 0
-          fi
-
-          git add badges/*.json
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git commit -m "chore: update badges"
-          git push
-

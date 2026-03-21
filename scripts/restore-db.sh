@@ -8,6 +8,8 @@
 #
 # Требования: docker compose с сервисом db; env-файлы в docker/compose/.
 # Backend будет остановлен на время восстановления.
+#
+# Набор compose-файлов подбирается автоматически, если не заданы COMPOSE_FILE или KANBAN_COMPOSE_FILE.
 
 set -euo pipefail
 
@@ -54,6 +56,47 @@ source "$ENV_FILE"
 source "$SECRETS_FILE"
 set +a
 
+kanban_export_compose_file() {
+  if [ -n "${KANBAN_COMPOSE_FILE:-}" ]; then
+    export COMPOSE_FILE="${KANBAN_COMPOSE_FILE}"
+    return
+  fi
+  if [ -n "${COMPOSE_FILE:-}" ]; then
+    return
+  fi
+  local ccf_root="${REPO_ROOT:?}"
+  local -a ccf_ef=(--env-file "${ENV_FILE:?}" --env-file "${SECRETS_FILE:?}")
+  local ccf_matched=""
+
+  if [ -f "$ccf_root/docker-compose-base.yml" ] && [ -f "$ccf_root/docker-compose-prod.yml" ]; then
+    if docker compose "${ccf_ef[@]}" -f docker-compose-base.yml -f docker-compose-prod.yml ps -q db 2>/dev/null | head -1 | grep -q .; then
+      export COMPOSE_FILE=docker-compose-base.yml:docker-compose-prod.yml
+      ccf_matched=1
+    fi
+  fi
+
+  if [ -z "$ccf_matched" ] && [ -f "$ccf_root/docker-compose-base.yml" ] && [ -f "$ccf_root/docker-compose-dev.yml" ]; then
+    if docker compose "${ccf_ef[@]}" -f docker-compose-base.yml -f docker-compose-dev.yml ps -q db 2>/dev/null | head -1 | grep -q .; then
+      export COMPOSE_FILE=docker-compose-base.yml:docker-compose-dev.yml
+      ccf_matched=1
+    fi
+  fi
+
+  if [ -z "$ccf_matched" ]; then
+    if docker compose "${ccf_ef[@]}" ps -q db 2>/dev/null | head -1 | grep -q .; then
+      ccf_matched=1
+    fi
+  fi
+
+  if [ -z "$ccf_matched" ]; then
+    if [ -f "$ccf_root/docker-compose-base.yml" ] && [ -f "$ccf_root/docker-compose-prod.yml" ]; then
+      export COMPOSE_FILE=docker-compose-base.yml:docker-compose-prod.yml
+    elif [ -f "$ccf_root/docker-compose-base.yml" ] && [ -f "$ccf_root/docker-compose-dev.yml" ]; then
+      export COMPOSE_FILE=docker-compose-base.yml:docker-compose-dev.yml
+    fi
+  fi
+}
+
 if [ -n "${1:-}" ]; then
   BACKUP_FILE="$1"
   if [[ "$BACKUP_FILE" != /* ]]; then
@@ -76,6 +119,7 @@ if [ ! -f "$BACKUP_FILE" ]; then
 fi
 
 cd "$REPO_ROOT"
+kanban_export_compose_file
 COMPOSE_CMD=(docker compose --env-file "$ENV_FILE" --env-file "$SECRETS_FILE")
 
 echo "Остановка backend и frontend (чтобы не держали соединения с БД)..."

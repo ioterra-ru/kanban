@@ -1,8 +1,6 @@
 # ИоТерра Канбан
 
 [![CI](https://github.com/ioterra-ru/kanban/actions/workflows/ci.yml/badge.svg)](https://github.com/ioterra-ru/kanban/actions/workflows/ci.yml)
-![Tests %](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/ioterra-ru/kanban/main/badges/tests.json)
-![Coverage %](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/ioterra-ru/kanban/main/badges/coverage.json)
 ![License](https://img.shields.io/github/license/ioterra-ru/kanban)
 ![Last commit](https://img.shields.io/github/last-commit/ioterra-ru/kanban)
 
@@ -16,9 +14,17 @@
 
 **Вариант 1 — скриптом (рекомендуется):**
 
-```bash
-./run_one_app.sh
-```
+- локальная разработка (compose `base` + `dev`, в т.ч. Adminer):
+
+  ```bash
+  ./run_one_app_dev.sh
+  ```
+
+- продакшен-сервер (compose `base` + `prod`, без Adminer в типовой конфигурации):
+
+  ```bash
+  ./run_one_app_prod.sh
+  ```
 
 Нужны файлы `docker/compose/.cont_one_app.env` (скопировать из `.cont_one_app.env.example`) и `docker/compose/.cont_one_app.secrets.env` (скопировать из `.cont_one_app.secrets.env.example`; если файла нет, скрипт создаст его из примера). Если в секретах нет переменной **SESSION_SECRET** или она короче 16 символов, скрипт сгенерирует её (нужен установленный **openssl**) и сохранит в `.cont_one_app.secrets.env`. Без openssl скрипт выдаст ошибку с подсказкой.
 
@@ -42,9 +48,8 @@ docker compose --env-file docker/compose/.cont_one_app.env --env-file docker/com
 
 После первого запуска (скриптом или вручную) при необходимости отредактируйте `docker/compose/.cont_one_app.env` (порты, хосты, БД) и перезапустите.
 
-- **Логи backend** (при ошибке «backend is unhealthy» или для отладки): с теми же env-файлами, например
-  `./scripts/logs-backend.sh` или
-  `docker compose --env-file docker/compose/.cont_one_app.env --env-file docker/compose/.cont_one_app.secrets.env logs backend`
+- **Логи backend** (при ошибке «backend is unhealthy» или для отладки): с теми же env-файлами, например  
+  `docker compose --env-file docker/compose/.cont_one_app.env --env-file docker/compose/.cont_one_app.secrets.env logs -f backend`
 
 После запуска UI и Adminer доступны по адресу из переменной `PUBLIC_BASE_URL` (по умолчанию `https://localhost:8443`). При `ENABLE_HTTPS=false` используется HTTP по порту из `FRONTEND_HTTP_PORT` (по умолчанию 8080). Самоподписанный сертификат при HTTPS создаётся автоматически в каталоге из `CERTS_PATH` (`./certs/` по умолчанию).
 
@@ -111,30 +116,76 @@ docker compose --env-file docker/compose/.cont_one_app.env --env-file docker/com
 
 Если почта недоступна, есть альтернативы:
 
-- **по коду 2FA**: на экране входа **«Забыли пароль?»** → логин/email + код 2FA + новый пароль
-- **через администратора**: Админ → **Пользователи** → кнопка с ключом (сброс пароля, при входе потребуется смена)
+- **по коду 2FA**: на экране входа **«Забыли пароль?»** → логин/email + код 2FA + новый пароль (только если в БД у пользователя включена 2FA и есть секрет)
+- **через администратора в приложении**: Админ → **Пользователи** → кнопка с ключом (сброс пароля, при входе потребуется смена) — нужен другой уже вошедший администратор
 
-### Бэкап и восстановление БД
+**Почта не работает, 2FA выключена, пароль забыт, войти некому** — сброс пароля с сервера по SSH: скрипт **`admin-reset-user-password.sh`** (описан в разделе **«Скрипты»** ниже).
 
-**Создание бэкапа** (приложение должно быть запущено):
+### Скрипты: каталог `scripts/`
+
+В каталоге лежат **три** служебных скрипта для PostgreSQL и аварийного сброса пароля. Нужны **Docker** и **docker compose**, файлы `docker/compose/.cont_one_app.env` и `docker/compose/.cont_one_app.secrets.env`.
+
+**Общие замечания**
+
+| Тема | Поведение |
+|------|-----------|
+| Откуда запускать | Из **корня репозитория** (рядом с `docker/compose/`). Скрипты **`restore-db.sh`** и **`admin-reset-user-password.sh`** дополнительно находят корень по `docker/compose/.cont_one_app.env` или по переменной **`KANBAN_REPO_ROOT`**. **`backup-db.sh`** считает корень каталогом на уровень выше `scripts/`. |
+| Compose-файлы | Автоматически подбирается набор (`docker-compose-base.yml` + prod или dev, иначе `docker-compose.yml`) по **запущенному** сервису `db`; если контейнеры ещё не подняты — по умолчанию prod-набор, если файлы есть. Вручную: `export COMPOSE_FILE=...` или `export KANBAN_COMPOSE_FILE=...`. |
+
+---
+
+#### `backup-db.sh` — дамп базы
 
 ```bash
 ./scripts/backup-db.sh
 ```
 
-Файл сохраняется в `backup/kanban-YYYY-MM-DDTHHMMSSZ.sql`. Его можно перенести на другой сервер (scp, rsync и т.п.).
+- Контейнер **`db`** должен быть запущен (например `./run_one_app_dev.sh`, `./run_one_app_prod.sh` или `docker compose up -d db`).
+- В `backup/` создаётся файл **`kanban-YYYY-MM-DDTHHMMSSZ.sql`** (текстовый дамп `pg_dump` с `--no-owner --clean --if-exists`).
+- Имя пользователя и БД берутся из env (`POSTGRES_USER`, `POSTGRES_DB`).
 
-**Восстановление** (например, на облачном сервере после копирования файла в репозиторий):
+---
+
+#### `restore-db.sh` — восстановление из SQL-файла
 
 ```bash
-# указать файл явно
+# явный путь к дампу (относительный — от корня репозитория)
 ./scripts/restore-db.sh backup/kanban-2026-03-12T123456Z.sql
 
-# или без аргумента — возьмётся последний бэкап из backup/
+# без аргумента — самый новый по времени файла backup/kanban-*.sql
 ./scripts/restore-db.sh
 ```
 
-Скрипт восстановления останавливает backend и frontend, подставляет дамп в текущую БД (заменяя данные), затем снова запускает сервисы. Нужны те же env-файлы в `docker/compose/`.
+- **Вход** — один необязательный аргумент: путь к **текстовому SQL**, который выполняет **`psql`** (обычно дамп из `backup-db.sh`; другой совместимый SQL возможен на свой риск).
+- Останавливает **`backend`** и **`frontend`**, передаёт файл в `psql` в контейнере **`db`** с **`ON_ERROR_STOP`** (ошибка в дампе прерывает восстановление), затем снова поднимает backend и frontend. При необходимости поднимает только **`db`**.
+- Абсолютный путь к файлу можно передать как есть; относительный интерпретируется **от корня репозитория**.
+
+---
+
+#### `admin-reset-user-password.sh` — новый пароль пользователя по email
+
+```bash
+./scripts/admin-reset-user-password.sh user@example.com
+```
+
+- Запуск от **администратора ОС** на сервере (SSH). Один аргумент — **email** учётной записи из таблицы `User`.
+- Дважды запрашивает новый пароль (**ввод скрыт**), минимум **8** символов; пароли должны совпасть.
+- Считает **bcrypt**-хеш в одноразовом контейнере **`backend`** (`docker compose run`, 12 раундов, как в приложении), обновляет **`passwordHash`**, выставляет **`mustChangePassword = true`**, удаляет строки **`session`** для этого пользователя.
+- Нужны запущенный **`db`** и возможность **`docker compose run`** для сервиса **`backend`** (образ уже собран).
+
+---
+
+### Бэкап и восстановление БД
+
+Краткий типичный цикл (подробности — в разделе **Скрипты** выше):
+
+```bash
+./scripts/backup-db.sh
+./scripts/restore-db.sh backup/kanban-2026-03-12T123456Z.sql
+# или ./scripts/restore-db.sh — последний kanban-*.sql из backup/
+```
+
+Файл дампа можно копировать на другой хост (`scp`, `rsync` и т.д.) и восстанавливать там тем же `restore-db.sh`.
 
 ### Перенос БД на удалённый сервер
 
@@ -167,18 +218,27 @@ docker compose --env-file docker/compose/.cont_one_app.env --env-file docker/com
 
    Удалённая БД будет полностью заменена содержимым локальной (пользователи, доски, карточки и т.д.).
 
-   **Если после переноса нельзя войти из‑за 2FA:** на целевом сервере выполните `./scripts/disable-2fa-after-migration.sh` — у всех пользователей отключится двухфакторная аутентификация. Вход станет возможен по паролю; 2FA можно снова включить в профиле. Подробнее в `docs/auth.rst` (раздел «Перенос базы данных и 2FA»).
+   **Если после переноса нельзя войти из‑за 2FA:** на целевом сервере в PostgreSQL отключите 2FA у всех пользователей (подставьте пользователя/БД из env):
 
-**Вариант 2 — только структура (без данных)**
+   ```bash
+   docker compose exec -T db psql -U kanban -d kanban -c \
+     'UPDATE "User" SET "totpEnabled" = false, "totpSecret" = null, "totpTempSecret" = null;'
+   ```
 
-Если на удалённом сервере схема «отстала» и нужно подтянуть лишь структуру:
+   После этого вход по паролю; 2FA при необходимости снова включается в профиле. Подробнее в `docs/auth.rst` (раздел «Перенос базы данных и 2FA»).
 
-1. **Локально:** `./scripts/backup-db-schema.sh` → файл `backup/kanban-schema-YYYY-MM-DDTHHMMSSZ.sql`.
-2. **Копирование и восстановление** — те же шаги (scp в `backup/`, затем на сервере `./scripts/restore-db.sh backup/kanban-schema-...sql`). Данные на удалённой БД будут удалены, останется только актуальная схема.
+**Только схема БД (без данных)** — при необходимости вручную, с запущенным контейнером `db`:
+
+```bash
+docker compose --env-file docker/compose/.cont_one_app.env --env-file docker/compose/.cont_one_app.secrets.env \
+  exec -T db pg_dump -U kanban -d kanban --schema-only --no-owner > backup/kanban-schema-manual.sql
+```
+
+Дальше файл можно перенести и применить через `./scripts/restore-db.sh` (данные на целевой БД будут уничтожены дампом).
 
 ### Переменные окружения и секреты
 
-Запуск через `./run_one_app.sh` использует два файла в `docker/compose/`:
+Скрипты `./run_one_app_dev.sh` и `./run_one_app_prod.sh` используют два файла в `docker/compose/`:
 
 - **`.cont_one_app.env`** — конфигурация (порты, хосты, URL, БД). По умолчанию в примере заданы значения для локального запуска; пользователь редактирует этот файл под себя.
 - **`.cont_one_app.secrets.env`** — секреты (не коммитить). Создаётся скриптом при первом запуске; нужно задать `SESSION_SECRET` (не короче 16 символов) и при необходимости SMTP.

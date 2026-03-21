@@ -444,6 +444,11 @@ authRouter.post(
     const mailConfigured =
       ms?.enabled && !!ms.host && !!ms.port && !!ms.user && !!ms.pass ? true : !!(env.SMTP_HOST && env.SMTP_USER && env.SMTP_PASS);
     if (!mailConfigured) {
+      // Клиент всегда получает { ok: true } — в логах видно, что письмо даже не пытались отправить.
+      // eslint-disable-next-line no-console
+      console.warn(
+        "[auth/password/forgot] Почта не считается настроенной (проверьте MailSettings в БД или SMTP_* в env). Письмо не отправлено.",
+      );
       respondOk();
       return;
     }

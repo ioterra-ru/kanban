@@ -98,11 +98,17 @@ export async function sendEmail(input: SendEmailInput) {
   }
 
   try {
-    await t.transporter.sendMail({
+    const info = await t.transporter.sendMail({
       from: t.from,
       to: input.to.join(","),
       subject: input.subject,
       text: input.text,
+    });
+    // eslint-disable-next-line no-console
+    console.log("[email sent]", {
+      to: input.to,
+      subject: input.subject,
+      messageId: info.messageId,
     });
   } catch (err) {
     // Never crash the app because SMTP is down/misconfigured.
