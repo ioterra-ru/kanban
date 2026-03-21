@@ -335,13 +335,16 @@ function CardTile(props: {
       <div className="mt-2 flex items-center justify-between gap-2 text-xs text-slate-500">
         <div className="flex items-center gap-3">
           <button
-            className="rounded-md px-2 py-1 hover:bg-slate-50 hover:text-slate-900"
+            type="button"
+            className="grid h-7 w-7 place-items-center rounded-md text-slate-500 hover:bg-slate-50 hover:text-slate-900"
+            title="Открыть"
+            aria-label="Открыть"
             onClick={(e) => {
               e.stopPropagation();
               props.onClick();
             }}
           >
-            Открыть
+            <IconEye className="h-4 w-4" />
           </button>
           <span>💬 {props.card.commentCount}</span>
           <span>📎 {props.card.attachmentCount}</span>
@@ -362,44 +365,50 @@ function CardTile(props: {
               <IconMoreVertical className="h-4 w-4" />
             </button>
             {actionsOpen ? (
-              <div className="absolute right-0 top-full z-10 mt-1 min-w-[140px] rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
+              <div className="absolute right-0 top-full z-10 mt-1 min-w-[2.5rem] rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
                 {props.onShare ? (
                   <button
                     type="button"
-                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
+                    className="flex w-full items-center justify-center px-3 py-2 text-slate-700 hover:bg-slate-50"
+                    title="Поделиться"
+                    aria-label="Поделиться"
                     onClick={(e) => {
                       e.stopPropagation();
                       setActionsOpen(false);
                       props.onShare?.();
                     }}
                   >
-                    <IconShare className="h-4 w-4 shrink-0" /> Поделиться
+                    <IconShare className="h-4 w-4 shrink-0" />
                   </button>
                 ) : null}
                 {props.onDelete ? (
                   <button
                     type="button"
-                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
+                    className="flex w-full items-center justify-center px-3 py-2 text-slate-700 hover:bg-slate-50"
+                    title="Удалить"
+                    aria-label="Удалить"
                     onClick={(e) => {
                       e.stopPropagation();
                       setActionsOpen(false);
                       props.onDelete?.();
                     }}
                   >
-                    <IconTrash className="h-4 w-4 shrink-0" /> Удалить
+                    <IconTrash className="h-4 w-4 shrink-0" />
                   </button>
                 ) : null}
                 {props.onArchive ? (
                   <button
                     type="button"
-                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
+                    className="flex w-full items-center justify-center px-3 py-2 text-slate-700 hover:bg-slate-50"
+                    title="В архив"
+                    aria-label="В архив"
                     onClick={(e) => {
                       e.stopPropagation();
                       setActionsOpen(false);
                       props.onArchive?.();
                     }}
                   >
-                    <IconArchive className="h-4 w-4 shrink-0" /> В архив
+                    <IconArchive className="h-4 w-4 shrink-0" />
                   </button>
                 ) : null}
               </div>
@@ -689,11 +698,23 @@ function App() {
   }
 
   if (me.user.totpEnabled && !me.user.totpConfigured) {
-    return <TwoFaSetupView onDone={loadMe} />;
+    return (
+      <TwoFaSetupView
+        user={me.user}
+        onDone={loadMe}
+        onUseOtherAccount={() => void Api.logout().then(loadMe)}
+      />
+    );
   }
 
   if (me.user.totpEnabled && me.user.totpConfigured && !me.twoFactorPassed) {
-    return <TwoFaVerifyView onDone={loadMe} />;
+    return (
+      <TwoFaVerifyView
+        user={me.user}
+        onDone={loadMe}
+        onUseOtherAccount={() => void Api.logout().then(loadMe)}
+      />
+    );
   }
 
   const findColumnForCard = (cardId: string): { columnId: ColumnId; index: number } | null => {
@@ -881,10 +902,12 @@ function App() {
                   )}
                   <button
                     type="button"
-                    className="w-full border-t border-slate-100 px-3 py-2 text-xs text-slate-500 hover:bg-slate-50"
+                    className="flex w-full items-center justify-center border-t border-slate-100 px-3 py-2 text-slate-500 hover:bg-slate-50"
+                    title="Закрыть панель поиска"
+                    aria-label="Закрыть панель поиска"
                     onClick={() => setSearchOpen(false)}
                   >
-                    Закрыть
+                    <IconX className="h-4 w-4" />
                   </button>
                 </div>
               ) : null}
@@ -1014,7 +1037,10 @@ function App() {
                       <div className="flex items-center gap-1">
                         {!isObserver ? (
                           <button
-                            className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-800 hover:bg-slate-50"
+                            type="button"
+                            className="grid h-8 w-8 place-items-center rounded-lg border border-slate-200 bg-white text-slate-800 hover:bg-slate-50"
+                            title="Новая карточка в колонке"
+                            aria-label="Новая карточка в колонке"
                             onClick={() => {
                               setCreateColumn(col.id);
                               setCreateTitle("");
@@ -1022,7 +1048,7 @@ function App() {
                               setCreateOpen(true);
                             }}
                           >
-                            +
+                            <IconPlus className="h-4 w-4" />
                           </button>
                         ) : null}
                         {me?.user?.role === "ADMIN" ? (
@@ -1043,10 +1069,12 @@ function App() {
                               <IconMoreVertical className="h-4 w-4" />
                             </button>
                             {columnActionsOpen === col.id ? (
-                              <div className="absolute right-0 top-full z-10 mt-1 min-w-[160px] rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
+                              <div className="absolute right-0 top-full z-10 mt-1 min-w-[2.5rem] rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
                                 <button
                                   type="button"
-                                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
+                                  className="flex w-full items-center justify-center px-3 py-2 text-slate-700 hover:bg-slate-50"
+                                  title="Удалить колонку"
+                                  aria-label="Удалить колонку"
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     setColumnActionsOpen(null);
@@ -1061,11 +1089,13 @@ function App() {
                                       .catch((e) => setError((e as Error).message));
                                   }}
                                 >
-                                  <IconTrash className="h-4 w-4 shrink-0" /> Удалить
+                                  <IconTrash className="h-4 w-4 shrink-0" />
                                 </button>
                                 <button
                                   type="button"
-                                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-700 hover:bg-slate-50"
+                                  className="flex w-full items-center justify-center px-3 py-2 text-slate-700 hover:bg-slate-50"
+                                  title="В архив"
+                                  aria-label="В архив"
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     setColumnActionsOpen(null);
@@ -1075,7 +1105,7 @@ function App() {
                                       .catch((e) => setError((e as Error).message));
                                   }}
                                 >
-                                  <IconArchive className="h-4 w-4 shrink-0" /> В архив
+                                  <IconArchive className="h-4 w-4 shrink-0" />
                                 </button>
                               </div>
                             ) : null}
@@ -1198,8 +1228,9 @@ function App() {
             </label>
           ) : null}
           <div className="flex justify-end">
-            <button
-              className="rounded-xl bg-[#246c7c] px-4 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50"
+            <IconButton
+              variant="brand"
+              title="Создать карточку"
               disabled={!createTitle.trim() || !createColumn}
               onClick={() => {
                 const title = createTitle.trim();
@@ -1216,8 +1247,8 @@ function App() {
                 });
               }}
             >
-              Создать
-            </button>
+              <IconPlus className="h-5 w-5" />
+            </IconButton>
           </div>
         </div>
       </Modal>
@@ -1255,13 +1286,9 @@ function App() {
             Карточка «{shareConfirm.cardTitle}». Ссылка {shareConfirm.link} скопирована в буфер обмена.
           </p>
           <div className="mt-4 flex justify-end">
-            <button
-              type="button"
-              className="rounded-xl bg-[#246c7c] px-4 py-2 text-sm font-semibold text-white hover:bg-[#1d5663]"
-              onClick={() => setShareConfirm(null)}
-            >
-              OK
-            </button>
+            <IconButton variant="brand" title="OK" onClick={() => setShareConfirm(null)}>
+              <IconCheck className="h-5 w-5" />
+            </IconButton>
           </div>
         </Modal>
       ) : null}
@@ -1438,12 +1465,174 @@ function IconArchive(props: { className?: string }) {
   );
 }
 
+function IconArchiveRestore(props: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={props.className ?? "h-4 w-4"} fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M4 8v13h16V8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M2 5h20v3H2z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M12 18V9M9 12l3-3 3 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 function IconShare(props: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" className={props.className ?? "h-4 w-4"} fill="none" xmlns="http://www.w3.org/2000/svg">
       <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
       <path d="M16 6l-4-4-4 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
       <path d="M12 2v13" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function IconPlus(props: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={props.className ?? "h-4 w-4"} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" xmlns="http://www.w3.org/2000/svg">
+      <path d="M12 5v14M5 12h14" />
+    </svg>
+  );
+}
+
+function IconMinus(props: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={props.className ?? "h-4 w-4"} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" xmlns="http://www.w3.org/2000/svg">
+      <path d="M5 12h14" />
+    </svg>
+  );
+}
+
+function IconLogin(props: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={props.className ?? "h-4 w-4"} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" xmlns="http://www.w3.org/2000/svg">
+      <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4" />
+      <polyline points="10 17 15 12 10 7" />
+      <line x1="15" y1="12" x2="3" y2="12" />
+    </svg>
+  );
+}
+
+function IconLogout(props: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={props.className ?? "h-4 w-4"} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" xmlns="http://www.w3.org/2000/svg">
+      <path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+    </svg>
+  );
+}
+
+function IconArrowLeft(props: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={props.className ?? "h-4 w-4"} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" xmlns="http://www.w3.org/2000/svg">
+      <line x1="19" y1="12" x2="5" y2="12" />
+      <polyline points="12 19 5 12 12 5" />
+    </svg>
+  );
+}
+
+function IconUser(props: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={props.className ?? "h-4 w-4"} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" xmlns="http://www.w3.org/2000/svg">
+      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+      <circle cx="12" cy="7" r="4" />
+    </svg>
+  );
+}
+
+function IconMail(props: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={props.className ?? "h-4 w-4"} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" xmlns="http://www.w3.org/2000/svg">
+      <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+      <polyline points="22,6 12,13 2,6" />
+    </svg>
+  );
+}
+
+function IconLayoutKanban(props: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={props.className ?? "h-4 w-4"} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" xmlns="http://www.w3.org/2000/svg">
+      <rect x="3" y="3" width="5" height="18" rx="1" />
+      <rect x="10" y="3" width="5" height="12" rx="1" />
+      <rect x="17" y="3" width="5" height="8" rx="1" />
+    </svg>
+  );
+}
+
+function IconUsers(props: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={props.className ?? "h-4 w-4"} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" xmlns="http://www.w3.org/2000/svg">
+      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+      <circle cx="9" cy="7" r="4" />
+      <path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
+    </svg>
+  );
+}
+
+function IconColumns(props: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={props.className ?? "h-4 w-4"} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" xmlns="http://www.w3.org/2000/svg">
+      <rect x="3" y="3" width="18" height="18" rx="2" />
+      <line x1="9" y1="3" x2="9" y2="21" />
+      <line x1="15" y1="3" x2="15" y2="21" />
+    </svg>
+  );
+}
+
+function IconSend(props: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={props.className ?? "h-4 w-4"} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" xmlns="http://www.w3.org/2000/svg">
+      <line x1="22" y1="2" x2="11" y2="13" />
+      <polygon points="22 2 15 22 11 13 2 9 22 2" />
+    </svg>
+  );
+}
+
+function IconPhotoUpload(props: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={props.className ?? "h-4 w-4"} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" xmlns="http://www.w3.org/2000/svg">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+      <polyline points="17 8 12 3 7 8" />
+      <line x1="12" y1="3" x2="12" y2="15" />
+    </svg>
+  );
+}
+
+function IconQrCode(props: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={props.className ?? "h-4 w-4"} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" xmlns="http://www.w3.org/2000/svg">
+      <rect x="3" y="3" width="7" height="7" />
+      <rect x="14" y="3" width="7" height="7" />
+      <rect x="3" y="14" width="7" height="7" />
+      <line x1="14" y1="14" x2="14" y2="14.01" />
+      <line x1="18" y1="14" x2="18" y2="14.01" />
+      <line x1="14" y1="18" x2="18" y2="18" />
+      <line x1="18" y1="18" x2="18" y2="21" />
+      <line x1="21" y1="18" x2="21" y2="21" />
+      <line x1="14" y1="21" x2="17" y2="21" />
+    </svg>
+  );
+}
+
+function IconPlug(props: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={props.className ?? "h-4 w-4"} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" xmlns="http://www.w3.org/2000/svg">
+      <path d="M12 22v-5M9 8V2M15 8V2M5 8h14v5a7 7 0 0 1-14 0V8z" />
+    </svg>
+  );
+}
+
+function IconHelpCircle(props: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={props.className ?? "h-4 w-4"} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="12" cy="12" r="10" />
+      <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3M12 17h.01" />
+    </svg>
+  );
+}
+
+function IconSpinner(props: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={classNames("animate-spin", props.className ?? "h-5 w-5")} fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" opacity="0.25" />
+      <path d="M12 2a10 10 0 0 1 10 10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
     </svg>
   );
 }
@@ -1498,14 +1687,17 @@ function AvatarPresetDropdown(props: {
       <button
         type="button"
         disabled={props.disabled}
-        className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 outline-none focus:border-[#246c7c] disabled:opacity-50"
+        className="flex items-center gap-1 rounded-xl border border-slate-200 bg-white px-2 py-2 text-sm font-semibold text-slate-800 outline-none focus:border-[#246c7c] disabled:opacity-50"
+        title={`Пресет аватара: ${selectedLabel}`}
+        aria-label={`Пресет аватара: ${selectedLabel}`}
         onClick={() => setOpen((v) => !v)}
         aria-haspopup="listbox"
         aria-expanded={open}
       >
         <img src={`/avatars/${selectedKey}.svg`} alt="" className="h-6 w-6 rounded-full border border-slate-200 bg-white" />
-        <span>{selectedLabel}</span>
-        <span className="ml-1 flex shrink-0 text-slate-500" aria-hidden>{open ? <IconChevronUp className="h-6 w-6" /> : <IconChevronDown className="h-6 w-6" />}</span>
+        <span className="flex shrink-0 text-slate-500" aria-hidden>
+          {open ? <IconChevronUp className="h-6 w-6" /> : <IconChevronDown className="h-6 w-6" />}
+        </span>
       </button>
 
       {open ? (
@@ -1513,7 +1705,9 @@ function AvatarPresetDropdown(props: {
           <div className="max-h-64 overflow-auto p-1">
             <button
               type="button"
-              className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm text-slate-800 hover:bg-slate-50"
+              className="flex w-full items-center justify-center gap-2 rounded-lg px-2 py-2 text-sm text-slate-800 hover:bg-slate-50"
+              title="Авто"
+              aria-label="Авто"
               onClick={() => {
                 props.onChange("");
                 setOpen(false);
@@ -1526,14 +1720,15 @@ function AvatarPresetDropdown(props: {
                 alt=""
                 className="h-6 w-6 rounded-full border border-slate-200 bg-white"
               />
-              <span className="flex-1">Авто</span>
-              {selected === "" ? <IconCheck className="h-4 w-4 text-[#246c7c]" /> : null}
+              {selected === "" ? <IconCheck className="h-4 w-4 shrink-0 text-[#246c7c]" /> : <span className="h-4 w-4 shrink-0" aria-hidden />}
             </button>
             {AVATAR_PRESETS.map((k) => (
               <button
                 key={k}
                 type="button"
-                className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm text-slate-800 hover:bg-slate-50"
+                className="flex w-full items-center justify-center gap-2 rounded-lg px-2 py-2 text-sm text-slate-800 hover:bg-slate-50"
+                title={k.toUpperCase()}
+                aria-label={k.toUpperCase()}
                 onClick={() => {
                   props.onChange(k);
                   setOpen(false);
@@ -1542,8 +1737,7 @@ function AvatarPresetDropdown(props: {
                 aria-selected={selected === k}
               >
                 <img src={`/avatars/${k}.svg`} alt="" className="h-6 w-6 rounded-full border border-slate-200 bg-white" />
-                <span className="flex-1">{k.toUpperCase()}</span>
-                {selected === k ? <IconCheck className="h-4 w-4 text-[#246c7c]" /> : null}
+                {selected === k ? <IconCheck className="h-4 w-4 shrink-0 text-[#246c7c]" /> : <span className="h-4 w-4 shrink-0" aria-hidden />}
               </button>
             ))}
           </div>
@@ -1555,30 +1749,86 @@ function AvatarPresetDropdown(props: {
 
 function IconButton(props: {
   title: string;
-  onClick: () => void;
-  variant?: "default" | "danger" | "brand";
+  onClick?: () => void;
+  type?: "button" | "submit";
+  variant?: "default" | "danger" | "brand" | "ghost" | "ghostLink";
   disabled?: boolean;
+  className?: string;
   children: React.ReactNode;
 }) {
   const variant = props.variant ?? "default";
   const cls =
     variant === "brand"
-      ? "bg-[#246c7c] text-white hover:opacity-90"
+      ? "bg-[#246c7c] text-white hover:opacity-90 border-slate-200"
       : variant === "danger"
-        ? "bg-[#ac4c1c] text-white hover:opacity-90"
-        : "bg-white text-slate-800 hover:bg-slate-50";
+        ? "bg-[#ac4c1c] text-white hover:opacity-90 border-slate-200"
+        : variant === "ghost"
+          ? "border-transparent bg-transparent text-slate-800 hover:bg-slate-100"
+          : variant === "ghostLink"
+            ? "border-transparent bg-transparent text-[#246c7c] hover:bg-slate-100"
+            : "border-slate-200 bg-white text-slate-800 hover:bg-slate-50";
 
   return (
     <button
-      type="button"
-      className={`grid h-10 w-10 place-items-center rounded-xl border border-slate-200 ${cls} disabled:opacity-50 disabled:pointer-events-none`}
-      onClick={props.onClick}
+      type={props.type ?? "button"}
+      className={classNames(
+        "grid h-10 w-10 place-items-center rounded-xl border disabled:opacity-50 disabled:pointer-events-none",
+        cls,
+        props.className,
+      )}
+      onClick={props.type === "submit" ? undefined : props.onClick}
       title={props.title}
       aria-label={props.title}
       disabled={props.disabled}
     >
       {props.children}
     </button>
+  );
+}
+
+function PasswordInput(props: {
+  value: string;
+  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onBlur?: () => void;
+  placeholder?: string;
+  autoComplete?: string;
+  disabled?: boolean;
+  name?: string;
+  id?: string;
+  className?: string;
+  inputClassName?: string;
+}) {
+  const [visible, setVisible] = useState(false);
+  return (
+    <div className={classNames("relative", props.className)}>
+      <input
+        type={visible ? "text" : "password"}
+        className={classNames(
+          "w-full rounded-xl border border-slate-200 bg-white py-2 pl-2 text-sm outline-none focus:border-[#246c7c] disabled:opacity-50",
+          props.inputClassName,
+          "pr-10",
+        )}
+        value={props.value}
+        onChange={props.onChange}
+        onBlur={props.onBlur}
+        placeholder={props.placeholder}
+        autoComplete={props.autoComplete}
+        disabled={props.disabled}
+        name={props.name}
+        id={props.id}
+      />
+      <button
+        type="button"
+        tabIndex={-1}
+        className="absolute right-1 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-lg text-slate-600 hover:bg-slate-100 disabled:pointer-events-none disabled:opacity-50"
+        aria-label={visible ? "Скрыть пароль" : "Показать пароль"}
+        title={visible ? "Скрыть пароль" : "Показать пароль"}
+        disabled={props.disabled}
+        onClick={() => setVisible((v) => !v)}
+      >
+        {visible ? <IconEyeOff className="h-4 w-4" /> : <IconEye className="h-4 w-4" />}
+      </button>
+    </div>
   );
 }
 
@@ -1680,13 +1930,7 @@ function LoginView(props: { onDone: () => Promise<void> | void }) {
             </label>
             <label className="grid gap-1">
               <div className="text-xs text-slate-600">Пароль</div>
-              <input
-                type="password"
-                className="rounded-xl border border-slate-200 p-2 text-sm outline-none focus:border-[#246c7c]"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                autoComplete="current-password"
-              />
+              <PasswordInput value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" />
             </label>
             {needTotp ? (
               <div className="grid gap-2">
@@ -1706,29 +1950,33 @@ function LoginView(props: { onDone: () => Promise<void> | void }) {
               </div>
             ) : null}
 
-            <button
-              type="submit"
-              className="rounded-xl bg-[#246c7c] px-4 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50"
-              disabled={submitting}
-            >
-              {submitting ? "Вход…" : "Войти"}
-            </button>
-            <button
-              className="text-sm font-semibold text-[#246c7c] underline underline-offset-4 hover:opacity-80"
-              onClick={() => {
-                setError(null);
-                setFpOk(false);
-                setFpMailSent(false);
-                setMode("forgot");
-                setFpLogin(login.trim());
-                setFpCode("");
-                setFpP1("");
-                setFpP2("");
-              }}
-              type="button"
-            >
-              Забыли пароль?
-            </button>
+            <div className="flex flex-wrap items-center justify-center gap-3">
+              <IconButton
+                type="submit"
+                variant="brand"
+                title={submitting ? "Вход…" : "Войти"}
+                disabled={submitting}
+              >
+                {submitting ? <IconSpinner className="h-5 w-5 text-white" /> : <IconLogin className="h-5 w-5" />}
+              </IconButton>
+              <IconButton
+                type="button"
+                variant="ghostLink"
+                title="Забыли пароль?"
+                onClick={() => {
+                  setError(null);
+                  setFpOk(false);
+                  setFpMailSent(false);
+                  setMode("forgot");
+                  setFpLogin(login.trim());
+                  setFpCode("");
+                  setFpP1("");
+                  setFpP2("");
+                }}
+              >
+                <IconHelpCircle className="h-5 w-5" />
+              </IconButton>
+            </div>
           </form>
         ) : (
           <>
@@ -1759,9 +2007,11 @@ function LoginView(props: { onDone: () => Promise<void> | void }) {
                 autoComplete="username"
               />
             </label>
-            <button
+            <IconButton
               type="button"
-              className="rounded-xl border border-[#246c7c] bg-white px-4 py-2 text-sm font-semibold text-[#246c7c] hover:bg-slate-50 disabled:opacity-50"
+              variant="default"
+              className="border-[#246c7c] text-[#246c7c]"
+              title={submitting ? "Отправка…" : "Отправить ссылку сброса на email"}
               disabled={fpOk || !fpLogin.trim() || submitting}
               onClick={() => {
                 setError(null);
@@ -1773,8 +2023,8 @@ function LoginView(props: { onDone: () => Promise<void> | void }) {
                   .finally(() => setSubmitting(false));
               }}
             >
-              {submitting ? "Отправка…" : "Отправить ссылку сброса на email"}
-            </button>
+              {submitting ? <IconSpinner className="h-5 w-5" /> : <IconSend className="h-5 w-5" />}
+            </IconButton>
             <div className="text-center text-xs text-slate-400">или с 2FA</div>
             <label className="grid gap-1">
               <div className="text-xs text-slate-600">Код 2FA</div>
@@ -1785,59 +2035,58 @@ function LoginView(props: { onDone: () => Promise<void> | void }) {
                 placeholder="123456"
               />
             </label>
-            <input
-              type="password"
-              className="rounded-xl border border-slate-200 p-2 text-sm outline-none focus:border-[#246c7c]"
+            <PasswordInput
               placeholder="Новый пароль (мин. 8)"
               value={fpP1}
               onChange={(e) => setFpP1(e.target.value)}
               autoComplete="new-password"
             />
-            <input
-              type="password"
-              className="rounded-xl border border-slate-200 p-2 text-sm outline-none focus:border-[#246c7c]"
+            <PasswordInput
               placeholder="Повторите пароль"
               value={fpP2}
               onChange={(e) => setFpP2(e.target.value)}
               autoComplete="new-password"
             />
-            <button
-              className="rounded-xl bg-[#246c7c] px-4 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50"
-              disabled={fpOk || !fpLogin.trim() || fpCode.trim().length < 6 || !fpP1 || fpP1 !== fpP2 || fpP1.length < 8 || submitting}
-              onClick={() => {
-                setError(null);
-                setSubmitting(true);
-                void Api.resetPasswordByTotp({ login: fpLogin.trim(), code: fpCode.trim(), newPassword: fpP1 })
-                  .then(() => {
-                    setFpOk(true);
-                    // Иначе на экране входа остаётся старый пароль в поле — пользователь жмёт «Войти» и получает «неверный пароль».
-                    setPassword("");
-                    setTotp("");
-                    setNeedTotp(false);
-                  })
-                  .catch((e) => setError(friendlyAuthError((e as Error).message)))
-                  .finally(() => setSubmitting(false));
-              }}
-            >
-              {submitting ? "Смена…" : "Сменить пароль"}
-            </button>
-            <button
-              className="text-sm font-semibold text-slate-700 underline underline-offset-4 hover:opacity-80"
-              onClick={() => {
-                setError(null);
-                setFpOk(false);
-                setFpMailSent(false);
-                setMode("login");
-                setPassword("");
-                setTotp("");
-                setNeedTotp(false);
-                // Подставить тот же идентификатор, что использовали при сбросе (на случай правок в форме восстановления).
-                if (fpLogin.trim()) setLogin(fpLogin.trim());
-              }}
-              type="button"
-            >
-              Назад ко входу
-            </button>
+            <div className="flex flex-wrap items-center justify-center gap-3">
+              <IconButton
+                type="button"
+                variant="brand"
+                title={submitting ? "Смена…" : "Сменить пароль"}
+                disabled={fpOk || !fpLogin.trim() || fpCode.trim().length < 6 || !fpP1 || fpP1 !== fpP2 || fpP1.length < 8 || submitting}
+                onClick={() => {
+                  setError(null);
+                  setSubmitting(true);
+                  void Api.resetPasswordByTotp({ login: fpLogin.trim(), code: fpCode.trim(), newPassword: fpP1 })
+                    .then(() => {
+                      setFpOk(true);
+                      setPassword("");
+                      setTotp("");
+                      setNeedTotp(false);
+                    })
+                    .catch((e) => setError(friendlyAuthError((e as Error).message)))
+                    .finally(() => setSubmitting(false));
+                }}
+              >
+                {submitting ? <IconSpinner className="h-5 w-5 text-white" /> : <IconCheck className="h-5 w-5" />}
+              </IconButton>
+              <IconButton
+                type="button"
+                variant="ghost"
+                title="Назад ко входу"
+                onClick={() => {
+                  setError(null);
+                  setFpOk(false);
+                  setFpMailSent(false);
+                  setMode("login");
+                  setPassword("");
+                  setTotp("");
+                  setNeedTotp(false);
+                  if (fpLogin.trim()) setLogin(fpLogin.trim());
+                }}
+              >
+                <IconArrowLeft className="h-5 w-5" />
+              </IconButton>
+            </div>
           </>
         )}
       </div>
@@ -1861,41 +2110,37 @@ function ResetPasswordView(props: { token: string; onDone: () => void }) {
             Пароль изменён. Теперь вы можете войти.
           </div>
         ) : null}
-        <input
-          type="password"
-          className="rounded-xl border border-slate-200 p-2 text-sm outline-none focus:border-[#246c7c]"
+        <PasswordInput
           placeholder="Новый пароль"
           value={p1}
           onChange={(e) => setP1(e.target.value)}
           autoComplete="new-password"
         />
-        <input
-          type="password"
-          className="rounded-xl border border-slate-200 p-2 text-sm outline-none focus:border-[#246c7c]"
+        <PasswordInput
           placeholder="Повторите пароль"
           value={p2}
           onChange={(e) => setP2(e.target.value)}
           autoComplete="new-password"
         />
-        <button
-          className="rounded-xl bg-[#246c7c] px-4 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50"
-          disabled={ok || !p1 || p1 !== p2 || p1.length < 8}
-          onClick={() => {
-            setError(null);
-            void Api.resetPasswordByToken({ token: props.token, newPassword: p1 })
-              .then(() => setOk(true))
-              .catch((e) => setError((e as Error).message));
-          }}
-        >
-          Сменить пароль
-        </button>
-        <button
-          className="text-sm font-semibold text-slate-700 underline underline-offset-4 hover:opacity-80"
-          onClick={props.onDone}
-          type="button"
-        >
-          Перейти ко входу
-        </button>
+        <div className="flex flex-wrap items-center justify-center gap-3">
+          <IconButton
+            type="button"
+            variant="brand"
+            title="Сменить пароль"
+            disabled={ok || !p1 || p1 !== p2 || p1.length < 8}
+            onClick={() => {
+              setError(null);
+              void Api.resetPasswordByToken({ token: props.token, newPassword: p1 })
+                .then(() => setOk(true))
+                .catch((e) => setError((e as Error).message));
+            }}
+          >
+            <IconCheck className="h-5 w-5" />
+          </IconButton>
+          <IconButton type="button" variant="ghost" title="Перейти ко входу" onClick={props.onDone}>
+            <IconLogin className="h-5 w-5" />
+          </IconButton>
+        </div>
       </div>
     </CenteredShell>
   );
@@ -1920,42 +2165,88 @@ function ChangePasswordView(props: { onDone: () => Promise<void> | void }) {
       <div className="grid gap-3">
         <div className="text-sm text-slate-600">Задайте новый пароль (минимум 8 символов).</div>
         {error ? <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-800">{error}</div> : null}
-        <input type="password" className="rounded-xl border border-slate-200 p-2 text-sm outline-none focus:border-[#246c7c]" placeholder="Новый пароль" value={p1} onChange={(e) => setP1(e.target.value)} />
-        <input
-          type="password"
-          className="rounded-xl border border-slate-200 p-2 text-sm outline-none focus:border-[#246c7c]"
+        <PasswordInput
+          placeholder="Новый пароль"
+          value={p1}
+          onChange={(e) => setP1(e.target.value)}
+          autoComplete="new-password"
+        />
+        <PasswordInput
           placeholder="Повторите пароль"
           value={p2}
           onChange={(e) => setP2(e.target.value)}
+          autoComplete="new-password"
         />
-        <button
+        <IconButton
           type="button"
-          className="rounded-xl bg-[#246c7c] px-4 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50"
+          variant="brand"
+          title={submitting ? "Сохранение…" : "Сохранить"}
           disabled={!p1 || p1 !== p2 || p1.length < 8 || submitting}
           onClick={handleSave}
         >
-          {submitting ? "Сохранение…" : "Сохранить"}
-        </button>
+          {submitting ? <IconSpinner className="h-5 w-5 text-white" /> : <IconCheck className="h-5 w-5" />}
+        </IconButton>
       </div>
     </CenteredShell>
   );
 }
 
-function TwoFaSetupView(props: { onDone: () => Promise<void> | void }) {
+function TwoFaAccountBanner(props: {
+  user: Pick<User, "id" | "email" | "name">;
+  onUseOtherAccount: () => void;
+}) {
+  const displayName = props.user.name?.trim() || "Без имени";
+  return (
+    <div className="grid gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
+      <div>
+        <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Учётная запись</div>
+        <div className="mt-1 flex items-start gap-2">
+          <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl border border-slate-200 bg-white text-slate-600">
+            <IconUser className="h-5 w-5" />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="truncate font-semibold text-slate-900">{displayName}</div>
+            <div className="break-all text-sm text-slate-600">{props.user.email}</div>
+          </div>
+        </div>
+      </div>
+      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-200 pt-3">
+        <span className="text-xs text-slate-500">Войти под другой учётной записью</span>
+        <IconButton
+          type="button"
+          variant="ghost"
+          title="Выйти и войти под другой учётной записью"
+          onClick={props.onUseOtherAccount}
+        >
+          <IconLogout className="h-5 w-5" />
+        </IconButton>
+      </div>
+    </div>
+  );
+}
+
+function TwoFaSetupView(props: {
+  user: Pick<User, "id" | "email" | "name">;
+  onDone: () => Promise<void> | void;
+  onUseOtherAccount: () => void;
+}) {
   const [qr, setQr] = useState<string | null>(null);
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
   return (
     <CenteredShell title="Настройка 2FA">
       <div className="grid gap-3">
+        <TwoFaAccountBanner user={props.user} onUseOtherAccount={props.onUseOtherAccount} />
         <div className="text-sm text-slate-600">
-          По политике организации для вашей учётной записи требуется двухфакторная аутентификация. Отсканируйте QR-код в
+          По политике организации для указанной учётной записи требуется двухфакторная аутентификация. Отсканируйте QR-код в
           приложении-аутентификаторе и введите код. Включить или отключить требование 2FA может только администратор.
         </div>
         {error ? <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-800">{error}</div> : null}
         {!qr ? (
-          <button
-            className="rounded-xl bg-[#246c7c] px-4 py-2 text-sm font-semibold text-white hover:opacity-90"
+          <IconButton
+            type="button"
+            variant="brand"
+            title="Сгенерировать QR-код"
             onClick={() => {
               setError(null);
               void Api.twoFaSetup()
@@ -1963,21 +2254,23 @@ function TwoFaSetupView(props: { onDone: () => Promise<void> | void }) {
                 .catch((e) => {
                   const msg = (e as Error).message;
                   if (msg.includes("2FA is not required")) {
-                    setError("Для вашей учётной записи 2FA отключена администратором. Обновите страницу или войдите снова.");
+                    setError("Для этой учётной записи 2FA отключена администратором. Обновите страницу или войдите снова.");
                   } else {
                     setError(msg);
                   }
                 });
             }}
           >
-            Сгенерировать QR-код
-          </button>
+            <IconQrCode className="h-5 w-5" />
+          </IconButton>
         ) : (
           <div className="grid gap-2">
             <img src={qr} alt="QR для 2FA" className="mx-auto w-48 rounded-xl border border-slate-200 bg-white p-2" />
             <input className="rounded-xl border border-slate-200 p-2 text-sm outline-none focus:border-[#246c7c]" value={code} onChange={(e) => setCode(e.target.value)} placeholder="Код 2FA" />
-            <button
-              className="rounded-xl bg-[#246c7c] px-4 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50"
+            <IconButton
+              type="button"
+              variant="brand"
+              title="Подтвердить привязку"
               disabled={code.trim().length < 6}
               onClick={() => {
                 setError(null);
@@ -1986,15 +2279,15 @@ function TwoFaSetupView(props: { onDone: () => Promise<void> | void }) {
                   .catch((e) => {
                     const msg = (e as Error).message;
                     if (msg.includes("2FA is not required")) {
-                      setError("Для вашей учётной записи 2FA отключена администратором.");
+                      setError("Для этой учётной записи 2FA отключена администратором.");
                     } else {
                       setError(msg);
                     }
                   });
               }}
             >
-              Подтвердить привязку
-            </button>
+              <IconCheck className="h-5 w-5" />
+            </IconButton>
           </div>
         )}
       </div>
@@ -2002,22 +2295,29 @@ function TwoFaSetupView(props: { onDone: () => Promise<void> | void }) {
   );
 }
 
-function TwoFaVerifyView(props: { onDone: () => Promise<void> | void }) {
+function TwoFaVerifyView(props: {
+  user: Pick<User, "id" | "email" | "name">;
+  onDone: () => Promise<void> | void;
+  onUseOtherAccount: () => void;
+}) {
   const [code, setCode] = useState("");
   const [rememberDevice, setRememberDevice] = useState(true);
   const [error, setError] = useState<string | null>(null);
   return (
     <CenteredShell title="Подтверждение 2FA">
       <div className="grid gap-3">
-        <div className="text-sm text-slate-600">Введите код из приложения-аутентификатора.</div>
+        <TwoFaAccountBanner user={props.user} onUseOtherAccount={props.onUseOtherAccount} />
+        <div className="text-sm text-slate-600">Введите код из приложения-аутентификатора для этой учётной записи.</div>
         {error ? <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-800">{error}</div> : null}
         <input className="rounded-xl border border-slate-200 p-2 text-sm outline-none focus:border-[#246c7c]" value={code} onChange={(e) => setCode(e.target.value)} placeholder="123456" />
         <label className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white p-2 text-sm text-slate-800">
           <input type="checkbox" checked={rememberDevice} onChange={(e) => setRememberDevice(e.target.checked)} />
           <span>Не спрашивать код на этом устройстве 30 дней</span>
         </label>
-        <button
-          className="rounded-xl bg-[#246c7c] px-4 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50"
+        <IconButton
+          type="button"
+          variant="brand"
+          title="Подтвердить"
           disabled={code.trim().length < 6}
           onClick={() => {
             setError(null);
@@ -2026,8 +2326,8 @@ function TwoFaVerifyView(props: { onDone: () => Promise<void> | void }) {
               .catch((e) => setError((e as Error).message));
           }}
         >
-          Подтвердить
-        </button>
+          <IconCheck className="h-5 w-5" />
+        </IconButton>
       </div>
     </CenteredShell>
   );
@@ -2051,7 +2351,6 @@ function UsersModal(props: { open: boolean; onClose: () => void; embedded?: bool
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
-  const [showNewUserPassword, setShowNewUserPassword] = useState(false);
   const [newUserTotpRequired, setNewUserTotpRequired] = useState(true);
   const [role, setRole] = useState<"ADMIN" | "MEMBER" | "OBSERVER">("MEMBER");
   const [error, setError] = useState<string | null>(null);
@@ -2100,26 +2399,14 @@ function UsersModal(props: { open: boolean; onClose: () => void; embedded?: bool
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />
-            <div className="relative md:col-span-2">
-              <input
-                type={showNewUserPassword ? "text" : "password"}
-                className="w-full rounded-xl border border-slate-200 bg-white py-2 pl-2 pr-10 text-sm outline-none focus:border-[#246c7c]"
-                placeholder="Стартовый пароль (мин. 8)"
-                name="cabinet-new-user-password"
-                autoComplete="new-password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-              />
-              <button
-                type="button"
-                className="absolute right-1 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-lg text-slate-600 hover:bg-slate-100"
-                aria-label={showNewUserPassword ? "Скрыть пароль" : "Показать пароль"}
-                title={showNewUserPassword ? "Скрыть пароль" : "Показать пароль"}
-                onClick={() => setShowNewUserPassword((v) => !v)}
-              >
-                {showNewUserPassword ? <IconEyeOff className="h-4 w-4" /> : <IconEye className="h-4 w-4" />}
-              </button>
-            </div>
+            <PasswordInput
+              className="md:col-span-2"
+              placeholder="Стартовый пароль (мин. 8)"
+              name="cabinet-new-user-password"
+              autoComplete="new-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
             <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-700 md:col-span-2">
               <input
                 type="checkbox"
@@ -2140,7 +2427,7 @@ function UsersModal(props: { open: boolean; onClose: () => void; embedded?: bool
               </select>
               <button
                 type="button"
-                className="grid h-10 w-10 place-items-center rounded-xl bg-[#246c7c] text-lg font-bold text-white hover:opacity-90 disabled:opacity-50"
+                className="grid h-10 w-10 place-items-center rounded-xl bg-[#246c7c] text-white hover:opacity-90 disabled:opacity-50"
                 disabled={!email.trim() || password.trim().length < 8}
                 title="Добавить пользователя"
                 aria-label="Добавить пользователя"
@@ -2157,7 +2444,6 @@ function UsersModal(props: { open: boolean; onClose: () => void; embedded?: bool
                       setEmail("");
                       setName("");
                       setPassword("");
-                      setShowNewUserPassword(false);
                       setNewUserTotpRequired(true);
                       return Api.listUsers();
                     })
@@ -2165,7 +2451,7 @@ function UsersModal(props: { open: boolean; onClose: () => void; embedded?: bool
                     .catch((e) => setError((e as Error).message));
                 }}
               >
-                +
+                <IconPlus className="h-5 w-5" />
               </button>
             </div>
           </form>
@@ -2279,23 +2565,26 @@ function UsersModal(props: { open: boolean; onClose: () => void; embedded?: bool
                     </div>
                   ) : (
                     <button
-                      className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-semibold text-slate-800 hover:bg-slate-50"
+                      type="button"
+                      className="grid h-8 w-8 place-items-center rounded-lg border border-slate-200 bg-white text-slate-800 hover:bg-slate-50"
                       onClick={() => setBoardsForUser({ id: u.id, name: u.name, email: u.email })}
                       title="Доступ к доскам"
+                      aria-label="Доступ к доскам"
                     >
-                      Доски
+                      <IconLayoutKanban className="h-4 w-4" />
                     </button>
                   )}
                   {u.isSystem ? (
                     <button
-                      className="grid h-8 w-8 cursor-not-allowed place-items-center rounded-lg border border-slate-200 bg-slate-50 text-base font-bold text-slate-400"
+                      type="button"
+                      className="grid h-8 w-8 cursor-not-allowed place-items-center rounded-lg border border-slate-200 bg-slate-50 text-slate-400"
                       title="Нельзя удалить системного администратора"
                       aria-label="Нельзя удалить системного администратора"
                       onClick={() => {
                         setError("Нельзя удалить системного администратора. Можно изменить только почту и пароль.");
                       }}
                     >
-                      −
+                      <IconMinus className="h-4 w-4" />
                     </button>
                   ) : (
                     <button
@@ -2604,64 +2893,74 @@ function ProfileModal(props: {
           <button
             type="button"
             className={classNames(
-              "rounded-xl px-3 py-2 text-sm font-semibold",
+              "grid h-10 w-10 place-items-center rounded-xl text-sm font-semibold",
               cabinetTab === "personal"
                 ? "bg-[#246c7c] text-white"
                 : "bg-slate-100 text-slate-700 hover:bg-slate-200",
             )}
+            title="Личные данные"
+            aria-label="Личные данные"
             onClick={() => setCabinetTab("personal")}
           >
-            Личные данные
+            <IconUser className="h-5 w-5" />
           </button>
           {isAdmin ? (
             <>
               <button
                 type="button"
                 className={classNames(
-                  "rounded-xl px-3 py-2 text-sm font-semibold",
+                  "grid h-10 w-10 place-items-center rounded-xl text-sm font-semibold",
                   cabinetTab === "smtp"
                     ? "bg-[#246c7c] text-white"
                     : "bg-slate-100 text-slate-700 hover:bg-slate-200",
                 )}
+                title="Настройки SMTP"
+                aria-label="Настройки SMTP"
                 onClick={() => setCabinetTab("smtp")}
               >
-                Настройки SMTP
+                <IconMail className="h-5 w-5" />
               </button>
               <button
                 type="button"
                 className={classNames(
-                  "rounded-xl px-3 py-2 text-sm font-semibold",
+                  "grid h-10 w-10 place-items-center rounded-xl text-sm font-semibold",
                   cabinetTab === "boards"
                     ? "bg-[#246c7c] text-white"
                     : "bg-slate-100 text-slate-700 hover:bg-slate-200",
                 )}
+                title="Доски"
+                aria-label="Доски"
                 onClick={() => setCabinetTab("boards")}
               >
-                Доски
+                <IconLayoutKanban className="h-5 w-5" />
               </button>
               <button
                 type="button"
                 className={classNames(
-                  "rounded-xl px-3 py-2 text-sm font-semibold",
+                  "grid h-10 w-10 place-items-center rounded-xl text-sm font-semibold",
                   cabinetTab === "users"
                     ? "bg-[#246c7c] text-white"
                     : "bg-slate-100 text-slate-700 hover:bg-slate-200",
                 )}
+                title="Пользователи"
+                aria-label="Пользователи"
                 onClick={() => setCabinetTab("users")}
               >
-                Пользователи
+                <IconUsers className="h-5 w-5" />
               </button>
               <button
                 type="button"
                 className={classNames(
-                  "rounded-xl px-3 py-2 text-sm font-semibold",
+                  "grid h-10 w-10 place-items-center rounded-xl text-sm font-semibold",
                   cabinetTab === "archive"
                     ? "bg-[#246c7c] text-white"
                     : "bg-slate-100 text-slate-700 hover:bg-slate-200",
                 )}
+                title="Архив"
+                aria-label="Архив"
                 onClick={() => setCabinetTab("archive")}
               >
-                Архив
+                <IconArchive className="h-5 w-5" />
               </button>
             </>
           ) : null}
@@ -2693,13 +2992,17 @@ function ProfileModal(props: {
                 {archiveFiles.map((filename) => (
                   <li
                     key={filename}
-                    className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white p-3"
+                    className="flex min-w-0 items-center gap-2 rounded-xl border border-slate-200 bg-white p-3"
                   >
-                    <span className="min-w-0 truncate text-sm font-medium text-slate-900">{filename}</span>
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-700 hover:bg-slate-50"
+                    <span
+                      className="min-w-0 flex-1 truncate text-sm font-medium text-slate-900"
+                      title={filename}
+                    >
+                      {filename}
+                    </span>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <IconButton
+                        title="Удалить"
                         onClick={() => {
                           if (confirm(`Удалить архив «${filename}»?`)) {
                             void Api.deleteArchive(filename).then(() =>
@@ -2708,26 +3011,25 @@ function ProfileModal(props: {
                           }
                         }}
                       >
-                        <IconTrash className="h-3.5 w-3.5" /> Удалить
-                      </button>
-                      <button
-                        type="button"
-                        className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-700 hover:bg-slate-50"
+                        <IconTrash className="h-5 w-5" />
+                      </IconButton>
+                      <IconButton
+                        title="Скачать"
                         onClick={() => void Api.downloadArchive(filename).catch((e) => setArchiveError((e as Error).message))}
                       >
-                        <IconDownload className="h-3.5 w-3.5" /> Скачать
-                      </button>
-                      <button
-                        type="button"
-                        className="inline-flex items-center gap-1.5 rounded-lg border border-[#246c7c] bg-[#246c7c] px-2 py-1 text-xs text-white hover:opacity-90"
+                        <IconDownload className="h-5 w-5" />
+                      </IconButton>
+                      <IconButton
+                        title="Восстановить"
+                        variant="brand"
                         onClick={() => {
                           setRestoreFilename(filename);
                           setRestoreBoardId(props.boards[0]?.id ?? "");
                           setRestoreColumnId("");
                         }}
                       >
-                        Восстановить
-                      </button>
+                        <IconArchiveRestore className="h-5 w-5" />
+                      </IconButton>
                     </div>
                   </li>
                 ))}
@@ -2763,9 +3065,9 @@ function ProfileModal(props: {
                     </select>
                   </label>
                   <div className="flex gap-2">
-                    <button
-                      type="button"
-                      className="rounded-lg bg-[#246c7c] px-3 py-1.5 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50"
+                    <IconButton
+                      variant="brand"
+                      title={restoring ? "Восстановление…" : "Восстановить"}
                       disabled={restoring || !restoreColumnId}
                       onClick={() => {
                         if (!restoreFilename || !restoreColumnId) return;
@@ -2781,15 +3083,11 @@ function ProfileModal(props: {
                           .finally(() => setRestoring(false));
                       }}
                     >
-                      {restoring ? "Восстановление…" : "Восстановить"}
-                    </button>
-                    <button
-                      type="button"
-                      className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm text-slate-700 hover:bg-slate-50"
-                      onClick={() => setRestoreFilename(null)}
-                    >
-                      Отмена
-                    </button>
+                      {restoring ? <IconSpinner className="h-5 w-5 text-white" /> : <IconArchiveRestore className="h-5 w-5" />}
+                    </IconButton>
+                    <IconButton title="Отмена" onClick={() => setRestoreFilename(null)}>
+                      <IconX className="h-5 w-5" />
+                    </IconButton>
                   </div>
                 </div>
               </div>
@@ -2916,9 +3214,7 @@ function ProfileModal(props: {
                       </label>
                       <label className="grid gap-1">
                         <div className="text-xs text-slate-600">Пароль</div>
-                        <input
-                          type="password"
-                          className="rounded-xl border border-slate-200 p-2 text-sm outline-none focus:border-[#246c7c]"
+                        <PasswordInput
                           value={mailPass}
                           onChange={(e) => setMailPass(e.target.value)}
                           onBlur={saveMailSettingsBlur}
@@ -2951,9 +3247,8 @@ function ProfileModal(props: {
                     ) : null}
 
                     <div className="flex flex-wrap justify-end gap-2">
-                      <button
-                        type="button"
-                        className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50 disabled:opacity-50"
+                      <IconButton
+                        title={mailTesting ? "Проверка…" : "Проверить соединение"}
                         disabled={mailLoading || mailSaving || mailTesting}
                         onClick={() => {
                           setError(null);
@@ -2976,8 +3271,8 @@ function ProfileModal(props: {
                             .finally(() => setMailTesting(false));
                         }}
                       >
-                        {mailTesting ? "Проверка…" : "Проверить соединение"}
-                      </button>
+                        {mailTesting ? <IconSpinner className="h-5 w-5" /> : <IconPlug className="h-5 w-5" />}
+                      </IconButton>
                     </div>
                   </div>
                 ) : null}
@@ -3022,14 +3317,13 @@ function ProfileModal(props: {
                     .finally(() => setUploadingAvatar(false));
                 }}
               />
-              <button
-                type="button"
-                className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50 disabled:opacity-50"
+              <IconButton
+                title="Загрузить фото"
                 disabled={saving || uploadingAvatar}
                 onClick={() => avatarFileRef.current?.click()}
               >
-                Загрузить фото
-              </button>
+                <IconPhotoUpload className="h-5 w-5" />
+              </IconButton>
 
               {avatarUploadName ? (
                 <IconButton
@@ -3210,7 +3504,8 @@ function BoardsModal(props: {
               onChange={(e) => setCreateName(e.target.value)}
             />
             <button
-              className="grid h-10 w-10 place-items-center rounded-xl bg-[#246c7c] text-lg font-bold text-white hover:opacity-90 disabled:opacity-50"
+              type="button"
+              className="grid h-10 w-10 place-items-center rounded-xl bg-[#246c7c] text-white hover:opacity-90 disabled:opacity-50"
               disabled={!createName.trim()}
               onClick={() => {
                 setError(null);
@@ -3227,10 +3522,10 @@ function BoardsModal(props: {
                   })
                   .catch((e) => setError((e as Error).message));
               }}
-              title="Создать"
-              aria-label="Создать"
+              title="Создать доску"
+              aria-label="Создать доску"
             >
-              +
+              <IconPlus className="h-5 w-5" />
             </button>
           </div>
           <textarea
@@ -3366,17 +3661,16 @@ function BoardsModal(props: {
                         ) : null}
 
                         <div className="flex flex-wrap items-center justify-end gap-2">
-                          <button
-                            type="button"
-                            className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-800 hover:bg-slate-50"
+                          <IconButton
+                            title="Колонки доски"
                             onClick={() => {
                               setColumnsBoardId(b.id);
                               setNewColumnTitle("");
                               setEditingColumnId(null);
                             }}
                           >
-                            Колонки
-                          </button>
+                            <IconColumns className="h-5 w-5" />
+                          </IconButton>
                           <IconButton
                             title={props.boards.length <= 1 ? "Нельзя удалить последнюю доску" : "Удалить доску"}
                             variant="danger"
@@ -3477,13 +3771,15 @@ function BoardsModal(props: {
                           />
                           <button
                             type="button"
-                            className="rounded-lg border border-slate-200 px-3 py-1.5 text-sm font-semibold text-slate-800 hover:bg-slate-50"
+                            className="grid h-9 w-9 place-items-center rounded-lg border border-slate-200 text-slate-800 hover:bg-slate-50"
+                            title="Отмена"
+                            aria-label="Отмена"
                             onClick={() => {
                               setEditingColumnId(null);
                               setEditingColumnTitle("");
                             }}
                           >
-                            Отмена
+                            <IconX className="h-4 w-4" />
                           </button>
                         </>
                       ) : (
@@ -3494,13 +3790,15 @@ function BoardsModal(props: {
                           </span>
                           <button
                             type="button"
-                            className="rounded-lg border border-slate-200 px-2 py-1 text-xs font-semibold text-slate-800 hover:bg-slate-50"
+                            className="grid h-9 w-9 place-items-center rounded-lg border border-slate-200 text-slate-800 hover:bg-slate-50"
+                            title="Переименовать"
+                            aria-label="Переименовать"
                             onClick={() => {
                               setEditingColumnId(col.id);
                               setEditingColumnTitle(col.title);
                             }}
                           >
-                            Переименовать
+                            <IconEdit className="h-4 w-4" />
                           </button>
                           <IconButton
                             title="Удалить колонку"
@@ -3537,9 +3835,9 @@ function BoardsModal(props: {
                 value={newColumnTitle}
                 onChange={(e) => setNewColumnTitle(e.target.value)}
               />
-              <button
-                type="button"
-                className="rounded-xl bg-[#246c7c] px-4 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50"
+              <IconButton
+                variant="brand"
+                title="Добавить колонку"
                 disabled={!newColumnTitle.trim()}
                 onClick={() => {
                   const title = newColumnTitle.trim();
@@ -3554,8 +3852,8 @@ function BoardsModal(props: {
                     .catch((e) => setColumnsError((e as Error).message));
                 }}
               >
-                Добавить
-              </button>
+                <IconPlus className="h-5 w-5" />
+              </IconButton>
             </div>
           </div>
         </div>
@@ -3903,46 +4201,17 @@ function CardModal(props: {
             onBlur={() => void persist()}
             placeholder="Название карточки"
           />
-          <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">
-            <span className="rounded-md bg-slate-100 px-2 py-0.5">Код: {card.id.slice(0, 8)}</span>
-            <span className="inline-flex items-center gap-1.5 rounded-md bg-slate-100 px-2 py-0.5">
-              <span className="shrink-0">Статус:</span>
-              {canEditCard ? (
-                <select
-                  className="rounded border-0 bg-transparent py-0 pr-6 text-slate-700 outline-none focus:ring-1 focus:ring-slate-300"
-                  value={card.column.id}
-                  onChange={(e) => {
-                    const toColumnId = e.target.value;
-                    if (toColumnId === card.column.id) return;
-                    setSaveError(null);
-                    void Api.moveCard(card.id, { toColumnId, toIndex: 0 })
-                      .then(() => void props.onChanged())
-                      .catch((err) => setSaveError((err as Error).message));
-                  }}
-                >
-                  {props.columns.map((col) => (
-                    <option key={col.id} value={col.id}>
-                      {col.title}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <span className="text-slate-700">{card.column.title}</span>
-              )}
-            </span>
-            <span className={classNames("rounded-md px-2 py-0.5 font-semibold", importanceBadge(importance))}>
-              {importanceLabel(importance)}
-            </span>
+          <div className="mt-1 flex w-full min-w-0 flex-wrap items-center gap-x-2 gap-y-2 text-xs text-slate-600">
             {canEditCard ? (
               <button
                 type="button"
                 className={classNames(
-                  "inline-flex items-center gap-2 rounded-md px-2 py-0.5 font-semibold",
+                  "inline-flex shrink-0 items-center gap-1.5 rounded-md px-2 py-0.5 text-xs font-semibold",
                   paused ? "bg-amber-100 text-amber-900" : "border border-amber-200 bg-white text-amber-900 hover:bg-amber-50",
                 )}
-                title="Пауза"
+                title={paused ? "Снять паузу" : "Пауза"}
+                aria-label={paused ? "Снять паузу" : "Пауза"}
                 onMouseDown={(e) => {
-                  // Prevent title input blur -> persist() race which can overwrite paused state.
                   e.preventDefault();
                   e.stopPropagation();
                 }}
@@ -3967,10 +4236,10 @@ function CardModal(props: {
             ) : (
               <span
                 className={classNames(
-                  "inline-flex items-center gap-2 rounded-md px-2 py-0.5 font-semibold",
+                  "inline-flex shrink-0 items-center gap-1.5 rounded-md px-2 py-0.5 text-xs font-semibold",
                   paused ? "bg-amber-100 text-amber-900" : "border border-amber-200 bg-slate-50 text-amber-900",
                 )}
-                title="Пауза"
+                title={paused ? "На паузе" : "Пауза"}
               >
                 <span
                   className={classNames(
@@ -3984,26 +4253,193 @@ function CardModal(props: {
                 Пауза
               </span>
             )}
+            <span className="inline-flex items-center gap-1.5 rounded-md bg-slate-100 px-2 py-0.5">
+              <span className="shrink-0 text-slate-600">Колонка:</span>
+              {canEditCard ? (
+                <select
+                  className="max-w-[min(220px,45vw)] rounded border-0 bg-transparent py-0 pr-5 text-slate-800 outline-none focus:ring-1 focus:ring-slate-300"
+                  value={card.column.id}
+                  onChange={(e) => {
+                    const toColumnId = e.target.value;
+                    if (toColumnId === card.column.id) return;
+                    setSaveError(null);
+                    void Api.moveCard(card.id, { toColumnId, toIndex: 0 })
+                      .then(() => void props.onChanged())
+                      .catch((err) => setSaveError((err as Error).message));
+                  }}
+                >
+                  {props.columns.map((col) => (
+                    <option key={col.id} value={col.id}>
+                      {col.title}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <span className="truncate text-slate-800">{card.column.title}</span>
+              )}
+            </span>
+            <span className="inline-flex items-center gap-1.5 rounded-md bg-slate-100 px-2 py-0.5">
+              <span className="shrink-0 text-slate-600">Важность:</span>
+              {canEditCard ? (
+                <>
+                  <select
+                    className="rounded border-0 bg-transparent py-0 pr-4 font-semibold text-slate-800 outline-none focus:ring-1 focus:ring-slate-300"
+                    value={importance}
+                    onChange={(e) => {
+                      const next = e.target.value as Importance;
+                      setImportance(next);
+                      setSaveError(null);
+                      void Api.updateCard(card.id, { importance: next }).catch((err) => setSaveError((err as Error).message));
+                    }}
+                  >
+                    <option value="LOW">Низкая</option>
+                    <option value="MEDIUM">Средняя</option>
+                    <option value="HIGH">Высокая</option>
+                  </select>
+                  <span
+                    className={classNames("h-4 w-4 shrink-0 rounded-sm border border-slate-200/80", importanceBadge(importance))}
+                    title={importanceLabel(importance)}
+                    aria-hidden
+                  />
+                </>
+              ) : (
+                <span className={classNames("rounded px-1.5 py-0.5 font-semibold", importanceBadge(importance))}>
+                  {importanceLabel(importance)}
+                </span>
+              )}
+            </span>
+            <span
+              className="inline-flex min-w-0 max-w-[min(280px,92vw)] items-center gap-1.5 rounded-md bg-slate-100 px-2 py-0.5"
+              ref={assigneeSelectRef}
+            >
+              <span className="shrink-0 text-slate-600">Ответственный:</span>
+              <div className="relative min-w-0 flex-1">
+                {canManageCard ? (
+                  <>
+                    <button
+                      type="button"
+                      className="flex w-full min-w-0 items-center gap-1 rounded border-0 bg-transparent py-0 text-left text-xs text-slate-800 outline-none focus:ring-1 focus:ring-slate-300"
+                      onClick={() => setAssigneeSelectOpen((v) => !v)}
+                      aria-haspopup="listbox"
+                      aria-expanded={assigneeSelectOpen}
+                    >
+                      {assignee ? (
+                        selectedAssigneeUser ? (
+                          <>
+                            <AvatarImg user={selectedAssigneeUser} size={18} />
+                            <span className="min-w-0 flex-1 truncate">{selectedAssigneeUser.name || selectedAssigneeUser.email}</span>
+                          </>
+                        ) : (
+                          <span className="min-w-0 flex-1 truncate">{assignee}</span>
+                        )
+                      ) : (
+                        <span className="text-slate-500">—</span>
+                      )}
+                      <span className="shrink-0 text-slate-400">
+                        {assigneeSelectOpen ? <IconChevronUp className="h-4 w-4" /> : <IconChevronDown className="h-4 w-4" />}
+                      </span>
+                    </button>
+                    {assigneeSelectOpen ? (
+                      <div
+                        className="absolute left-0 top-full z-30 mt-1 max-h-56 w-[min(100%,18rem)] min-w-[12rem] overflow-auto rounded-xl border border-slate-200 bg-white py-1 shadow-lg"
+                        role="listbox"
+                      >
+                        <button
+                          type="button"
+                          role="option"
+                          aria-selected={!assignee}
+                          className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-800 hover:bg-slate-50"
+                          onClick={() => {
+                            setAssignee("");
+                            setAssigneeSelectOpen(false);
+                            setTimeout(() => void persist(), 0);
+                          }}
+                        >
+                          <span className="text-slate-500">—</span>
+                        </button>
+                        {assignee && !props.allUsers.some((u) => u.email === assignee) ? (
+                          <button
+                            type="button"
+                            role="option"
+                            aria-selected={true}
+                            className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-800 hover:bg-slate-50"
+                            onClick={() => setAssigneeSelectOpen(false)}
+                          >
+                            <span className="min-w-0 truncate">{assignee}</span>
+                          </button>
+                        ) : null}
+                        {props.allUsers.map((u) => (
+                          <button
+                            key={u.id}
+                            type="button"
+                            role="option"
+                            aria-selected={assignee === u.email}
+                            className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-800 hover:bg-slate-50"
+                            onClick={() => {
+                              setAssignee(u.email);
+                              setAssigneeSelectOpen(false);
+                              setTimeout(() => void persist(), 0);
+                            }}
+                          >
+                            <AvatarImg user={u} size={24} />
+                            <span className="min-w-0 flex-1 truncate">{u.name || u.email}</span>
+                          </button>
+                        ))}
+                      </div>
+                    ) : null}
+                  </>
+                ) : (
+                  <div className="flex min-h-[1.25rem] items-center gap-1 text-xs text-slate-800">
+                    {assignee ? (
+                      selectedAssigneeUser ? (
+                        <>
+                          <AvatarImg user={selectedAssigneeUser} size={18} />
+                          <span className="min-w-0 flex-1 truncate">{selectedAssigneeUser.name || selectedAssigneeUser.email}</span>
+                        </>
+                      ) : (
+                        <span className="min-w-0 flex-1 truncate">{assignee}</span>
+                      )
+                    ) : (
+                      <span className="text-slate-500">—</span>
+                    )}
+                  </div>
+                )}
+              </div>
+            </span>
+            <span className="inline-flex items-center gap-1.5 rounded-md bg-slate-100 px-2 py-0.5">
+              <span className="shrink-0 text-slate-600">Срок исполнения:</span>
+              <input
+                type="datetime-local"
+                className="min-w-0 max-w-[11.5rem] rounded border-0 bg-transparent py-0 text-xs text-slate-800 outline-none focus:ring-1 focus:ring-slate-300 read-only:cursor-default disabled:opacity-70"
+                value={dueDate}
+                readOnly={!canEditCard}
+                disabled={!canEditCard}
+                onChange={(e) => setDueDate(e.target.value)}
+                onBlur={() => void persist()}
+              />
+            </span>
             {saveError ? <span className="rounded-md bg-rose-50 px-2 py-0.5 text-rose-800">Не сохранено</span> : null}
+            {props.boardId && props.onShareLink ? (
+              <div className="ml-auto flex shrink-0 items-center">
+                <IconButton
+                  title="Поделиться"
+                  onClick={() => {
+                    const link = getCardShareLink(props.boardId!, card.id);
+                    navigator.clipboard.writeText(link).then(
+                      () => props.onShareLink?.(card.description ?? "", link),
+                      () => props.onShareLink?.(card.description ?? "", link),
+                    );
+                  }}
+                >
+                  <IconShare className="h-5 w-5" />
+                </IconButton>
+              </div>
+            ) : null}
           </div>
         </div>
       }
       headerRight={
         <div className="flex items-center gap-2">
-          {props.boardId && props.onShareLink ? (
-            <IconButton
-              title="Поделиться"
-              onClick={() => {
-                const link = getCardShareLink(props.boardId!, card.id);
-                navigator.clipboard.writeText(link).then(
-                  () => props.onShareLink?.(card.description ?? "", link),
-                  () => props.onShareLink?.(card.description ?? "", link),
-                );
-              }}
-            >
-              <IconShare className="h-5 w-5" />
-            </IconButton>
-          ) : null}
           <IconButton
             title="Закрыть"
             onClick={() => {
@@ -4066,140 +4502,20 @@ function CardModal(props: {
           </div>
 
           <div className="rounded-2xl border border-slate-200 bg-white p-4">
-            <div className="mb-3 text-sm font-semibold text-slate-900">Свойства</div>
-            <div className="grid gap-3 md:grid-cols-2">
-              <div className="grid gap-1" ref={assigneeSelectRef}>
-                <div className="text-xs text-slate-600">Ответственный</div>
-                <div className="relative">
-                  <button
-                    type="button"
-                    disabled={!canManageCard}
-                    className="flex min-h-[2.75rem] w-full items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-left text-sm outline-none focus:border-[#246c7c] disabled:opacity-60 disabled:cursor-not-allowed"
-                    onClick={() => canManageCard && setAssigneeSelectOpen((v) => !v)}
-                    aria-haspopup="listbox"
-                    aria-expanded={assigneeSelectOpen}
-                  >
-                    {assignee ? (
-                      selectedAssigneeUser ? (
-                        <>
-                          <AvatarImg user={selectedAssigneeUser} size={24} />
-                          <span className="min-w-0 flex-1 truncate text-slate-800">{selectedAssigneeUser.name || selectedAssigneeUser.email}</span>
-                        </>
-                      ) : (
-                        <span className="min-w-0 flex-1 truncate text-slate-800">{assignee}</span>
-                      )
-                    ) : (
-                      <span className="text-slate-500">—</span>
-                    )}
-                    <span className="shrink-0 text-slate-400">
-                      {assigneeSelectOpen ? <IconChevronUp className="h-5 w-5" /> : <IconChevronDown className="h-5 w-5" />}
-                    </span>
-                  </button>
-                  {assigneeSelectOpen && canManageCard ? (
-                    <div
-                      className="absolute left-0 top-full z-20 mt-1 max-h-56 w-full min-w-[12rem] overflow-auto rounded-xl border border-slate-200 bg-white py-1 shadow-lg"
-                      role="listbox"
-                    >
-                      <button
-                        type="button"
-                        role="option"
-                        aria-selected={!assignee}
-                        className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-800 hover:bg-slate-50"
-                        onClick={() => {
-                          setAssignee("");
-                          setAssigneeSelectOpen(false);
-                          setTimeout(() => void persist(), 0);
-                        }}
-                      >
-                        <span className="text-slate-500">—</span>
-                      </button>
-                      {assignee && !props.allUsers.some((u) => u.email === assignee) ? (
-                        <button
-                          type="button"
-                          role="option"
-                          aria-selected={true}
-                          className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-800 hover:bg-slate-50"
-                          onClick={() => setAssigneeSelectOpen(false)}
-                        >
-                          <span className="min-w-0 truncate">{assignee}</span>
-                        </button>
-                      ) : null}
-                      {props.allUsers.map((u) => (
-                        <button
-                          key={u.id}
-                          type="button"
-                          role="option"
-                          aria-selected={assignee === u.email}
-                          className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-800 hover:bg-slate-50"
-                          onClick={() => {
-                            setAssignee(u.email);
-                            setAssigneeSelectOpen(false);
-                            setTimeout(() => void persist(), 0);
-                          }}
-                        >
-                          <AvatarImg user={u} size={24} />
-                          <span className="min-w-0 flex-1 truncate">{u.name || u.email}</span>
-                        </button>
-                      ))}
-                    </div>
-                  ) : null}
-                </div>
-              </div>
-
-              <div className="grid gap-1">
-                <div className="text-xs text-slate-600">Срок исполнения</div>
-                <input
-                  type="datetime-local"
-                  className="w-full rounded-xl border border-slate-200 bg-white p-2 text-sm outline-none focus:border-[#246c7c] read-only:cursor-default read-only:bg-slate-50"
-                  value={dueDate}
-                  readOnly={!canEditCard}
-                  onChange={(e) => setDueDate(e.target.value)}
-                  onBlur={() => void persist()}
-                />
-              </div>
-
-              <label className="grid gap-1">
-                <div className="text-xs text-slate-600">Важность</div>
-                <div className="flex items-center gap-2">
-                  <select
-                    className="flex-1 rounded-xl border border-slate-200 bg-white p-2 text-sm font-semibold outline-none focus:border-[#246c7c] disabled:cursor-not-allowed disabled:opacity-70"
-                    value={importance}
-                    disabled={!canEditCard}
-                    onChange={(e) => {
-                      const next = e.target.value as Importance;
-                      setImportance(next);
-                      setSaveError(null);
-                      void Api.updateCard(card.id, { importance: next }).catch((err) => setSaveError((err as Error).message));
-                    }}
-                  >
-                    <option value="LOW">Низкая</option>
-                    <option value="MEDIUM">Средняя</option>
-                    <option value="HIGH">Высокая</option>
-                  </select>
-                  <span
-                    className={classNames("h-9 w-10 rounded-xl border border-slate-200", importanceBadge(importance))}
-                    title={importanceLabel(importance)}
-                    aria-label={importanceLabel(importance)}
-                  />
-                </div>
-              </label>
+            <div className="mb-3 flex items-center justify-between gap-2">
+              <div className="text-sm font-semibold text-slate-900">Участники</div>
+              {canManageCard ? (
+                <button
+                  type="button"
+                  className="grid h-8 w-8 place-items-center rounded-lg bg-[#246c7c] text-white hover:opacity-90"
+                  title="Добавить участника"
+                  aria-label="Добавить участника"
+                  onClick={() => setParticipantAddOpen((v) => !v)}
+                >
+                  <IconPlus className="h-4 w-4" />
+                </button>
+              ) : null}
             </div>
-
-            <div className="mt-4">
-              <div className="mb-1 flex items-center justify-between gap-2">
-                <div className="text-xs font-semibold text-slate-700">Участники</div>
-                {canManageCard ? (
-                  <button
-                    type="button"
-                    className="grid h-8 w-8 place-items-center rounded-lg bg-[#246c7c] text-white hover:opacity-90"
-                    title="Добавить участника"
-                    aria-label="Добавить участника"
-                    onClick={() => setParticipantAddOpen((v) => !v)}
-                  >
-                    +
-                  </button>
-                ) : null}
-              </div>
               {participantAddOpen && canManageCard ? (
                 <div className="mt-2 flex flex-col gap-2" ref={participantAddRef}>
                   <div className="flex items-center gap-2">
@@ -4219,8 +4535,8 @@ function CardModal(props: {
                       type="button"
                       className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#246c7c] text-white hover:opacity-90 disabled:opacity-50"
                       disabled={!participantAddUserId}
-                      title="Добавить"
-                      aria-label="Добавить"
+                      title="Добавить участника"
+                      aria-label="Добавить участника"
                       onClick={() => {
                         if (!canManageCard) return;
                         if (!card) return;
@@ -4247,7 +4563,7 @@ function CardModal(props: {
                           .catch((err) => setParticipantError((err as Error).message));
                       }}
                     >
-                      +
+                      <IconPlus className="h-5 w-5" />
                     </button>
                   </div>
                   <div className="max-h-48 overflow-auto rounded-xl border border-slate-200 bg-white py-1 shadow-sm">
@@ -4324,7 +4640,6 @@ function CardModal(props: {
                   ))
                 )}
               </div>
-            </div>
           </div>
 
           <div className="rounded-2xl border border-slate-200 bg-white p-4">
@@ -4336,8 +4651,9 @@ function CardModal(props: {
                   className="grid h-8 w-8 place-items-center rounded-lg bg-[#246c7c] text-white hover:opacity-90"
                   onClick={() => uploadInputRef.current?.click()}
                   title="Добавить файл"
+                  aria-label="Добавить файл"
                 >
-                  +
+                  <IconPlus className="h-4 w-4" />
                 </button>
               ) : null}
             </div>
@@ -4529,7 +4845,8 @@ function CardModal(props: {
                   placeholder="Текст комментария…"
                 />
                 <button
-                  className="grid h-10 w-10 place-items-center rounded-xl bg-[#246c7c] text-lg font-semibold text-white hover:opacity-90 disabled:opacity-50"
+                  type="button"
+                  className="grid h-10 w-10 place-items-center rounded-xl bg-[#246c7c] text-white hover:opacity-90 disabled:opacity-50"
                   disabled={!commentBody.trim()}
                   title="Добавить комментарий"
                   aria-label="Добавить комментарий"
@@ -4542,7 +4859,7 @@ function CardModal(props: {
                     });
                   }}
                 >
-                  +
+                  <IconPlus className="h-5 w-5" />
                 </button>
               </div>
             </div>
