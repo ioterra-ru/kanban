@@ -68,6 +68,12 @@ function getCardShareLink(boardId: string, cardId: string): string {
   return `${base}#board/${boardId}/card/${cardId}`;
 }
 
+function roleLabelRu(role: User["role"]) {
+  if (role === "ADMIN") return "Администратор";
+  if (role === "OBSERVER") return "Наблюдатель";
+  return "Участник";
+}
+
 function Modal(props: {
   open: boolean;
   title?: string;
@@ -184,9 +190,11 @@ function SortableColumnSection(props: {
   col: BoardColumn;
   renderHeader: (dragHandle: React.ReactNode) => React.ReactNode;
   children: React.ReactNode;
+  columnDragDisabled?: boolean;
 }) {
   const { setNodeRef, transform, transition, attributes, listeners, isDragging } = useSortable({
     id: `${COLUMN_PREFIX}${props.col.id}`,
+    disabled: !!props.columnDragDisabled,
   });
   const style: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
@@ -239,6 +247,7 @@ function CardTile(props: {
   onDelete?: () => void;
   onArchive?: () => void;
   onShare?: () => void;
+  dragDisabled?: boolean;
 }) {
   const [actionsOpen, setActionsOpen] = useState(false);
   const actionsRef = useRef<HTMLDivElement | null>(null);
@@ -262,6 +271,7 @@ function CardTile(props: {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: props.card.id,
     data: { columnId: props.card.column },
+    disabled: !!props.dragDisabled,
   });
 
   const style: React.CSSProperties = {
@@ -440,6 +450,7 @@ function App() {
   const [shareConfirm, setShareConfirm] = useState<{ cardTitle: string; link: string } | null>(null);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
+  const isObserver = me?.user?.role === "OBSERVER";
 
   const cardsById = useMemo(() => {
     const m = new Map<string, CardSummary>();
@@ -880,7 +891,7 @@ function App() {
               <AvatarImg user={me.user} size={24} />
               <span className="px-2 text-sm font-semibold text-slate-800">{me.user.name}</span>
               <span className="text-slate-400">·</span>
-              <span className="text-sm text-slate-600">{me.user.role === "ADMIN" ? "Администратор" : "Участник"}</span>
+              <span className="text-sm text-slate-600">{roleLabelRu(me.user.role)}</span>
               <button
                 type="button"
                 className="rounded-lg border border-slate-200 bg-white p-1.5 text-slate-600 hover:bg-slate-100"
@@ -915,6 +926,7 @@ function App() {
           sensors={sensors}
           collisionDetection={closestCorners}
           onDragStart={(e) => {
+            if (isObserver) return;
             const id = String(e.active.id);
             if (!id.startsWith(COLUMN_PREFIX)) {
               setActiveCardId(id);
@@ -926,6 +938,7 @@ function App() {
             const overId = e.over?.id ? String(e.over.id) : null;
             setActiveCardId(null);
             if (!overId) return;
+            if (isObserver) return;
 
             if (activeId.startsWith(COLUMN_PREFIX)) {
               const columnId = activeId.slice(COLUMN_PREFIX.length);
@@ -980,6 +993,7 @@ function App() {
                 <SortableColumnSection
                   key={col.id}
                   col={col}
+                  columnDragDisabled={isObserver}
                   renderHeader={(handle) => (
                     <div className="mb-2 flex items-center justify-between gap-2">
                       <div className="flex items-center gap-1">
@@ -994,17 +1008,19 @@ function App() {
                         </div>
                       </div>
                       <div className="flex items-center gap-1">
-                        <button
-                          className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-800 hover:bg-slate-50"
-                          onClick={() => {
-                            setCreateColumn(col.id);
-                            setCreateTitle("");
-                            setCreateDetails("");
-                            setCreateOpen(true);
-                          }}
-                        >
-                          +
-                        </button>
+                        {!isObserver ? (
+                          <button
+                            className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs text-slate-800 hover:bg-slate-50"
+                            onClick={() => {
+                              setCreateColumn(col.id);
+                              setCreateTitle("");
+                              setCreateDetails("");
+                              setCreateOpen(true);
+                            }}
+                          >
+                            +
+                          </button>
+                        ) : null}
                         {me?.user?.role === "ADMIN" ? (
                           <div
                             className="relative"
@@ -1072,6 +1088,7 @@ function App() {
                           <CardTile
                             key={card.id}
                             card={card}
+                            dragDisabled={isObserver}
                             assigneeDisplay={assigneeDisplay(card.assignee)}
                             assigneeUser={assigneeUser(card.assignee)}
                             onClick={() => void onOpenCard(card.id)}
@@ -1079,13 +1096,21 @@ function App() {
                             cardRef={(el) => {
                               if (el) cardTileRefs.current.set(card.id, el);
                             }}
-                            onDelete={() => {
-                              if (!confirm("Удалить карточку?")) return;
-                              void Api.deleteCard(card.id).then(() => reload()).catch((e) => setError((e as Error).message));
-                            }}
-                            onArchive={() => {
-                              void Api.archiveCard(card.id).then(() => reload()).catch((e) => setError((e as Error).message));
-                            }}
+                            onDelete={
+                              isObserver
+                                ? undefined
+                                : () => {
+                                    if (!confirm("Удалить карточку?")) return;
+                                    void Api.deleteCard(card.id).then(() => reload()).catch((e) => setError((e as Error).message));
+                                  }
+                            }
+                            onArchive={
+                              isObserver
+                                ? undefined
+                                : () => {
+                                    void Api.archiveCard(card.id).then(() => reload()).catch((e) => setError((e as Error).message));
+                                  }
+                            }
                             onShare={
                               currentBoardId
                                 ? () => handleShareCard(card.description, getCardShareLink(currentBoardId, card.id))
@@ -1095,7 +1120,7 @@ function App() {
                         ))}
                         {col.cards.length === 0 ? (
                           <div className="rounded-lg border border-dashed border-slate-200 p-3 text-xs text-slate-500">
-                            Перетащите сюда карточку или добавьте новую.
+                            {isObserver ? "Пока нет карточек." : "Перетащите сюда карточку или добавьте новую."}
                           </div>
                         ) : null}
                       </div>
@@ -1968,7 +1993,7 @@ function UsersModal(props: { open: boolean; onClose: () => void; embedded?: bool
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState<"ADMIN" | "MEMBER">("MEMBER");
+  const [role, setRole] = useState<"ADMIN" | "MEMBER" | "OBSERVER">("MEMBER");
   const [error, setError] = useState<string | null>(null);
   const [boardsForUser, setBoardsForUser] = useState<{ id: string; name: string; email: string } | null>(null);
 
@@ -2019,6 +2044,7 @@ function UsersModal(props: { open: boolean; onClose: () => void; embedded?: bool
                 onChange={(e) => setRole(e.target.value as any)}
               >
                 <option value="MEMBER">Участник</option>
+                <option value="OBSERVER">Наблюдатель</option>
                 <option value="ADMIN">Администратор</option>
               </select>
               <button
@@ -2093,7 +2119,7 @@ function UsersModal(props: { open: boolean; onClose: () => void; embedded?: bool
                         className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1 text-sm font-semibold text-slate-800 outline-none focus:border-[#246c7c]"
                         value={u.role}
                         onChange={(e) => {
-                          const next = e.target.value as "ADMIN" | "MEMBER";
+                          const next = e.target.value as "ADMIN" | "MEMBER" | "OBSERVER";
                           setError(null);
                           void Api.adminUpdateUser(u.id, { role: next })
                             .then(() => Api.listUsers())
@@ -2102,6 +2128,7 @@ function UsersModal(props: { open: boolean; onClose: () => void; embedded?: bool
                         }}
                       >
                         <option value="MEMBER">Участник</option>
+                        <option value="OBSERVER">Наблюдатель</option>
                         <option value="ADMIN">Админ</option>
                       </select>
                     )}
@@ -3495,8 +3522,11 @@ function CardModal(props: {
   const panelResizeRef = useRef<{ startX: number; startY: number; startW: number; startH: number } | null>(null);
   const lastLoadedIdRef = useRef<string | null>(null);
 
+  const canEditCard = props.viewer.role !== "OBSERVER";
   const canManageCard =
-    !!card && (props.viewer.role === "ADMIN" || ((card as any).authorId as string | null | undefined) === props.viewer.id);
+    !!card &&
+    canEditCard &&
+    (props.viewer.role === "ADMIN" || ((card as any).authorId as string | null | undefined) === props.viewer.id);
 
   const userById = useMemo(() => new Map(props.allUsers.map((u) => [u.id, u])), [props.allUsers]);
   const userByEmail = useMemo(() => new Map(props.allUsers.map((u) => [u.email, u])), [props.allUsers]);
@@ -3648,6 +3678,7 @@ function CardModal(props: {
     }>,
   ): Promise<boolean> => {
     if (!card) return false;
+    if (!canEditCard) return true;
     if (deleting) return true;
     if (persistInFlightRef.current) return await persistInFlightRef.current;
     setSaveError(null);
@@ -3746,8 +3777,9 @@ function CardModal(props: {
       headerLeft={
         <div className="min-w-0">
           <input
-            className="w-full rounded-lg border border-transparent bg-transparent px-2 py-1 text-lg font-semibold text-slate-900 outline-none focus:border-slate-200 focus:bg-white"
+            className="w-full rounded-lg border border-transparent bg-transparent px-2 py-1 text-lg font-semibold text-slate-900 outline-none focus:border-slate-200 focus:bg-white read-only:cursor-default read-only:focus:border-transparent read-only:focus:bg-transparent"
             value={title}
+            readOnly={!canEditCard}
             onChange={(e) => setTitle(e.target.value)}
             onBlur={() => void persist()}
             placeholder="Название карточки"
@@ -3756,58 +3788,83 @@ function CardModal(props: {
             <span className="rounded-md bg-slate-100 px-2 py-0.5">Код: {card.id.slice(0, 8)}</span>
             <span className="inline-flex items-center gap-1.5 rounded-md bg-slate-100 px-2 py-0.5">
               <span className="shrink-0">Статус:</span>
-              <select
-                className="rounded border-0 bg-transparent py-0 pr-6 text-slate-700 outline-none focus:ring-1 focus:ring-slate-300"
-                value={card.column.id}
-                onChange={(e) => {
-                  const toColumnId = e.target.value;
-                  if (toColumnId === card.column.id) return;
-                  setSaveError(null);
-                  void Api.moveCard(card.id, { toColumnId, toIndex: 0 })
-                    .then(() => void props.onChanged())
-                    .catch((err) => setSaveError((err as Error).message));
-                }}
-              >
-                {props.columns.map((col) => (
-                  <option key={col.id} value={col.id}>
-                    {col.title}
-                  </option>
-                ))}
-              </select>
+              {canEditCard ? (
+                <select
+                  className="rounded border-0 bg-transparent py-0 pr-6 text-slate-700 outline-none focus:ring-1 focus:ring-slate-300"
+                  value={card.column.id}
+                  onChange={(e) => {
+                    const toColumnId = e.target.value;
+                    if (toColumnId === card.column.id) return;
+                    setSaveError(null);
+                    void Api.moveCard(card.id, { toColumnId, toIndex: 0 })
+                      .then(() => void props.onChanged())
+                      .catch((err) => setSaveError((err as Error).message));
+                  }}
+                >
+                  {props.columns.map((col) => (
+                    <option key={col.id} value={col.id}>
+                      {col.title}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <span className="text-slate-700">{card.column.title}</span>
+              )}
             </span>
             <span className={classNames("rounded-md px-2 py-0.5 font-semibold", importanceBadge(importance))}>
               {importanceLabel(importance)}
             </span>
-            <button
-              type="button"
-              className={classNames(
-                "inline-flex items-center gap-2 rounded-md px-2 py-0.5 font-semibold",
-                paused ? "bg-amber-100 text-amber-900" : "border border-amber-200 bg-white text-amber-900 hover:bg-amber-50",
-              )}
-              title="Пауза"
-              onMouseDown={(e) => {
-                // Prevent title input blur -> persist() race which can overwrite paused state.
-                e.preventDefault();
-                e.stopPropagation();
-              }}
-              onClick={() => {
-                const next = !paused;
-                setPaused(next);
-                setSaveError(null);
-                void persist({ paused: next });
-              }}
-            >
+            {canEditCard ? (
+              <button
+                type="button"
+                className={classNames(
+                  "inline-flex items-center gap-2 rounded-md px-2 py-0.5 font-semibold",
+                  paused ? "bg-amber-100 text-amber-900" : "border border-amber-200 bg-white text-amber-900 hover:bg-amber-50",
+                )}
+                title="Пауза"
+                onMouseDown={(e) => {
+                  // Prevent title input blur -> persist() race which can overwrite paused state.
+                  e.preventDefault();
+                  e.stopPropagation();
+                }}
+                onClick={() => {
+                  const next = !paused;
+                  setPaused(next);
+                  setSaveError(null);
+                  void persist({ paused: next });
+                }}
+              >
+                <span
+                  className={classNames(
+                    "grid h-4 w-4 place-items-center rounded border",
+                    paused ? "border-amber-300 bg-amber-200" : "border-amber-200 bg-white",
+                  )}
+                  aria-hidden="true"
+                >
+                  {paused ? "✓" : ""}
+                </span>
+                Пауза
+              </button>
+            ) : (
               <span
                 className={classNames(
-                  "grid h-4 w-4 place-items-center rounded border",
-                  paused ? "border-amber-300 bg-amber-200" : "border-amber-200 bg-white",
+                  "inline-flex items-center gap-2 rounded-md px-2 py-0.5 font-semibold",
+                  paused ? "bg-amber-100 text-amber-900" : "border border-amber-200 bg-slate-50 text-amber-900",
                 )}
-                aria-hidden="true"
+                title="Пауза"
               >
-                {paused ? "✓" : ""}
+                <span
+                  className={classNames(
+                    "grid h-4 w-4 place-items-center rounded border",
+                    paused ? "border-amber-300 bg-amber-200" : "border-amber-200 bg-white",
+                  )}
+                  aria-hidden="true"
+                >
+                  {paused ? "✓" : ""}
+                </span>
+                Пауза
               </span>
-              Пауза
-            </button>
+            )}
             {saveError ? <span className="rounded-md bg-rose-50 px-2 py-0.5 text-rose-800">Не сохранено</span> : null}
           </div>
         </div>
@@ -3840,26 +3897,28 @@ function CardModal(props: {
           >
             <IconX className="h-5 w-5" />
           </IconButton>
-          <IconButton
-            title="Удалить карточку"
-            variant="danger"
-            onClick={() => {
-              if (!confirm("Удалить карточку?")) return;
-              setSaveError(null);
-              setDeleting(true);
-              void Api.deleteCard(card.id)
-                .then(async () => {
-                  await props.onDeleted(); // only reload board; do not refetch deleted card
-                  props.onClose();
-                })
-                .catch((e) => {
-                  setDeleting(false);
-                  setSaveError((e as Error).message);
-                });
-            }}
-          >
-            <IconTrash className="h-5 w-5" />
-          </IconButton>
+          {canEditCard ? (
+            <IconButton
+              title="Удалить карточку"
+              variant="danger"
+              onClick={() => {
+                if (!confirm("Удалить карточку?")) return;
+                setSaveError(null);
+                setDeleting(true);
+                void Api.deleteCard(card.id)
+                  .then(async () => {
+                    await props.onDeleted(); // only reload board; do not refetch deleted card
+                    props.onClose();
+                  })
+                  .catch((e) => {
+                    setDeleting(false);
+                    setSaveError((e as Error).message);
+                  });
+              }}
+            >
+              <IconTrash className="h-5 w-5" />
+            </IconButton>
+          ) : null}
         </div>
       }
     >
@@ -3878,8 +3937,9 @@ function CardModal(props: {
           <div className="rounded-2xl border border-slate-200 bg-white p-4">
             <div className="mb-2 text-sm font-semibold text-slate-900">Описание</div>
             <textarea
-              className="min-h-[140px] w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900 outline-none focus:border-[#246c7c]"
+              className="min-h-[140px] w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900 outline-none focus:border-[#246c7c] read-only:cursor-default read-only:bg-slate-50"
               value={details}
+              readOnly={!canEditCard}
               onChange={(e) => setDetails(e.target.value)}
               onBlur={() => void persist()}
               placeholder="Введите описание…"
@@ -3971,8 +4031,9 @@ function CardModal(props: {
                 <div className="text-xs text-slate-600">Срок исполнения</div>
                 <input
                   type="datetime-local"
-                  className="w-full rounded-xl border border-slate-200 bg-white p-2 text-sm outline-none focus:border-[#246c7c]"
+                  className="w-full rounded-xl border border-slate-200 bg-white p-2 text-sm outline-none focus:border-[#246c7c] read-only:cursor-default read-only:bg-slate-50"
                   value={dueDate}
+                  readOnly={!canEditCard}
                   onChange={(e) => setDueDate(e.target.value)}
                   onBlur={() => void persist()}
                 />
@@ -3982,8 +4043,9 @@ function CardModal(props: {
                 <div className="text-xs text-slate-600">Важность</div>
                 <div className="flex items-center gap-2">
                   <select
-                    className="flex-1 rounded-xl border border-slate-200 bg-white p-2 text-sm font-semibold outline-none focus:border-[#246c7c]"
+                    className="flex-1 rounded-xl border border-slate-200 bg-white p-2 text-sm font-semibold outline-none focus:border-[#246c7c] disabled:cursor-not-allowed disabled:opacity-70"
                     value={importance}
+                    disabled={!canEditCard}
                     onChange={(e) => {
                       const next = e.target.value as Importance;
                       setImportance(next);
@@ -4149,30 +4211,34 @@ function CardModal(props: {
           <div className="rounded-2xl border border-slate-200 bg-white p-4">
             <div className="mb-2 flex items-center justify-between gap-2">
               <div className="text-sm font-semibold text-slate-900">Вложения</div>
-              <button
-                type="button"
-                className="grid h-8 w-8 place-items-center rounded-lg bg-[#246c7c] text-white hover:opacity-90"
-                onClick={() => uploadInputRef.current?.click()}
-                title="Добавить файл"
-              >
-                +
-              </button>
+              {canEditCard ? (
+                <button
+                  type="button"
+                  className="grid h-8 w-8 place-items-center rounded-lg bg-[#246c7c] text-white hover:opacity-90"
+                  onClick={() => uploadInputRef.current?.click()}
+                  title="Добавить файл"
+                >
+                  +
+                </button>
+              ) : null}
             </div>
-            <input
-              ref={uploadInputRef}
-              type="file"
-              className="sr-only"
-              onChange={(e) => {
-                const f = e.target.files?.[0];
-                if (!f) return;
-                setUploadSelectedName(f.name);
-                e.target.value = "";
-                void Api.uploadAttachment(card.id, f).then(() => {
-                  setUploadSelectedName("");
-                  return props.onChanged();
-                });
-              }}
-            />
+            {canEditCard ? (
+              <input
+                ref={uploadInputRef}
+                type="file"
+                className="sr-only"
+                onChange={(e) => {
+                  const f = e.target.files?.[0];
+                  if (!f) return;
+                  setUploadSelectedName(f.name);
+                  e.target.value = "";
+                  void Api.uploadAttachment(card.id, f).then(() => {
+                    setUploadSelectedName("");
+                    return props.onChanged();
+                  });
+                }}
+              />
+            ) : null}
             {uploadSelectedName ? (
               <div className="mt-1 truncate text-xs text-slate-500" title={uploadSelectedName}>
                 {compactFileName(uploadSelectedName, 70)}
@@ -4204,15 +4270,17 @@ function CardModal(props: {
                       >
                         <IconDownload />
                       </a>
-                      <button
-                        type="button"
-                        className="grid h-8 w-8 place-items-center rounded-lg bg-[#ac4c1c] text-white hover:opacity-90"
-                        onClick={() => void Api.deleteAttachment(a.id).then(props.onChanged)}
-                        title="Удалить"
-                        aria-label="Удалить"
-                      >
-                        <IconTrash />
-                      </button>
+                      {canEditCard ? (
+                        <button
+                          type="button"
+                          className="grid h-8 w-8 place-items-center rounded-lg bg-[#ac4c1c] text-white hover:opacity-90"
+                          onClick={() => void Api.deleteAttachment(a.id).then(props.onChanged)}
+                          title="Удалить"
+                          aria-label="Удалить"
+                        >
+                          <IconTrash />
+                        </button>
+                      ) : null}
                     </div>
                   </div>
                 ))
@@ -4263,7 +4331,8 @@ function CardModal(props: {
                     </div>
                     {(() => {
                       const authorId = (c as any).authorId as string | null | undefined;
-                      const canManage = props.viewer.role === "ADMIN" || (!!authorId && authorId === props.viewer.id);
+                      const canManage =
+                        canEditCard && (props.viewer.role === "ADMIN" || (!!authorId && authorId === props.viewer.id));
                       if (!canManage) return null;
                       return (
                         <div className="flex items-center gap-2">
@@ -4330,33 +4399,35 @@ function CardModal(props: {
             )}
           </div>
 
-          <div className="mt-3 grid gap-2">
-            <div className="flex items-start gap-2">
-              <AvatarImg user={props.viewer} size={24} />
-              <textarea
-                className="min-h-[80px] flex-1 rounded-xl border border-slate-200 bg-white p-2 text-sm outline-none focus:border-[#246c7c]"
-                value={commentBody}
-                onChange={(e) => setCommentBody(e.target.value)}
-                placeholder="Текст комментария…"
-              />
-              <button
-                className="grid h-10 w-10 place-items-center rounded-xl bg-[#246c7c] text-lg font-semibold text-white hover:opacity-90 disabled:opacity-50"
-                disabled={!commentBody.trim()}
-                title="Добавить комментарий"
-                aria-label="Добавить комментарий"
-                onClick={() => {
-                  const body = commentBody.trim();
-                  if (!body) return;
-                  void Api.addComment(card.id, { body }).then(() => {
-                    setCommentBody("");
-                    return props.onChanged();
-                  });
-                }}
-              >
-                +
-              </button>
+          {canEditCard ? (
+            <div className="mt-3 grid gap-2">
+              <div className="flex items-start gap-2">
+                <AvatarImg user={props.viewer} size={24} />
+                <textarea
+                  className="min-h-[80px] flex-1 rounded-xl border border-slate-200 bg-white p-2 text-sm outline-none focus:border-[#246c7c]"
+                  value={commentBody}
+                  onChange={(e) => setCommentBody(e.target.value)}
+                  placeholder="Текст комментария…"
+                />
+                <button
+                  className="grid h-10 w-10 place-items-center rounded-xl bg-[#246c7c] text-lg font-semibold text-white hover:opacity-90 disabled:opacity-50"
+                  disabled={!commentBody.trim()}
+                  title="Добавить комментарий"
+                  aria-label="Добавить комментарий"
+                  onClick={() => {
+                    const body = commentBody.trim();
+                    if (!body) return;
+                    void Api.addComment(card.id, { body }).then(() => {
+                      setCommentBody("");
+                      return props.onChanged();
+                    });
+                  }}
+                >
+                  +
+                </button>
+              </div>
             </div>
-          </div>
+          ) : null}
         </div>
       </div>
     </Modal>

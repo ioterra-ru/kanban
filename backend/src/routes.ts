@@ -28,6 +28,10 @@ function clamp(n: number, min: number, max: number) {
   return Math.max(min, Math.min(max, n));
 }
 
+function assertCanMutateBoardContent(user: { role: Role }) {
+  if (user.role === Role.OBSERVER) throw new HttpError(403, "Forbidden");
+}
+
 router.use(requireLogin(), requireTwoFactor());
 
 const SelectBoardSchema = z.object({
@@ -738,8 +742,10 @@ router.post(
   "/cards",
   asyncHandler(async (req, res) => {
     const boardId = (req as any).boardId as string;
+    const actor = (req as any).user as { id: string; role: Role };
+    assertCanMutateBoardContent(actor);
     const data = CardCreateSchema.parse(req.body);
-    const userId = (req as any).user.id as string;
+    const userId = actor.id;
 
     const boardColumn = await prisma.boardColumn.findFirst({
       where: { id: data.columnId, boardId },
@@ -787,6 +793,7 @@ router.patch(
     const id = z.string().uuid().parse(req.params.id);
     const data = CardUpdateSchema.parse(req.body);
     const actor = (req as any).user as { id: string; name: string; email: string; role: Role };
+    assertCanMutateBoardContent(actor);
 
     const exists = await prisma.card.findFirst({ where: { id, boardId }, select: { id: true, authorId: true } });
     if (!exists) throw new HttpError(404, "Card not found");
@@ -822,7 +829,8 @@ router.post(
     const boardId = (req as any).boardId as string;
     const id = z.string().uuid().parse(req.params.id);
     const { toColumnId, toIndex } = CardMoveSchema.parse(req.body);
-    const actor = (req as any).user as { id: string; name: string; email: string };
+    const actor = (req as any).user as { id: string; name: string; email: string; role: Role };
+    assertCanMutateBoardContent(actor);
 
     const toColumnExists = await prisma.boardColumn.findFirst({
       where: { id: toColumnId, boardId },
@@ -920,6 +928,7 @@ router.post(
     const boardId = (req as any).boardId as string;
     const cardId = z.string().uuid().parse(req.params.id);
     const actor = (req as any).user as { id: string; role: Role };
+    assertCanMutateBoardContent(actor);
     const { email, userId } = AddParticipantSchema.parse(req.body);
 
     const card = await prisma.card.findFirst({ where: { id: cardId, boardId }, select: { id: true, authorId: true } });
@@ -949,6 +958,7 @@ router.delete(
     const cardId = z.string().uuid().parse(req.params.id);
     const userId = z.string().uuid().parse(req.params.userId);
     const actor = (req as any).user as { id: string; role: Role };
+    assertCanMutateBoardContent(actor);
 
     const card = await prisma.card.findFirst({ where: { id: cardId, boardId }, select: { id: true, authorId: true } });
     if (!card) throw new HttpError(404, "Card not found");
@@ -965,6 +975,8 @@ router.delete(
   asyncHandler(async (req, res) => {
     const boardId = (req as any).boardId as string;
     const id = z.string().uuid().parse(req.params.id);
+    const actor = (req as any).user as { role: Role };
+    assertCanMutateBoardContent(actor);
     const card = await prisma.card.findFirst({
       where: { id, boardId },
       select: { id: true, attachments: { select: { relativePath: true } } },
@@ -999,6 +1011,7 @@ router.post(
     const boardId = (req as any).boardId as string;
     const id = z.string().uuid().parse(req.params.id);
     const actor = (req as any).user as { id: string; role: Role };
+    assertCanMutateBoardContent(actor);
     const card = await prisma.card.findFirst({
       where: { id, boardId },
       select: { id: true, authorId: true, attachments: { select: { relativePath: true } } },
@@ -1043,6 +1056,7 @@ router.post(
     const cardId = z.string().uuid().parse(req.params.id);
     const data = CommentCreateSchema.parse(req.body);
     const user = (req as any).user as { id: string; name: string; email: string; role: Role };
+    assertCanMutateBoardContent(user);
 
     const exists = await prisma.card.count({ where: { id: cardId, boardId } });
     if (!exists) throw new HttpError(404, "Card not found");
@@ -1069,6 +1083,7 @@ router.patch(
     const id = z.string().uuid().parse(req.params.id);
     const data = CommentUpdateSchema.parse(req.body);
     const user = (req as any).user as { id: string; name: string; email: string; role: Role };
+    assertCanMutateBoardContent(user);
 
     const c = await prisma.comment.findUnique({
       where: { id },
@@ -1092,6 +1107,7 @@ router.delete(
     const boardId = (req as any).boardId as string;
     const id = z.string().uuid().parse(req.params.id);
     const user = (req as any).user as { id: string; name: string; email: string; role: Role };
+    assertCanMutateBoardContent(user);
     const c = await prisma.comment.findUnique({
       where: { id },
       select: { authorId: true, cardId: true, card: { select: { boardId: true } } },
@@ -1140,7 +1156,8 @@ router.post(
   asyncHandler(async (req, res) => {
     const boardId = (req as any).boardId as string;
     const cardId = z.string().uuid().parse(req.params.id);
-    const actor = (req as any).user as { id: string; name: string; email: string };
+    const actor = (req as any).user as { id: string; name: string; email: string; role: Role };
+    assertCanMutateBoardContent(actor);
     if (!req.file) throw new HttpError(400, "File is required");
 
     const exists = await prisma.card.count({ where: { id: cardId, boardId } });
@@ -1206,7 +1223,8 @@ router.delete(
   asyncHandler(async (req, res) => {
     const boardId = (req as any).boardId as string;
     const id = z.string().uuid().parse(req.params.id);
-    const actor = (req as any).user as { id: string; name: string; email: string };
+    const actor = (req as any).user as { id: string; name: string; email: string; role: Role };
+    assertCanMutateBoardContent(actor);
     const att = await prisma.attachment.findUnique({
       where: { id },
       include: { card: { select: { boardId: true } } },

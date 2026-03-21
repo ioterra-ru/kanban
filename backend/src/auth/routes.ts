@@ -20,6 +20,12 @@ import { env } from "../env.js";
 import { BoardIdSchema, DEFAULT_BOARD_ID } from "../boards/ids.js";
 import { AVATAR_PRESETS, isAvatarPreset, randomAvatarPreset } from "./avatarPresets.js";
 
+function roleFromAdminApi(v: "ADMIN" | "MEMBER" | "OBSERVER"): Role {
+  if (v === "ADMIN") return Role.ADMIN;
+  if (v === "OBSERVER") return Role.OBSERVER;
+  return Role.MEMBER;
+}
+
 export const authRouter = express.Router();
 
 const AvatarPresetSchema = z
@@ -772,7 +778,7 @@ authRouter.post(
 const CreateUserSchema = z.object({
   email: z.string().email(),
   name: z.string().min(1).optional(),
-  role: z.enum(["ADMIN", "MEMBER"]).optional().default("MEMBER"),
+  role: z.enum(["ADMIN", "MEMBER", "OBSERVER"]).optional().default("MEMBER"),
   password: z.string().min(8),
 });
 
@@ -818,7 +824,7 @@ authRouter.post(
         email: data.email,
         name: data.name ?? data.email.split("@")[0],
         avatarPreset: randomAvatarPreset(),
-        role: data.role === "ADMIN" ? Role.ADMIN : Role.MEMBER,
+        role: roleFromAdminApi(data.role),
         passwordHash,
         mustChangePassword: true,
         totpEnabled: false,
@@ -837,7 +843,7 @@ const ResetUserPasswordSchema = z.object({
 
 const AdminUpdateUserSchema = z.object({
   email: z.string().email().optional(),
-  role: z.enum(["ADMIN", "MEMBER"]).optional(),
+  role: z.enum(["ADMIN", "MEMBER", "OBSERVER"]).optional(),
 });
 
 authRouter.post(
@@ -876,7 +882,7 @@ authRouter.patch(
       if (data.role !== undefined) throw new HttpError(400, "Cannot change role for system admin");
     }
 
-    if (data.role === "MEMBER" && u.role === Role.ADMIN) {
+    if (data.role !== undefined && data.role !== "ADMIN" && u.role === Role.ADMIN) {
       const adminCount = await prisma.user.count({ where: { role: Role.ADMIN } });
       if (adminCount <= 1) throw new HttpError(400, "Cannot demote last admin");
     }
@@ -890,11 +896,10 @@ authRouter.patch(
     }
 
     const updated = await prisma.$transaction(async (tx) => {
-      const nextRole =
-        data.role !== undefined ? (data.role === "ADMIN" ? Role.ADMIN : Role.MEMBER) : (u.role as Role);
+      const nextRole = data.role !== undefined ? roleFromAdminApi(data.role) : (u.role as Role);
 
-      // If demoting to MEMBER, ensure at least one board membership exists.
-      if (nextRole === Role.MEMBER) {
+      // Non-admins need at least one board membership.
+      if (nextRole === Role.MEMBER || nextRole === Role.OBSERVER) {
         const count = await tx.boardMembership.count({ where: { userId: id } });
         if (count === 0) {
           const boardId =
@@ -910,7 +915,7 @@ authRouter.patch(
         where: { id },
         data: {
           ...(data.email !== undefined ? { email: data.email } : {}),
-          ...(data.role !== undefined ? { role: data.role === "ADMIN" ? Role.ADMIN : Role.MEMBER } : {}),
+          ...(data.role !== undefined ? { role: roleFromAdminApi(data.role) } : {}),
         },
         select: {
           id: true,
