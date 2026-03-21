@@ -229,11 +229,11 @@ export const Api = {
     api<{ ok: true }>(`/api/boards/${boardId}/columns/${columnId}/archive`, { method: "POST" }),
 
   listUsers: () => api<{ users: any[] }>("/api/auth/users"),
-  createUser: (input: { email: string; name?: string; role?: "ADMIN" | "MEMBER"; password: string }) =>
+  createUser: (input: { email: string; name?: string; role?: "ADMIN" | "MEMBER" | "OBSERVER"; password: string }) =>
     api<{ user: any }>("/api/auth/users", { method: "POST", body: JSON.stringify(input) }),
   resetUserPassword: (userId: string, input: { newPassword: string }) =>
     api<{ ok: true }>(`/api/auth/users/${userId}/password`, { method: "POST", body: JSON.stringify(input) }),
-  adminUpdateUser: (userId: string, input: { email?: string; role?: "ADMIN" | "MEMBER" }) =>
+  adminUpdateUser: (userId: string, input: { email?: string; role?: "ADMIN" | "MEMBER" | "OBSERVER" }) =>
     api<{ user: any }>(`/api/auth/users/${userId}`, { method: "PATCH", body: JSON.stringify(input) }),
   deleteUser: (userId: string) => api<{ ok: true }>(`/api/auth/users/${userId}`, { method: "DELETE" }),
 

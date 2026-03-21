@@ -16,6 +16,7 @@ enum Importance {
 enum Role {
   ADMIN
   MEMBER
+  OBSERVER
 }
 
 model Board {

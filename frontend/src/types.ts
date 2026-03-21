@@ -3,7 +3,7 @@ export type ColumnId = string;
 
 export type Importance = "LOW" | "MEDIUM" | "HIGH";
 
-export type Role = "ADMIN" | "MEMBER";
+export type Role = "ADMIN" | "MEMBER" | "OBSERVER";
 
 export type User = {
   id: string;
