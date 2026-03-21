@@ -11,11 +11,3 @@ services:
     depends_on:
       db:
         condition: service_healthy
-
-networks:
-  default:
-    name: kanban_default
-
-volumes:
-  kanban_pg:
-  kanban_uploads:

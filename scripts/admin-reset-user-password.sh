@@ -3,7 +3,10 @@
 # Запуск на сервере под root/админом по SSH, из корня репозитория с docker compose.
 #
 # Использование:
-#   ./scripts/admin-reset-user-password.sh user@example.com
+#   ./scripts/admin-reset-user-password.sh user@example.com [totp_enabled]
+#
+#   totp_enabled — требовать 2FA для пользователя (поле totpEnabled): true или false.
+#   По умолчанию true. Значение false отключает 2FA и обнуляет секреты TOTP (как в админке).
 #
 # Набор compose-файлов подбирается автоматически (как в backup-db / restore-db), если не заданы
 # COMPOSE_FILE или KANBAN_COMPOSE_FILE.
@@ -95,11 +98,25 @@ kanban_export_compose_file() {
 }
 
 EMAIL="${1:-}"
+TOTP_RAW="${2:-true}"
+
 if [ -z "$EMAIL" ]; then
-  echo "Использование: $0 <email>" >&2
-  echo "Пример: $0 admin@local" >&2
+  echo "Использование: $0 <email> [totp_enabled]" >&2
+  echo "  totp_enabled — true (по умолчанию) или false: включить/выключить требование 2FA." >&2
+  echo "Примеры: $0 admin@local" >&2
+  echo "         $0 admin@local false   # войти только по паролю" >&2
   exit 1
 fi
+
+TOTP_NORM="$(printf '%s' "$TOTP_RAW" | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')"
+case "$TOTP_NORM" in
+  true|1|yes|да) TOTP_ENABLED="true" ;;
+  false|0|no|нет) TOTP_ENABLED="false" ;;
+  *)
+    echo "Ошибка: второй аргумент (2FA) должен быть true или false, получено: «${TOTP_RAW}»" >&2
+    exit 1
+    ;;
+esac
 
 escape_sql() {
   printf '%s' "$1" | sed "s/'/''/g"
@@ -167,9 +184,23 @@ fi
 HASH_ESC="$(escape_sql "$HASH")"
 UID_ESC="$(escape_sql "$USER_ID")"
 
-echo "Обновление пароля и сброс сессий…"
-"${COMPOSE_CMD[@]}" exec -T db psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -v ON_ERROR_STOP=1 -c \
-  "UPDATE \"User\" SET \"passwordHash\" = '${HASH_ESC}', \"mustChangePassword\" = true WHERE id = '${UID_ESC}'; \
-   DELETE FROM \"session\" WHERE (sess->'user'->>'userId') = '${UID_ESC}';"
+if [ "$TOTP_ENABLED" = "true" ]; then
+  TOTP_SET=', "totpEnabled" = true'
+  TOTP_TRUSTED=""
+else
+  TOTP_SET=', "totpEnabled" = false, "totpSecret" = null, "totpTempSecret" = null'
+  TOTP_TRUSTED="DELETE FROM \"TrustedDevice\" WHERE \"userId\" = '${UID_ESC}';"
+fi
 
-echo "Готово. Пользователь «${EMAIL}» может войти с новым паролем; при входе система может потребовать сменить пароль ещё раз (флаг обязательной смены)."
+echo "Обновление пароля и сброс сессий…"
+SQL_BODY="UPDATE \"User\" SET \"passwordHash\" = '${HASH_ESC}', \"mustChangePassword\" = true${TOTP_SET} WHERE id = '${UID_ESC}'; DELETE FROM \"session\" WHERE (sess->'user'->>'userId') = '${UID_ESC}';"
+if [ -n "$TOTP_TRUSTED" ]; then
+  SQL_BODY+="$TOTP_TRUSTED"
+fi
+"${COMPOSE_CMD[@]}" exec -T db psql -U "${POSTGRES_USER}" -d "${POSTGRES_DB}" -v ON_ERROR_STOP=1 -c "$SQL_BODY"
+
+if [ "$TOTP_ENABLED" = "true" ]; then
+  echo "Готово. Пользователь «${EMAIL}» может войти с новым паролем; 2FA для учётной записи включено (totpEnabled=true). При входе система может потребовать сменить пароль ещё раз (флаг обязательной смены)."
+else
+  echo "Готово. Пользователь «${EMAIL}» может войти с новым паролем; 2FA отключено (totpEnabled=false), секреты TOTP сброшены. При входе система может потребовать сменить пароль ещё раз (флаг обязательной смены)."
+fi
