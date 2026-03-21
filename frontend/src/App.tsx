@@ -1339,6 +1339,41 @@ function IconKey(props: { className?: string }) {
   );
 }
 
+function IconEye(props: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={props.className ?? "h-4 w-4"} fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path
+        d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinejoin="round"
+        strokeLinecap="round"
+      />
+      <path
+        d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinejoin="round"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function IconEyeOff(props: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={props.className ?? "h-4 w-4"} fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path
+        d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12C3.242 16.293 7.367 19.5 12 19.5c1.585 0 3.101-.29 4.5-.815M6.228 6.228A10.45 10.45 0 0 1 12 4.5c4.638 0 8.573 3.007 9.963 7.178.051.15.088.305.105.466M6.228 6.228 4.5 4.5m1.728 1.728L4.5 4.5m1.728 1.728 12.728 12.728M4.5 4.5l2.228 2.228m0 0L19.5 19.5m-12.772-12.772L19.5 19.5"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinejoin="round"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
 function IconEdit(props: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" className={props.className ?? "h-4 w-4"} fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -2016,6 +2051,7 @@ function UsersModal(props: { open: boolean; onClose: () => void; embedded?: bool
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
+  const [showNewUserPassword, setShowNewUserPassword] = useState(false);
   const [newUserTotpRequired, setNewUserTotpRequired] = useState(true);
   const [role, setRole] = useState<"ADMIN" | "MEMBER" | "OBSERVER">("MEMBER");
   const [error, setError] = useState<string | null>(null);
@@ -2042,26 +2078,48 @@ function UsersModal(props: { open: boolean; onClose: () => void; embedded?: bool
             Для системного администратора доступны только смена почты и пароля (в т.ч. через «Кабинет»).
           </div>
 
-          <div className="grid gap-2 rounded-2xl border border-slate-200 bg-slate-50 p-3 md:grid-cols-2">
+          <form
+            className="grid gap-2 rounded-2xl border border-slate-200 bg-slate-50 p-3 md:grid-cols-2"
+            autoComplete="off"
+            onSubmit={(e) => e.preventDefault()}
+          >
             <input
-              className="rounded-xl border border-slate-200 p-2 text-sm outline-none focus:border-[#246c7c]"
+              className="rounded-xl border border-slate-200 bg-white p-2 text-sm outline-none focus:border-[#246c7c]"
               placeholder="Имя (необязательно)"
+              name="cabinet-new-user-display-name"
+              autoComplete="off"
               value={name}
               onChange={(e) => setName(e.target.value)}
             />
             <input
-              className="rounded-xl border border-slate-200 p-2 text-sm outline-none focus:border-[#246c7c]"
+              className="rounded-xl border border-slate-200 bg-white p-2 text-sm outline-none focus:border-[#246c7c]"
               placeholder="Email"
+              type="email"
+              name="cabinet-new-user-email"
+              autoComplete="off"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />
-            <input
-              type="password"
-              className="rounded-xl border border-slate-200 p-2 text-sm outline-none focus:border-[#246c7c]"
-              placeholder="Стартовый пароль (мин. 8)"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
+            <div className="relative md:col-span-2">
+              <input
+                type={showNewUserPassword ? "text" : "password"}
+                className="w-full rounded-xl border border-slate-200 bg-white py-2 pl-2 pr-10 text-sm outline-none focus:border-[#246c7c]"
+                placeholder="Стартовый пароль (мин. 8)"
+                name="cabinet-new-user-password"
+                autoComplete="new-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+              <button
+                type="button"
+                className="absolute right-1 top-1/2 grid h-8 w-8 -translate-y-1/2 place-items-center rounded-lg text-slate-600 hover:bg-slate-100"
+                aria-label={showNewUserPassword ? "Скрыть пароль" : "Показать пароль"}
+                title={showNewUserPassword ? "Скрыть пароль" : "Показать пароль"}
+                onClick={() => setShowNewUserPassword((v) => !v)}
+              >
+                {showNewUserPassword ? <IconEyeOff className="h-4 w-4" /> : <IconEye className="h-4 w-4" />}
+              </button>
+            </div>
             <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-700 md:col-span-2">
               <input
                 type="checkbox"
@@ -2081,6 +2139,7 @@ function UsersModal(props: { open: boolean; onClose: () => void; embedded?: bool
                 <option value="ADMIN">Администратор</option>
               </select>
               <button
+                type="button"
                 className="grid h-10 w-10 place-items-center rounded-xl bg-[#246c7c] text-lg font-bold text-white hover:opacity-90 disabled:opacity-50"
                 disabled={!email.trim() || password.trim().length < 8}
                 title="Добавить пользователя"
@@ -2098,6 +2157,7 @@ function UsersModal(props: { open: boolean; onClose: () => void; embedded?: bool
                       setEmail("");
                       setName("");
                       setPassword("");
+                      setShowNewUserPassword(false);
                       setNewUserTotpRequired(true);
                       return Api.listUsers();
                     })
@@ -2108,7 +2168,7 @@ function UsersModal(props: { open: boolean; onClose: () => void; embedded?: bool
                 +
               </button>
             </div>
-          </div>
+          </form>
 
           <div className="rounded-2xl border border-slate-200 bg-white">
             <div className="grid grid-cols-[1fr_1fr_120px_108px_56px_90px_44px] gap-2 border-b border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600">
