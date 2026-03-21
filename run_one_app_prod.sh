@@ -96,4 +96,4 @@ else
 fi
 echo
 echo "OK. UI:      $base_url"
-echo "Adminer: $base_url/adminer/"
+#echo "Adminer: $base_url/adminer/"
