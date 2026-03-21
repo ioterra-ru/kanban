@@ -8,11 +8,3 @@ services:
     restart: always
   frontend:
     restart: always
-
-networks:
-  default:
-    name: kanban_default
-
-volumes:
-  kanban_pg:
-  kanban_uploads:

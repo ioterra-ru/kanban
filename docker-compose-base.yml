@@ -70,4 +70,6 @@ networks:
 
 volumes:
   kanban_pg:
+    name: kanban_pg
   kanban_uploads:
+    name: kanban_uploads
