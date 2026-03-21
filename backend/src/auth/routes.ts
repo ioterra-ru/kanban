@@ -677,7 +677,8 @@ authRouter.post(
       return null;
     })();
 
-    if (!u?.totpEnabled || !u.totpSecret) throw new HttpError(400, "Password reset not available");
+    if (!u) throw new HttpError(404, "Unknown login for password reset");
+    if (!u.totpEnabled || !u.totpSecret) throw new HttpError(400, "Password reset not available");
     const ok = verifyTotp({ token: code.trim(), secret: u.totpSecret });
     if (!ok) throw new HttpError(400, "Invalid code");
 
@@ -1010,4 +1011,3 @@ authRouter.put(
     res.json({ ok: true });
   }),
 );
-

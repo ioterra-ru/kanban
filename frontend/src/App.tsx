@@ -1545,14 +1545,17 @@ function LoginView(props: { onDone: () => Promise<void> | void }) {
   const [fpP1, setFpP1] = useState("");
   const [fpP2, setFpP2] = useState("");
   const [fpOk, setFpOk] = useState(false);
+  const [fpMailSent, setFpMailSent] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   const friendlyAuthError = (msg: string) => {
     if (msg.includes("Invalid credentials")) return "Неверный логин или пароль.";
     if (msg.includes("Two-factor required")) return "Введите код 2FA и повторите вход.";
     if (msg.includes("2FA setup required")) return "Для пользователя требуется настроить 2FA (обратитесь к администратору).";
+    if (msg.includes("Unknown login for password reset"))
+      return "Учётная запись с таким логином или email не найдена. Проверьте адрес — он должен совпадать с записью в базе (в т.ч. домен после @).";
     if (msg.includes("Password reset not available"))
-      return "Для этой учетной записи сброс пароля по коду 2FA недоступен. Обратитесь к администратору.";
+      return "Для этой учётной записи сброс по коду 2FA недоступен (2FA выключена или не настроена). Обратитесь к администратору или используйте восстановление по почте.";
     if (msg.includes("Invalid code")) return "Неверный код 2FA.";
     if (msg.includes("Timeout")) return "Сервер не отвечает. Подождите и попробуйте ещё раз (или перезапустите контейнеры).";
     if (msg.includes("502") || msg.toLowerCase().includes("bad gateway"))
@@ -1650,6 +1653,7 @@ function LoginView(props: { onDone: () => Promise<void> | void }) {
               onClick={() => {
                 setError(null);
                 setFpOk(false);
+                setFpMailSent(false);
                 setMode("forgot");
                 setFpLogin(login.trim());
                 setFpCode("");
@@ -1664,11 +1668,20 @@ function LoginView(props: { onDone: () => Promise<void> | void }) {
         ) : (
           <>
             <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
-              Если у вас включена 2FA, вы можете сменить пароль по коду из приложения-аутентификатора. Если 2FA не включена — обратитесь к администратору.
+              <span className="font-medium">Без 2FA:</span> запросите ссылку на почту (ниже) — если на сервере настроен SMTP.
+              <br />
+              <span className="font-medium">С 2FA:</span> введите код из приложения-аутентификатора и новый пароль.
             </div>
             {fpOk ? (
               <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900">
                 Пароль изменён. Теперь вы можете войти.
+              </div>
+            ) : null}
+            {fpMailSent ? (
+              <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-900">
+                Если для этой учётной записи на сервере настроена почта, на указанный email отправлена ссылка для сброса
+                (действует около часа). Проверьте папку «Спам». Если письма нет — почта на сервере не настроена; обратитесь к
+                администратору.
               </div>
             ) : null}
             <label className="grid gap-1">
@@ -1681,6 +1694,23 @@ function LoginView(props: { onDone: () => Promise<void> | void }) {
                 autoComplete="username"
               />
             </label>
+            <button
+              type="button"
+              className="rounded-xl border border-[#246c7c] bg-white px-4 py-2 text-sm font-semibold text-[#246c7c] hover:bg-slate-50 disabled:opacity-50"
+              disabled={fpOk || !fpLogin.trim() || submitting}
+              onClick={() => {
+                setError(null);
+                setFpMailSent(false);
+                setSubmitting(true);
+                void Api.forgotPassword({ login: fpLogin.trim() })
+                  .then(() => setFpMailSent(true))
+                  .catch((e) => setError(friendlyAuthError((e as Error).message)))
+                  .finally(() => setSubmitting(false));
+              }}
+            >
+              {submitting ? "Отправка…" : "Отправить ссылку сброса на email"}
+            </button>
+            <div className="text-center text-xs text-slate-400">или с 2FA</div>
             <label className="grid gap-1">
               <div className="text-xs text-slate-600">Код 2FA</div>
               <input
@@ -1713,7 +1743,13 @@ function LoginView(props: { onDone: () => Promise<void> | void }) {
                 setError(null);
                 setSubmitting(true);
                 void Api.resetPasswordByTotp({ login: fpLogin.trim(), code: fpCode.trim(), newPassword: fpP1 })
-                  .then(() => setFpOk(true))
+                  .then(() => {
+                    setFpOk(true);
+                    // Иначе на экране входа остаётся старый пароль в поле — пользователь жмёт «Войти» и получает «неверный пароль».
+                    setPassword("");
+                    setTotp("");
+                    setNeedTotp(false);
+                  })
                   .catch((e) => setError(friendlyAuthError((e as Error).message)))
                   .finally(() => setSubmitting(false));
               }}
@@ -1725,7 +1761,13 @@ function LoginView(props: { onDone: () => Promise<void> | void }) {
               onClick={() => {
                 setError(null);
                 setFpOk(false);
+                setFpMailSent(false);
                 setMode("login");
+                setPassword("");
+                setTotp("");
+                setNeedTotp(false);
+                // Подставить тот же идентификатор, что использовали при сбросе (на случай правок в форме восстановления).
+                if (fpLogin.trim()) setLogin(fpLogin.trim());
               }}
               type="button"
             >
