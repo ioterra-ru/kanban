@@ -12,11 +12,13 @@ jobs:
   update-version:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      # Коммит, на который указывает тег — это снимок для архивов Source code на GitHub.
+      # Раньше bump делался только в main, тег оставался на старом SHA → в zip/tar.gz была прошлая версия.
+      - name: Checkout tagged commit
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: main  # Обновляем версию в основной ветке
+          ref: ${{ github.ref }}
 
       - name: Extract version from tag
         id: extract_version
@@ -46,16 +48,31 @@ jobs:
           VERSION="${{ steps.extract_version.outputs.version }}"
           npm pkg set version="$VERSION" -w frontend
 
-      - name: Commit and push version updates
+      - name: Commit bump, merge to main, move tag to released snapshot
+        env:
+          TAG_NAME: ${{ github.ref_name }}
         run: |
+          set -euo pipefail
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git checkout main
+
           git add package.json backend/package.json frontend/package.json
-          # Проверяем, есть ли изменения перед коммитом
-          if ! git diff --staged --quiet; then
-            git commit -m "chore: update version to ${{ steps.extract_version.outputs.version }}"
-            git push origin main
-          else
-            echo "No version changes to commit"
+          if git diff --staged --quiet; then
+            echo "Version in tree already matches tag; archives and main are in sync."
+            exit 0
           fi
+
+          git commit -m "chore: update version to ${{ steps.extract_version.outputs.version }}"
+
+          BUMP_SHA=$(git rev-parse HEAD)
+
+          git fetch origin main
+          git checkout main
+          git pull origin main --no-rebase
+          git merge "$BUMP_SHA" -m "chore: merge version ${{ steps.extract_version.outputs.version }} for ${TAG_NAME}"
+
+          git push origin main
+
+          # Переносим лёгкий тег на коммит с актуальными package.json — тогда исходные архивы релиза совпадают с версией.
+          git tag -f "$TAG_NAME" HEAD
+          git push origin "refs/tags/$TAG_NAME" --force
