@@ -50,11 +50,14 @@ authRouter.get(
         role: true,
         defaultBoardId: true,
         totpEnabled: true,
+        totpSecret: true,
         mustChangePassword: true,
         emailNotificationsEnabled: true,
       },
     });
-    res.json({ user: u });
+    if (!u) throw new HttpError(404, "User not found");
+    const { totpSecret, ...rest } = u;
+    res.json({ user: { ...rest, totpConfigured: !!totpSecret } });
   }),
 );
 
@@ -110,6 +113,7 @@ authRouter.patch(
         role: true,
         defaultBoardId: true,
         totpEnabled: true,
+        totpSecret: true,
         mustChangePassword: true,
         emailNotificationsEnabled: true,
       },
@@ -120,7 +124,8 @@ authRouter.patch(
       await new Promise<void>((resolve, reject) => req.session.save((e) => (e ? reject(e) : resolve())));
     }
 
-    res.json({ user: updated, currentBoardId: req.session.boardId ?? null });
+    const { totpSecret: _ts, ...userOut } = updated;
+    res.json({ user: { ...userOut, totpConfigured: !!_ts }, currentBoardId: req.session.boardId ?? null });
   }),
 );
 
@@ -142,13 +147,19 @@ authRouter.get(
         avatarUploadName: true,
         role: true,
         totpEnabled: true,
+        totpSecret: true,
         mustChangePassword: true,
         defaultBoardId: true,
         emailNotificationsEnabled: true,
       },
     });
+    if (!u) {
+      res.json({ user: null, twoFactorPassed: false, currentBoardId: req.session.boardId ?? null });
+      return;
+    }
+    const { totpSecret, ...rest } = u;
     res.json({
-      user: u ?? null,
+      user: { ...rest, totpConfigured: !!totpSecret },
       twoFactorPassed: !!req.session.twoFactorPassed,
       currentBoardId: req.session.boardId ?? null,
     });
@@ -195,24 +206,29 @@ authRouter.post(
     const ok = await verifyPassword(password, u.passwordHash);
     if (!ok) throw new HttpError(401, "Invalid credentials");
 
-    // 2FA required if enabled
-    if (u.totpEnabled) {
-      if (!u.totpSecret) throw new HttpError(500, "2FA misconfigured");
+    // 2FA: если админ отключил требование — вход без кода; если включено и секрет есть — код или доверенное устройство;
+    // если включено, секрета ещё нет — вход по паролю, дальше экран первичной настройки TOTP.
+    let twoFactorPassed = false;
+    if (!u.totpEnabled) {
+      twoFactorPassed = true;
+    } else if (u.totpSecret) {
       if (totp) {
         const valid = verifyTotp({ token: totp, secret: u.totpSecret });
         if (!valid) throw new HttpError(401, "Invalid 2FA code");
         if (rememberDevice) {
           await issueTrustedDevice({ userId: u.id, req, res });
         }
+        twoFactorPassed = true;
       } else {
         const token = getTrustedDeviceCookie(req);
         const ok = token ? await verifyTrustedDeviceToken({ userId: u.id, token }) : false;
         if (!ok) throw new HttpError(401, "Two-factor required");
+        twoFactorPassed = true;
       }
     }
 
     req.session.user = { userId: u.id };
-    req.session.twoFactorPassed = !u.totpEnabled ? false : true;
+    req.session.twoFactorPassed = twoFactorPassed;
 
     // set current board to user's default board (or first membership)
     const defaultBoardId = u.defaultBoardId ?? null;
@@ -239,6 +255,7 @@ authRouter.post(
         avatarUploadName: u.avatarUploadName,
         role: u.role,
         totpEnabled: u.totpEnabled,
+        totpConfigured: !!u.totpSecret,
         mustChangePassword: u.mustChangePassword,
         defaultBoardId: u.defaultBoardId,
       },
@@ -310,6 +327,7 @@ authRouter.post(
         role: true,
         defaultBoardId: true,
         totpEnabled: true,
+        totpSecret: true,
         mustChangePassword: true,
       },
     });
@@ -319,7 +337,8 @@ authRouter.post(
       fs.promises.unlink(absPrev).catch(() => undefined);
     }
 
-    res.json({ user: updated });
+    const { totpSecret, ...userOut } = updated;
+    res.json({ user: { ...userOut, totpConfigured: !!totpSecret } });
   }),
 );
 
@@ -342,6 +361,7 @@ authRouter.delete(
         role: true,
         defaultBoardId: true,
         totpEnabled: true,
+        totpSecret: true,
         mustChangePassword: true,
       },
     });
@@ -349,7 +369,8 @@ authRouter.delete(
       const absPrev = path.join(avatarUploadRoot, prev.avatarUploadName);
       fs.promises.unlink(absPrev).catch(() => undefined);
     }
-    res.json({ user: updated });
+    const { totpSecret: tsDel, ...userOutDel } = updated;
+    res.json({ user: { ...userOutDel, totpConfigured: !!tsDel } });
   }),
 );
 
@@ -711,6 +732,7 @@ authRouter.post(
     const userId = (req as any).user.id as string;
     const u = await prisma.user.findUnique({ where: { id: userId } });
     if (!u) throw new HttpError(404, "User not found");
+    if (!u.totpEnabled) throw new HttpError(403, "2FA is not required for this account");
     const secret = generateTotpSecret();
     const url = otpauthUrl({ email: u.email, issuer: "IoTerra-Kanban", secret });
     const qrDataUrl = await QRCode.toDataURL(url);
@@ -739,7 +761,6 @@ authRouter.post(
     await prisma.user.update({
       where: { id: userId },
       data: {
-        totpEnabled: true,
         totpSecret: u.totpTempSecret,
         totpTempSecret: null,
       },
@@ -780,6 +801,8 @@ const CreateUserSchema = z.object({
   name: z.string().min(1).optional(),
   role: z.enum(["ADMIN", "MEMBER", "OBSERVER"]).optional().default("MEMBER"),
   password: z.string().min(8),
+  /** Политика администратора: требовать 2FA (по умолчанию да). */
+  totpEnabled: z.boolean().optional().default(true),
 });
 
 authRouter.get(
@@ -799,11 +822,14 @@ authRouter.get(
         role: true,
         isSystem: true,
         totpEnabled: true,
+        totpSecret: true,
         mustChangePassword: true,
         createdAt: true,
       },
     });
-    res.json({ users });
+    res.json({
+      users: users.map(({ totpSecret, ...row }) => ({ ...row, totpConfigured: !!totpSecret })),
+    });
   }),
 );
 
@@ -827,11 +853,21 @@ authRouter.post(
         role: roleFromAdminApi(data.role),
         passwordHash,
         mustChangePassword: true,
-        totpEnabled: false,
+        totpEnabled: data.totpEnabled,
         defaultBoardId: boardId,
         boardMemberships: { create: { boardId } },
       },
-      select: { id: true, email: true, name: true, avatarPreset: true, avatarUploadName: true, role: true, defaultBoardId: true, createdAt: true },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        avatarPreset: true,
+        avatarUploadName: true,
+        role: true,
+        defaultBoardId: true,
+        totpEnabled: true,
+        createdAt: true,
+      },
     });
     res.status(201).json({ user });
   }),
@@ -844,6 +880,7 @@ const ResetUserPasswordSchema = z.object({
 const AdminUpdateUserSchema = z.object({
   email: z.string().email().optional(),
   role: z.enum(["ADMIN", "MEMBER", "OBSERVER"]).optional(),
+  totpEnabled: z.boolean().optional(),
 });
 
 authRouter.post(
@@ -887,6 +924,10 @@ authRouter.patch(
       if (adminCount <= 1) throw new HttpError(400, "Cannot demote last admin");
     }
 
+    if (data.email === undefined && data.role === undefined && data.totpEnabled === undefined) {
+      throw new HttpError(400, "No fields to update");
+    }
+
     if (data.email) {
       const existing = await prisma.user.findFirst({
         where: { email: { equals: data.email, mode: "insensitive" }, NOT: { id } },
@@ -911,9 +952,17 @@ authRouter.patch(
         }
       }
 
+      if (data.totpEnabled !== undefined) {
+        await tx.$executeRaw`DELETE FROM "session" WHERE (sess->'user'->>'userId') = ${id}`;
+        await tx.trustedDevice.deleteMany({ where: { userId: id } });
+      }
+
       return await tx.user.update({
         where: { id },
         data: {
+          ...(data.totpEnabled !== undefined
+            ? { totpEnabled: data.totpEnabled, totpSecret: null, totpTempSecret: null }
+            : {}),
           ...(data.email !== undefined ? { email: data.email } : {}),
           ...(data.role !== undefined ? { role: roleFromAdminApi(data.role) } : {}),
         },
@@ -924,13 +973,15 @@ authRouter.patch(
           role: true,
           isSystem: true,
           totpEnabled: true,
+          totpSecret: true,
           mustChangePassword: true,
           createdAt: true,
         },
       });
     });
 
-    res.json({ user: updated });
+    const { totpSecret, ...userOut } = updated;
+    res.json({ user: { ...userOut, totpConfigured: !!totpSecret } });
   }),
 );
 

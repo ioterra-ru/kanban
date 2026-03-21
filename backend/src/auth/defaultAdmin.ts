@@ -29,7 +29,7 @@ export async function ensureDefaultAdmin() {
         isSystem: true,
         passwordHash,
         mustChangePassword: true,
-        totpEnabled: false,
+        totpEnabled: true,
         defaultBoardId: boardId,
       },
     });

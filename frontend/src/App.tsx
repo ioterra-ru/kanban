@@ -559,7 +559,11 @@ function App() {
 
   useEffect(() => {
     if (!me) return;
-    const ok = !!me.user && me.user.totpEnabled && me.twoFactorPassed && !me.user.mustChangePassword;
+    const totpConfigured = !!me.user?.totpConfigured;
+    const ok =
+      !!me.user &&
+      !me.user.mustChangePassword &&
+      (!me.user.totpEnabled || (totpConfigured && me.twoFactorPassed));
     if (!ok) {
       setLoading(false);
       return;
@@ -604,7 +608,7 @@ function App() {
         setLoading(false);
       }
     })();
-  }, [me?.user?.id, me?.twoFactorPassed, me?.user?.totpEnabled, me?.user?.mustChangePassword]);
+  }, [me?.user?.id, me?.twoFactorPassed, me?.user?.totpEnabled, me?.user?.totpConfigured, me?.user?.mustChangePassword]);
 
   useEffect(() => {
     const onHashChange = () => void openCardFromHash();
@@ -684,11 +688,11 @@ function App() {
     return <ChangePasswordView onDone={loadMe} />;
   }
 
-  if (!me.user.totpEnabled) {
+  if (me.user.totpEnabled && !me.user.totpConfigured) {
     return <TwoFaSetupView onDone={loadMe} />;
   }
 
-  if (!me.twoFactorPassed) {
+  if (me.user.totpEnabled && me.user.totpConfigured && !me.twoFactorPassed) {
     return <TwoFaVerifyView onDone={loadMe} />;
   }
 
@@ -1576,7 +1580,8 @@ function LoginView(props: { onDone: () => Promise<void> | void }) {
   const friendlyAuthError = (msg: string) => {
     if (msg.includes("Invalid credentials")) return "Неверный логин или пароль.";
     if (msg.includes("Two-factor required")) return "Введите код 2FA и повторите вход.";
-    if (msg.includes("2FA setup required")) return "Для пользователя требуется настроить 2FA (обратитесь к администратору).";
+    if (msg.includes("2FA setup required"))
+      return "Сначала завершите настройку 2FA (экран с QR-кодом) или обратитесь к администратору, если политика изменилась.";
     if (msg.includes("Unknown login for password reset"))
       return "Учётная запись с таким логином или email не найдена. Проверьте адрес — он должен совпадать с записью в базе (в т.ч. домен после @).";
     if (msg.includes("Password reset not available"))
@@ -1908,7 +1913,10 @@ function TwoFaSetupView(props: { onDone: () => Promise<void> | void }) {
   return (
     <CenteredShell title="Настройка 2FA">
       <div className="grid gap-3">
-        <div className="text-sm text-slate-600">Отсканируйте QR-код в приложении-аутентификаторе и введите код.</div>
+        <div className="text-sm text-slate-600">
+          По политике организации для вашей учётной записи требуется двухфакторная аутентификация. Отсканируйте QR-код в
+          приложении-аутентификаторе и введите код. Включить или отключить требование 2FA может только администратор.
+        </div>
         {error ? <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-800">{error}</div> : null}
         {!qr ? (
           <button
@@ -1917,7 +1925,14 @@ function TwoFaSetupView(props: { onDone: () => Promise<void> | void }) {
               setError(null);
               void Api.twoFaSetup()
                 .then((d) => setQr(d.qrDataUrl))
-                .catch((e) => setError((e as Error).message));
+                .catch((e) => {
+                  const msg = (e as Error).message;
+                  if (msg.includes("2FA is not required")) {
+                    setError("Для вашей учётной записи 2FA отключена администратором. Обновите страницу или войдите снова.");
+                  } else {
+                    setError(msg);
+                  }
+                });
             }}
           >
             Сгенерировать QR-код
@@ -1933,10 +1948,17 @@ function TwoFaSetupView(props: { onDone: () => Promise<void> | void }) {
                 setError(null);
                 void Api.twoFaEnable({ code: code.trim() })
                   .then(() => props.onDone())
-                  .catch((e) => setError((e as Error).message));
+                  .catch((e) => {
+                    const msg = (e as Error).message;
+                    if (msg.includes("2FA is not required")) {
+                      setError("Для вашей учётной записи 2FA отключена администратором.");
+                    } else {
+                      setError(msg);
+                    }
+                  });
               }}
             >
-              Включить 2FA
+              Подтвердить привязку
             </button>
           </div>
         )}
@@ -1987,12 +2009,14 @@ function UsersModal(props: { open: boolean; onClose: () => void; embedded?: bool
       role: string;
       isSystem?: boolean;
       totpEnabled: boolean;
+      totpConfigured?: boolean;
     }>
     | null
   >(null);
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
+  const [newUserTotpRequired, setNewUserTotpRequired] = useState(true);
   const [role, setRole] = useState<"ADMIN" | "MEMBER" | "OBSERVER">("MEMBER");
   const [error, setError] = useState<string | null>(null);
   const [boardsForUser, setBoardsForUser] = useState<{ id: string; name: string; email: string } | null>(null);
@@ -2011,7 +2035,8 @@ function UsersModal(props: { open: boolean; onClose: () => void; embedded?: bool
         <div className="grid gap-3">
           {error ? <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-800">{error}</div> : null}
           <div className="text-xs text-slate-600">
-            При создании задайте стартовый пароль. При первом входе пользователь будет обязан сменить пароль.
+            При создании задайте стартовый пароль. При первом входе пользователь будет обязан сменить пароль. По умолчанию для
+            новой учётной записи включено требование 2FA (можно снять флажок ниже).
           </div>
           <div className="text-xs text-slate-500">
             Для системного администратора доступны только смена почты и пароля (в т.ч. через «Кабинет»).
@@ -2037,7 +2062,15 @@ function UsersModal(props: { open: boolean; onClose: () => void; embedded?: bool
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />
-            <div className="flex items-center gap-2">
+            <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-700 md:col-span-2">
+              <input
+                type="checkbox"
+                checked={newUserTotpRequired}
+                onChange={(e) => setNewUserTotpRequired(e.target.checked)}
+              />
+              <span>Требовать 2FA (пользователь не может отключить сам)</span>
+            </label>
+            <div className="flex items-center gap-2 md:col-span-2">
               <select
                 className="flex-1 rounded-xl border border-slate-200 p-2 text-sm outline-none focus:border-[#246c7c]"
                 value={role}
@@ -2059,11 +2092,13 @@ function UsersModal(props: { open: boolean; onClose: () => void; embedded?: bool
                     ...(name.trim() ? { name: name.trim() } : {}),
                     role,
                     password: password.trim(),
+                    totpEnabled: newUserTotpRequired,
                   })
                     .then(() => {
                       setEmail("");
                       setName("");
                       setPassword("");
+                      setNewUserTotpRequired(true);
                       return Api.listUsers();
                     })
                     .then((d) => setUsers(d.users as any))
@@ -2076,18 +2111,18 @@ function UsersModal(props: { open: boolean; onClose: () => void; embedded?: bool
           </div>
 
           <div className="rounded-2xl border border-slate-200 bg-white">
-            <div className="grid grid-cols-[1fr_1fr_120px_70px_56px_90px_44px] gap-2 border-b border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600">
+            <div className="grid grid-cols-[1fr_1fr_120px_108px_56px_90px_44px] gap-2 border-b border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600">
               <div>Имя</div>
               <div>Email</div>
               <div>Роль</div>
-              <div>2FA</div>
+              <div title="Требование 2FA (политика администратора)">2FA</div>
               <div>Пароль</div>
               <div>Доски</div>
               <div />
             </div>
             <div className="max-h-[40vh] overflow-auto">
               {(users ?? []).map((u) => (
-                <div key={u.id} className="grid grid-cols-[1fr_1fr_120px_70px_56px_90px_44px] items-center gap-2 border-b border-slate-100 px-3 py-2 text-sm text-slate-800">
+                <div key={u.id} className="grid grid-cols-[1fr_1fr_120px_108px_56px_90px_44px] items-center gap-2 border-b border-slate-100 px-3 py-2 text-sm text-slate-800">
                   <div className="flex min-w-0 items-center gap-2">
                     <AvatarImg user={u} size={24} />
                     <div className="min-w-0 flex-1 truncate">{u.name}</div>
@@ -2133,7 +2168,31 @@ function UsersModal(props: { open: boolean; onClose: () => void; embedded?: bool
                       </select>
                     )}
                   </div>
-                  <div>{u.totpEnabled ? "Да" : "Нет"}</div>
+                  <div className="flex flex-col gap-0.5">
+                    <label className="flex cursor-pointer items-center gap-1.5 text-xs font-semibold text-slate-800">
+                      <input
+                        type="checkbox"
+                        checked={u.totpEnabled}
+                        title="Требовать 2FA для этого пользователя"
+                        onChange={(e) => {
+                          const next = e.target.checked;
+                          setError(null);
+                          void Api.adminUpdateUser(u.id, { totpEnabled: next })
+                            .then(() => Api.listUsers())
+                            .then((d) => setUsers(d.users as any))
+                            .catch((err) => setError((err as Error).message));
+                        }}
+                      />
+                      <span>{u.totpEnabled ? "Да" : "Нет"}</span>
+                    </label>
+                    {u.totpEnabled ? (
+                      <span className={`text-[10px] ${u.totpConfigured ? "text-emerald-700" : "text-amber-700"}`}>
+                        {u.totpConfigured ? "привязано" : "не привязано"}
+                      </span>
+                    ) : (
+                      <span className="text-[10px] text-slate-400">не требуется</span>
+                    )}
+                  </div>
                   <button
                     className="grid h-8 w-8 place-items-center rounded-lg border border-slate-200 bg-white text-slate-800 hover:bg-slate-50"
                     title="Сбросить пароль"
