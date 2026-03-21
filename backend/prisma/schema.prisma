@@ -142,7 +142,7 @@ model User {
   passwordHash String
   mustChangePassword Boolean @default(true)
 
-  totpEnabled    Boolean @default(false)
+  totpEnabled    Boolean @default(true)
   totpSecret     String?
   totpTempSecret String?
 

@@ -12,7 +12,10 @@ export type User = {
   avatarPreset?: string | null;
   avatarUploadName?: string | null;
   role: Role;
+  /** Политика: администратор требует 2FA для этой учётной записи. */
   totpEnabled: boolean;
+  /** Секрет TOTP сохранён (привязка завершена). */
+  totpConfigured?: boolean;
   mustChangePassword: boolean;
   defaultBoardId: string | null;
   /** Per-user: receive email notifications about card updates. */

@@ -19,11 +19,14 @@ export async function getAuthUser(req: Request): Promise<AuthUser | null> {
       avatarUploadName: true,
       role: true,
       totpEnabled: true,
+      totpSecret: true,
       mustChangePassword: true,
       defaultBoardId: true,
     },
   });
-  return u ?? null;
+  if (!u) return null;
+  const { totpSecret, ...rest } = u;
+  return { ...rest, totpConfigured: !!totpSecret };
 }
 
 export function requireLogin() {
@@ -39,7 +42,8 @@ export function requireTwoFactor() {
   return (req: Request, _res: Response, next: NextFunction) => {
     const u = (req as Request & { user?: AuthUser }).user;
     if (!u) return next(new HttpError(401, "Unauthorized"));
-    if (!u.totpEnabled) return next(new HttpError(403, "2FA setup required"));
+    if (!u.totpEnabled) return next();
+    if (!u.totpConfigured) return next(new HttpError(403, "2FA setup required"));
     if (!req.session.twoFactorPassed) return next(new HttpError(401, "Two-factor required"));
     next();
   };

@@ -7,7 +7,10 @@ export type AuthUser = {
   avatarPreset: string | null;
   avatarUploadName: string | null;
   role: Role;
+  /** Админ требует 2FA для этой учётной записи. */
   totpEnabled: boolean;
+  /** Секрет TOTP уже сохранён (настройка завершена). */
+  totpConfigured: boolean;
   mustChangePassword: boolean;
   defaultBoardId: string | null;
 };
