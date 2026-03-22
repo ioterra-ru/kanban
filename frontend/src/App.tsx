@@ -4201,12 +4201,12 @@ function CardModal(props: {
             onBlur={() => void persist()}
             placeholder="Название карточки"
           />
-          <div className="mt-1 flex w-full min-w-0 flex-wrap items-center gap-x-2 gap-y-2 text-xs text-slate-600">
+          <div className="mt-2 flex w-full min-w-0 min-h-[2.75rem] flex-wrap items-center gap-x-2 gap-y-2 py-2 text-xs text-slate-600">
             {canEditCard ? (
               <button
                 type="button"
                 className={classNames(
-                  "inline-flex shrink-0 items-center gap-1.5 rounded-md px-2 py-0.5 text-xs font-semibold",
+                  "inline-flex shrink-0 items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-semibold",
                   paused ? "bg-amber-100 text-amber-900" : "border border-amber-200 bg-white text-amber-900 hover:bg-amber-50",
                 )}
                 title={paused ? "Снять паузу" : "Пауза"}
@@ -4236,7 +4236,7 @@ function CardModal(props: {
             ) : (
               <span
                 className={classNames(
-                  "inline-flex shrink-0 items-center gap-1.5 rounded-md px-2 py-0.5 text-xs font-semibold",
+                  "inline-flex shrink-0 items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-semibold",
                   paused ? "bg-amber-100 text-amber-900" : "border border-amber-200 bg-slate-50 text-amber-900",
                 )}
                 title={paused ? "На паузе" : "Пауза"}
@@ -4253,7 +4253,7 @@ function CardModal(props: {
                 Пауза
               </span>
             )}
-            <span className="inline-flex items-center gap-1.5 rounded-md bg-slate-100 px-2 py-0.5">
+            <span className="inline-flex items-center gap-1.5 rounded-md bg-slate-100 px-2.5 py-1.5">
               <span className="shrink-0 text-slate-600">Колонка:</span>
               {canEditCard ? (
                 <select
@@ -4278,7 +4278,7 @@ function CardModal(props: {
                 <span className="truncate text-slate-800">{card.column.title}</span>
               )}
             </span>
-            <span className="inline-flex items-center gap-1.5 rounded-md bg-slate-100 px-2 py-0.5">
+            <span className="inline-flex items-center gap-1.5 rounded-md bg-slate-100 px-2.5 py-1.5">
               <span className="shrink-0 text-slate-600">Важность:</span>
               {canEditCard ? (
                 <>
@@ -4309,7 +4309,7 @@ function CardModal(props: {
               )}
             </span>
             <span
-              className="inline-flex min-w-0 max-w-[min(280px,92vw)] items-center gap-1.5 rounded-md bg-slate-100 px-2 py-0.5"
+              className="inline-flex min-w-0 max-w-[min(280px,92vw)] items-center gap-1.5 rounded-md bg-slate-100 px-2.5 py-1.5"
               ref={assigneeSelectRef}
             >
               <span className="shrink-0 text-slate-600">Ответственный:</span>
@@ -4406,11 +4406,11 @@ function CardModal(props: {
                 )}
               </div>
             </span>
-            <span className="inline-flex items-center gap-1.5 rounded-md bg-slate-100 px-2 py-0.5">
+            <span className="inline-flex items-center gap-1.5 rounded-md bg-slate-100 px-2.5 py-1.5">
               <span className="shrink-0 text-slate-600">Срок исполнения:</span>
               <input
                 type="datetime-local"
-                className="min-w-0 max-w-[11.5rem] rounded border-0 bg-transparent py-0 text-xs text-slate-800 outline-none focus:ring-1 focus:ring-slate-300 read-only:cursor-default disabled:opacity-70"
+                className="min-w-0 max-w-[11.5rem] rounded border-0 bg-transparent py-0.5 text-xs text-slate-800 outline-none focus:ring-1 focus:ring-slate-300 read-only:cursor-default disabled:opacity-70"
                 value={dueDate}
                 readOnly={!canEditCard}
                 disabled={!canEditCard}
@@ -4418,28 +4418,26 @@ function CardModal(props: {
                 onBlur={() => void persist()}
               />
             </span>
-            {saveError ? <span className="rounded-md bg-rose-50 px-2 py-0.5 text-rose-800">Не сохранено</span> : null}
-            {props.boardId && props.onShareLink ? (
-              <div className="ml-auto flex shrink-0 items-center">
-                <IconButton
-                  title="Поделиться"
-                  onClick={() => {
-                    const link = getCardShareLink(props.boardId!, card.id);
-                    navigator.clipboard.writeText(link).then(
-                      () => props.onShareLink?.(card.description ?? "", link),
-                      () => props.onShareLink?.(card.description ?? "", link),
-                    );
-                  }}
-                >
-                  <IconShare className="h-5 w-5" />
-                </IconButton>
-              </div>
-            ) : null}
+            {saveError ? <span className="rounded-md bg-rose-50 px-2 py-1.5 text-rose-800">Не сохранено</span> : null}
           </div>
         </div>
       }
       headerRight={
         <div className="flex items-center gap-2">
+          {props.boardId && props.onShareLink ? (
+            <IconButton
+              title="Поделиться"
+              onClick={() => {
+                const link = getCardShareLink(props.boardId!, card.id);
+                navigator.clipboard.writeText(link).then(
+                  () => props.onShareLink?.(card.description ?? "", link),
+                  () => props.onShareLink?.(card.description ?? "", link),
+                );
+              }}
+            >
+              <IconShare className="h-5 w-5" />
+            </IconButton>
+          ) : null}
           <IconButton
             title="Закрыть"
             onClick={() => {
@@ -4454,6 +4452,7 @@ function CardModal(props: {
           </IconButton>
           {canEditCard ? (
             <IconButton
+              className="ml-3"
               title="Удалить карточку"
               variant="danger"
               onClick={() => {
