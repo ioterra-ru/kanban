@@ -1519,15 +1519,6 @@ function IconLogout(props: { className?: string }) {
   );
 }
 
-function IconArrowLeft(props: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" className={props.className ?? "h-4 w-4"} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" xmlns="http://www.w3.org/2000/svg">
-      <line x1="19" y1="12" x2="5" y2="12" />
-      <polyline points="12 19 5 12 12 5" />
-    </svg>
-  );
-}
-
 function IconUser(props: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" className={props.className ?? "h-4 w-4"} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" xmlns="http://www.w3.org/2000/svg">
@@ -1576,15 +1567,6 @@ function IconColumns(props: { className?: string }) {
   );
 }
 
-function IconSend(props: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" className={props.className ?? "h-4 w-4"} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" xmlns="http://www.w3.org/2000/svg">
-      <line x1="22" y1="2" x2="11" y2="13" />
-      <polygon points="22 2 15 22 11 13 2 9 22 2" />
-    </svg>
-  );
-}
-
 function IconPhotoUpload(props: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" className={props.className ?? "h-4 w-4"} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" xmlns="http://www.w3.org/2000/svg">
@@ -1615,15 +1597,6 @@ function IconPlug(props: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" className={props.className ?? "h-4 w-4"} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" xmlns="http://www.w3.org/2000/svg">
       <path d="M12 22v-5M9 8V2M15 8V2M5 8h14v5a7 7 0 0 1-14 0V8z" />
-    </svg>
-  );
-}
-
-function IconHelpCircle(props: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" className={props.className ?? "h-4 w-4"} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" xmlns="http://www.w3.org/2000/svg">
-      <circle cx="12" cy="12" r="10" />
-      <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3M12 17h.01" />
     </svg>
   );
 }
@@ -1884,15 +1857,19 @@ function LoginView(props: { onDone: () => Promise<void> | void }) {
     <CenteredShell title="ИоТерра Канбан">
       <div className="grid gap-3">
         <div className="text-sm text-slate-600">{mode === "login" ? "Вход" : "Восстановление пароля"}</div>
-        <div className="text-xs text-slate-500">По умолчанию: логин <span className="font-mono">admin</span>, пароль <span className="font-mono">admin</span>.</div>
-        <div
-          className={`rounded-xl border px-3 py-2 text-sm ${
-            error ? "border-rose-200 bg-rose-50 text-rose-800" : "border-transparent bg-transparent text-transparent"
-          } max-h-24 overflow-auto whitespace-pre-wrap break-words`}
-          aria-live="polite"
-        >
-          {error ?? " "}
-        </div>
+        {mode === "login" ? (
+          <div className="text-xs text-slate-500">
+            По умолчанию: логин <span className="font-mono">admin</span>, пароль <span className="font-mono">admin</span>.
+          </div>
+        ) : null}
+        {error ? (
+          <div
+            className="max-h-24 overflow-auto whitespace-pre-wrap break-words rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-800"
+            aria-live="polite"
+          >
+            {error}
+          </div>
+        ) : null}
         {mode === "login" ? (
           <form
             className="grid gap-3"
@@ -1921,7 +1898,7 @@ function LoginView(props: { onDone: () => Promise<void> | void }) {
             <label className="grid gap-1">
               <div className="text-xs text-slate-600">Логин</div>
               <input
-                className="rounded-xl border border-slate-200 p-2 text-sm outline-none focus:border-[#246c7c]"
+                className="w-full rounded-xl border border-slate-200 bg-white py-2 pl-2 pr-2 text-sm outline-none focus:border-[#246c7c]"
                 value={login}
                 onChange={(e) => setLogin(e.target.value)}
                 placeholder="admin или email"
@@ -1950,33 +1927,36 @@ function LoginView(props: { onDone: () => Promise<void> | void }) {
               </div>
             ) : null}
 
-            <div className="flex flex-wrap items-center justify-center gap-3">
-              <IconButton
-                type="submit"
-                variant="brand"
-                title={submitting ? "Вход…" : "Войти"}
-                disabled={submitting}
-              >
-                {submitting ? <IconSpinner className="h-5 w-5 text-white" /> : <IconLogin className="h-5 w-5" />}
-              </IconButton>
-              <IconButton
-                type="button"
-                variant="ghostLink"
-                title="Забыли пароль?"
-                onClick={() => {
-                  setError(null);
-                  setFpOk(false);
-                  setFpMailSent(false);
-                  setMode("forgot");
-                  setFpLogin(login.trim());
-                  setFpCode("");
-                  setFpP1("");
-                  setFpP2("");
-                }}
-              >
-                <IconHelpCircle className="h-5 w-5" />
-              </IconButton>
-            </div>
+            <button
+              type="submit"
+              disabled={submitting}
+              className="w-full rounded-xl border border-transparent bg-[#246c7c] py-3 text-sm font-semibold text-white shadow-sm hover:opacity-90 disabled:pointer-events-none disabled:opacity-50"
+            >
+              {submitting ? (
+                <span className="inline-flex items-center justify-center gap-2">
+                  <IconSpinner className="h-5 w-5 shrink-0 text-white" />
+                  Вход…
+                </span>
+              ) : (
+                "Войти"
+              )}
+            </button>
+            <button
+              type="button"
+              className="w-full text-center text-sm font-medium text-[#246c7c] underline decoration-[#246c7c] underline-offset-2 hover:opacity-90"
+              onClick={() => {
+                setError(null);
+                setFpOk(false);
+                setFpMailSent(false);
+                setMode("forgot");
+                setFpLogin(login.trim());
+                setFpCode("");
+                setFpP1("");
+                setFpP2("");
+              }}
+            >
+              Забыли пароль?
+            </button>
           </form>
         ) : (
           <>
@@ -2007,12 +1987,10 @@ function LoginView(props: { onDone: () => Promise<void> | void }) {
                 autoComplete="username"
               />
             </label>
-            <IconButton
+            <button
               type="button"
-              variant="default"
-              className="border-[#246c7c] text-[#246c7c]"
-              title={submitting ? "Отправка…" : "Отправить ссылку сброса на email"}
               disabled={fpOk || !fpLogin.trim() || submitting}
+              className="w-full rounded-xl border border-[#246c7c] bg-white py-3 text-sm font-semibold text-[#246c7c] hover:bg-slate-50 disabled:pointer-events-none disabled:opacity-50"
               onClick={() => {
                 setError(null);
                 setFpMailSent(false);
@@ -2023,8 +2001,15 @@ function LoginView(props: { onDone: () => Promise<void> | void }) {
                   .finally(() => setSubmitting(false));
               }}
             >
-              {submitting ? <IconSpinner className="h-5 w-5" /> : <IconSend className="h-5 w-5" />}
-            </IconButton>
+              {submitting ? (
+                <span className="inline-flex items-center justify-center gap-2">
+                  <IconSpinner className="h-5 w-5 shrink-0 text-[#246c7c]" />
+                  Отправка…
+                </span>
+              ) : (
+                "Отправить ссылку на email"
+              )}
+            </button>
             <div className="text-center text-xs text-slate-400">или с 2FA</div>
             <label className="grid gap-1">
               <div className="text-xs text-slate-600">Код 2FA</div>
@@ -2047,46 +2032,49 @@ function LoginView(props: { onDone: () => Promise<void> | void }) {
               onChange={(e) => setFpP2(e.target.value)}
               autoComplete="new-password"
             />
-            <div className="flex flex-wrap items-center justify-center gap-3">
-              <IconButton
-                type="button"
-                variant="brand"
-                title={submitting ? "Смена…" : "Сменить пароль"}
-                disabled={fpOk || !fpLogin.trim() || fpCode.trim().length < 6 || !fpP1 || fpP1 !== fpP2 || fpP1.length < 8 || submitting}
-                onClick={() => {
-                  setError(null);
-                  setSubmitting(true);
-                  void Api.resetPasswordByTotp({ login: fpLogin.trim(), code: fpCode.trim(), newPassword: fpP1 })
-                    .then(() => {
-                      setFpOk(true);
-                      setPassword("");
-                      setTotp("");
-                      setNeedTotp(false);
-                    })
-                    .catch((e) => setError(friendlyAuthError((e as Error).message)))
-                    .finally(() => setSubmitting(false));
-                }}
-              >
-                {submitting ? <IconSpinner className="h-5 w-5 text-white" /> : <IconCheck className="h-5 w-5" />}
-              </IconButton>
-              <IconButton
-                type="button"
-                variant="ghost"
-                title="Назад ко входу"
-                onClick={() => {
-                  setError(null);
-                  setFpOk(false);
-                  setFpMailSent(false);
-                  setMode("login");
-                  setPassword("");
-                  setTotp("");
-                  setNeedTotp(false);
-                  if (fpLogin.trim()) setLogin(fpLogin.trim());
-                }}
-              >
-                <IconArrowLeft className="h-5 w-5" />
-              </IconButton>
-            </div>
+            <button
+              type="button"
+              disabled={fpOk || !fpLogin.trim() || fpCode.trim().length < 6 || !fpP1 || fpP1 !== fpP2 || fpP1.length < 8 || submitting}
+              className="w-full rounded-xl border border-transparent bg-[#246c7c] py-3 text-sm font-semibold text-white shadow-sm hover:opacity-90 disabled:pointer-events-none disabled:opacity-50"
+              onClick={() => {
+                setError(null);
+                setSubmitting(true);
+                void Api.resetPasswordByTotp({ login: fpLogin.trim(), code: fpCode.trim(), newPassword: fpP1 })
+                  .then(() => {
+                    setFpOk(true);
+                    setPassword("");
+                    setTotp("");
+                    setNeedTotp(false);
+                  })
+                  .catch((e) => setError(friendlyAuthError((e as Error).message)))
+                  .finally(() => setSubmitting(false));
+              }}
+            >
+              {submitting ? (
+                <span className="inline-flex items-center justify-center gap-2">
+                  <IconSpinner className="h-5 w-5 shrink-0 text-white" />
+                  Смена…
+                </span>
+              ) : (
+                "Сменить пароль"
+              )}
+            </button>
+            <button
+              type="button"
+              className="w-full text-center text-sm font-medium text-[#246c7c] underline decoration-[#246c7c] underline-offset-2 hover:opacity-90"
+              onClick={() => {
+                setError(null);
+                setFpOk(false);
+                setFpMailSent(false);
+                setMode("login");
+                setPassword("");
+                setTotp("");
+                setNeedTotp(false);
+                if (fpLogin.trim()) setLogin(fpLogin.trim());
+              }}
+            >
+              Назад ко входу
+            </button>
           </>
         )}
       </div>
