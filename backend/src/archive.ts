@@ -143,6 +143,67 @@ type RestoreCardPayload = {
   attachments: Array<{ filename: string; storedName: string; mimeType: string; size: number }>;
 };
 
+/** card.json сейчас: { card: { ... }, comments, participants, attachments }. Раньше мог быть плоский объект. */
+function parseArchiveCardJson(jsonStr: string): RestoreCardPayload {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(jsonStr);
+  } catch {
+    throw new HttpError(400, "Некорректный JSON в card.json");
+  }
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    throw new HttpError(400, "Некорректный card.json");
+  }
+  const root = parsed as Record<string, unknown>;
+  const cardSection =
+    root.card !== undefined && root.card !== null && typeof root.card === "object" && !Array.isArray(root.card)
+      ? (root.card as Record<string, unknown>)
+      : root;
+
+  const rawDesc = cardSection.description;
+  const description =
+    typeof rawDesc === "string" && rawDesc.trim() !== ""
+      ? rawDesc.trim()
+      : rawDesc !== undefined && rawDesc !== null && String(rawDesc).trim() !== ""
+        ? String(rawDesc).trim()
+        : "Карточка из архива";
+
+  const rawDetails = cardSection.details;
+  const details =
+    rawDetails === undefined || rawDetails === null ? null : String(rawDetails);
+
+  const rawAssignee = cardSection.assignee;
+  const assignee =
+    rawAssignee === undefined || rawAssignee === null || rawAssignee === ""
+      ? null
+      : String(rawAssignee);
+
+  const rawDue = cardSection.dueDate;
+  const dueDate =
+    rawDue === undefined || rawDue === null || rawDue === ""
+      ? null
+      : typeof rawDue === "string"
+        ? rawDue
+        : null;
+
+  const imp = cardSection.importance;
+  const importance = typeof imp === "string" && imp ? imp : "MEDIUM";
+
+  return {
+    description,
+    details,
+    assignee,
+    dueDate,
+    importance,
+    paused: Boolean(cardSection.paused),
+    comments: Array.isArray(root.comments) ? (root.comments as RestoreCardPayload["comments"]) : [],
+    participants: Array.isArray(root.participants)
+      ? (root.participants as unknown[]).filter((p): p is string => typeof p === "string")
+      : [],
+    attachments: Array.isArray(root.attachments) ? (root.attachments as RestoreCardPayload["attachments"]) : [],
+  };
+}
+
 export async function restoreCardFromArchive(
   filename: string,
   boardId: string,
@@ -168,7 +229,7 @@ export async function restoreCardFromArchive(
   const cardEntry = dir.files.find((f) => f.path === "card.json");
   if (!cardEntry) throw new HttpError(400, "В архиве нет card.json");
   const cardJsonStr = (await cardEntry.buffer()).toString("utf8");
-  const data = JSON.parse(cardJsonStr) as RestoreCardPayload;
+  const data = parseArchiveCardJson(cardJsonStr);
 
   const agg = await prisma.card.aggregate({
     where: { boardId, columnId },
@@ -183,11 +244,11 @@ export async function restoreCardFromArchive(
         columnId,
         position,
         description: data.description,
-        details: data.details,
-        assignee: data.assignee,
+        details: data.details ?? null,
+        assignee: data.assignee ?? null,
         dueDate: data.dueDate ? new Date(data.dueDate) : null,
         importance: (data.importance as "LOW" | "MEDIUM" | "HIGH") || "MEDIUM",
-        paused: !!data.paused,
+        paused: data.paused,
         authorId,
       },
     });
