@@ -1518,6 +1518,32 @@ function IconPlus(props: { className?: string }) {
   );
 }
 
+function IconPaperclip(props: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={props.className ?? "h-4 w-4"} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" xmlns="http://www.w3.org/2000/svg">
+      <path d="M21.44 11.05 12 20.49a6 6 0 0 1-8.49-8.49l9.44-9.44a4 4 0 0 1 5.66 5.66l-9.44 9.44a2 2 0 1 1-2.83-2.83l8.49-8.49" />
+    </svg>
+  );
+}
+
+function IconLink(props: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={props.className ?? "h-4 w-4"} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" xmlns="http://www.w3.org/2000/svg">
+      <path d="M10 13a5 5 0 0 0 7.07 0l2.12-2.12a5 5 0 0 0-7.07-7.07L10.9 5.03" />
+      <path d="M14 11a5 5 0 0 0-7.07 0L4.81 13.12a5 5 0 0 0 7.07 7.07l1.22-1.22" />
+    </svg>
+  );
+}
+
+function IconAt(props: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={props.className ?? "h-4 w-4"} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="12" cy="12" r="4" />
+      <path d="M16 8v5a3 3 0 0 0 6 0v-1a10 10 0 1 0-4 8" />
+    </svg>
+  );
+}
+
 function IconMinus(props: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" className={props.className ?? "h-4 w-4"} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" xmlns="http://www.w3.org/2000/svg">
@@ -3915,6 +3941,8 @@ function CardModal(props: {
 }) {
   const card = props.card;
   const uploadInputRef = useRef<HTMLInputElement>(null);
+  const commentComposerRef = useRef<HTMLDivElement | null>(null);
+  const commentTextareaRef = useRef<HTMLTextAreaElement | null>(null);
   const persistInFlightRef = useRef<Promise<boolean> | null>(null);
 
   const [title, setTitle] = useState("");
@@ -3926,6 +3954,13 @@ function CardModal(props: {
   const [uploadSelectedName, setUploadSelectedName] = useState<string>("");
 
   const [commentBody, setCommentBody] = useState("");
+  const [commentMentionOpen, setCommentMentionOpen] = useState(false);
+  const [commentMentionQuery, setCommentMentionQuery] = useState("");
+  const [commentMentionStart, setCommentMentionStart] = useState<number | null>(null);
+  const [commentCardLinkOpen, setCommentCardLinkOpen] = useState(false);
+  const [commentCardLinkQuery, setCommentCardLinkQuery] = useState("");
+  const [commentCardLinkResults, setCommentCardLinkResults] = useState<CardSearchHit[]>([]);
+  const [commentCardLinkSearching, setCommentCardLinkSearching] = useState(false);
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editingCommentBody, setEditingCommentBody] = useState<string>("");
 
@@ -3978,6 +4013,13 @@ function CardModal(props: {
     setAssigneeSelectOpen(false);
     setSaveError(null);
     setDeleting(false);
+    setCommentBody("");
+    setCommentMentionOpen(false);
+    setCommentMentionQuery("");
+    setCommentMentionStart(null);
+    setCommentCardLinkOpen(false);
+    setCommentCardLinkQuery("");
+    setCommentCardLinkResults([]);
     setEditingCommentId(null);
     setEditingCommentBody("");
 
@@ -4028,6 +4070,36 @@ function CardModal(props: {
     document.addEventListener("mousedown", onDocClick);
     return () => document.removeEventListener("mousedown", onDocClick);
   }, [participantAddOpen]);
+
+  useEffect(() => {
+    if (!commentMentionOpen && !commentCardLinkOpen) return;
+    const onDocClick = (e: MouseEvent) => {
+      if (commentComposerRef.current && !commentComposerRef.current.contains(e.target as Node)) {
+        setCommentMentionOpen(false);
+        setCommentCardLinkOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", onDocClick);
+    return () => document.removeEventListener("mousedown", onDocClick);
+  }, [commentMentionOpen, commentCardLinkOpen]);
+
+  useEffect(() => {
+    if (!commentCardLinkOpen) return;
+    const q = commentCardLinkQuery.trim();
+    if (!q) {
+      setCommentCardLinkResults([]);
+      setCommentCardLinkSearching(false);
+      return;
+    }
+    setCommentCardLinkSearching(true);
+    const t = window.setTimeout(() => {
+      Api.searchCards(q)
+        .then((r) => setCommentCardLinkResults(r.cards))
+        .catch(() => setCommentCardLinkResults([]))
+        .finally(() => setCommentCardLinkSearching(false));
+    }, 250);
+    return () => window.clearTimeout(t);
+  }, [commentCardLinkOpen, commentCardLinkQuery]);
 
   useEffect(() => {
     if (!dragging) return;
@@ -4154,6 +4226,88 @@ function CardModal(props: {
     await props.onChanged(); // refresh board + card data in parent
     props.onClose();
   };
+
+  const uploadAttachmentForCard = (file: File) => {
+    if (!card) return;
+    setUploadSelectedName(file.name);
+    void Api.uploadAttachment(card.id, file).then(() => {
+      setUploadSelectedName("");
+      return props.onChanged();
+    });
+  };
+
+  const updateCommentDraft = (next: string, cursor: number) => {
+    setCommentBody(next);
+    const beforeCursor = next.slice(0, cursor);
+    const mentionMatch = beforeCursor.match(/(^|\s)@([^\s@]*)$/);
+    if (!mentionMatch) {
+      setCommentMentionOpen(false);
+      setCommentMentionQuery("");
+      setCommentMentionStart(null);
+      return;
+    }
+    setCommentCardLinkOpen(false);
+    setCommentMentionOpen(true);
+    setCommentMentionQuery(mentionMatch[2] ?? "");
+    setCommentMentionStart(cursor - (mentionMatch[2]?.length ?? 0) - 1);
+  };
+
+  const insertCommentMention = (user: Pick<User, "id" | "email" | "name" | "avatarPreset" | "avatarUploadName">) => {
+    const textarea = commentTextareaRef.current;
+    const cursor = textarea?.selectionStart ?? commentBody.length;
+    const start = commentMentionStart ?? Math.max(0, cursor - commentMentionQuery.length - 1);
+    const label = user.name || user.email;
+    const next = `${commentBody.slice(0, start)}@${label} ${commentBody.slice(cursor)}`;
+    setCommentBody(next);
+    setCommentMentionOpen(false);
+    setCommentMentionQuery("");
+    setCommentMentionStart(null);
+    window.setTimeout(() => {
+      commentTextareaRef.current?.focus();
+      const pos = start + label.length + 2;
+      commentTextareaRef.current?.setSelectionRange(pos, pos);
+    }, 0);
+  };
+
+  const insertCardLink = (hit: CardSearchHit) => {
+    if (!props.boardId) return;
+    const textarea = commentTextareaRef.current;
+    const cursor = textarea?.selectionStart ?? commentBody.length;
+    const link = getCardShareLink(props.boardId, hit.id);
+    const insertion = `${hit.description}: ${link}`;
+    const prefix = commentBody.slice(0, cursor);
+    const suffix = commentBody.slice(textarea?.selectionEnd ?? cursor);
+    const needsLeadingSpace = prefix.length > 0 && !/\s$/.test(prefix);
+    const needsTrailingSpace = suffix.length > 0 && !/^\s/.test(suffix);
+    const next = `${prefix}${needsLeadingSpace ? " " : ""}${insertion}${needsTrailingSpace ? " " : ""}${suffix}`;
+    setCommentBody(next);
+    setCommentCardLinkOpen(false);
+    setCommentCardLinkQuery("");
+    setCommentCardLinkResults([]);
+    window.setTimeout(() => {
+      commentTextareaRef.current?.focus();
+      const pos = prefix.length + (needsLeadingSpace ? 1 : 0) + insertion.length + (needsTrailingSpace ? 1 : 0);
+      commentTextareaRef.current?.setSelectionRange(pos, pos);
+    }, 0);
+  };
+
+  const submitComment = () => {
+    if (!card) return;
+    const body = commentBody.trim();
+    if (!body) return;
+    void Api.addComment(card.id, { body }).then(() => {
+      setCommentBody("");
+      setCommentMentionOpen(false);
+      setCommentCardLinkOpen(false);
+      return props.onChanged();
+    });
+  };
+
+  const commentMentionUsers = props.allUsers.filter((u) => {
+    const q = commentMentionQuery.trim().toLowerCase();
+    if (!q) return true;
+    return (u.name ?? "").toLowerCase().includes(q) || (u.email ?? "").toLowerCase().includes(q);
+  });
 
   if (!props.open) return null;
 
@@ -4677,12 +4831,8 @@ function CardModal(props: {
                 onChange={(e) => {
                   const f = e.target.files?.[0];
                   if (!f) return;
-                  setUploadSelectedName(f.name);
                   e.target.value = "";
-                  void Api.uploadAttachment(card.id, f).then(() => {
-                    setUploadSelectedName("");
-                    return props.onChanged();
-                  });
+                  uploadAttachmentForCard(f);
                 }}
               />
             ) : null}
@@ -4754,6 +4904,144 @@ function CardModal(props: {
         {/* Right */}
         <div className="rounded-2xl border border-slate-200 bg-white p-4">
           <div className="mb-2 text-sm font-semibold text-slate-900">Комментарии</div>
+          {canEditCard ? (
+            <div className="mb-3 grid gap-2" ref={commentComposerRef}>
+              <div className="relative flex items-start gap-2">
+                <AvatarImg user={props.viewer} size={24} />
+                <div className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-white focus-within:border-[#246c7c]">
+                  <textarea
+                    ref={commentTextareaRef}
+                    className="min-h-[80px] w-full resize-y rounded-t-xl border-0 bg-white p-2 text-sm outline-none"
+                    value={commentBody}
+                    onChange={(e) => updateCommentDraft(e.target.value, e.target.selectionStart)}
+                    onKeyUp={(e) => updateCommentDraft(e.currentTarget.value, e.currentTarget.selectionStart)}
+                    onClick={(e) => updateCommentDraft(e.currentTarget.value, e.currentTarget.selectionStart)}
+                    placeholder="Текст комментария..."
+                  />
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 px-2 py-1.5">
+                    <div className="flex flex-wrap items-center gap-1">
+                      <button
+                        type="button"
+                        className="inline-flex h-8 items-center gap-1 rounded-lg px-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                        title="Добавить файл"
+                        aria-label="Добавить файл"
+                        onClick={() => uploadInputRef.current?.click()}
+                      >
+                        <IconPaperclip className="h-4 w-4" />
+                        <span className="hidden xl:inline">Добавить файл</span>
+                      </button>
+                      <div className="relative">
+                        <button
+                          type="button"
+                          className="inline-flex h-8 items-center gap-1 rounded-lg px-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                          title="Добавить ссылку на карточку"
+                          aria-label="Добавить ссылку на карточку"
+                          onClick={() => {
+                            setCommentMentionOpen(false);
+                            setCommentCardLinkOpen((v) => !v);
+                          }}
+                        >
+                          <IconLink className="h-4 w-4" />
+                          <span className="hidden xl:inline">Добавить ссылку на карточку</span>
+                        </button>
+                        {commentCardLinkOpen ? (
+                          <div className="absolute left-0 top-full z-30 mt-1 w-72 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg">
+                            <div className="border-b border-slate-100 p-2">
+                              <input
+                                type="text"
+                                className="w-full rounded-lg border border-slate-200 px-2 py-1.5 text-sm outline-none focus:border-[#246c7c]"
+                                placeholder="Найти карточку..."
+                                value={commentCardLinkQuery}
+                                onChange={(e) => setCommentCardLinkQuery(e.target.value)}
+                                autoFocus
+                              />
+                            </div>
+                            <div className="max-h-56 overflow-auto py-1">
+                              {commentCardLinkSearching ? (
+                                <div className="px-3 py-3 text-sm text-slate-500">Ищем...</div>
+                              ) : commentCardLinkQuery.trim() && commentCardLinkResults.length === 0 ? (
+                                <div className="px-3 py-3 text-sm text-slate-500">Ничего не найдено</div>
+                              ) : (
+                                commentCardLinkResults.map((hit) => (
+                                  <button
+                                    key={hit.id}
+                                    type="button"
+                                    className="w-full px-3 py-2 text-left text-sm hover:bg-slate-50"
+                                    onClick={() => insertCardLink(hit)}
+                                  >
+                                    <div className="truncate font-medium text-slate-900">{hit.description}</div>
+                                    <div className="mt-0.5 text-xs text-slate-500">{hit.columnTitle}</div>
+                                  </button>
+                                ))
+                              )}
+                            </div>
+                          </div>
+                        ) : null}
+                      </div>
+                      <button
+                        type="button"
+                        className="inline-flex h-8 items-center gap-1 rounded-lg px-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                        title="Упомянуть пользователя"
+                        aria-label="Упомянуть пользователя"
+                        onClick={() => {
+                          const textarea = commentTextareaRef.current;
+                          const cursor = textarea?.selectionStart ?? commentBody.length;
+                          const prefix = commentBody.slice(0, cursor);
+                          const suffix = commentBody.slice(textarea?.selectionEnd ?? cursor);
+                          const needsSpace = prefix.length > 0 && !/\s$/.test(prefix);
+                          const next = `${prefix}${needsSpace ? " " : ""}@${suffix}`;
+                          const nextCursor = prefix.length + (needsSpace ? 1 : 0) + 1;
+                          updateCommentDraft(next, nextCursor);
+                          window.setTimeout(() => {
+                            commentTextareaRef.current?.focus();
+                            commentTextareaRef.current?.setSelectionRange(nextCursor, nextCursor);
+                          }, 0);
+                        }}
+                      >
+                        <IconAt className="h-4 w-4" />
+                        <span className="hidden xl:inline">Упомянуть пользователя</span>
+                      </button>
+                    </div>
+                    <button
+                      type="button"
+                      className="grid h-9 w-9 place-items-center rounded-xl bg-[#246c7c] text-white hover:opacity-90 disabled:opacity-50"
+                      disabled={!commentBody.trim()}
+                      title="Добавить комментарий"
+                      aria-label="Добавить комментарий"
+                      onClick={submitComment}
+                    >
+                      <IconPlus className="h-5 w-5" />
+                    </button>
+                  </div>
+                </div>
+                {commentMentionOpen ? (
+                  <div className="absolute left-8 right-0 top-full z-30 mt-1 max-h-56 overflow-auto rounded-xl border border-slate-200 bg-white py-1 shadow-lg">
+                    {commentMentionUsers.length === 0 ? (
+                      <div className="px-3 py-3 text-sm text-slate-500">Нет пользователей</div>
+                    ) : (
+                      commentMentionUsers.map((u) => (
+                        <button
+                          key={u.id}
+                          type="button"
+                          className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-800 hover:bg-slate-50"
+                          onClick={() => insertCommentMention(u)}
+                        >
+                          <AvatarImg user={u} size={24} />
+                          <span className="min-w-0 flex-1 truncate">{u.name || u.email}</span>
+                          <span className="hidden truncate text-xs text-slate-500 sm:block">{u.email}</span>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                ) : null}
+              </div>
+              {uploadSelectedName ? (
+                <div className="ml-8 truncate text-xs text-slate-500" title={uploadSelectedName}>
+                  {compactFileName(uploadSelectedName, 70)}
+                </div>
+              ) : null}
+            </div>
+          ) : null}
           <div className="grid max-h-[420px] gap-2 overflow-auto pr-1">
             {card.comments.length === 0 ? (
               <div className="text-xs text-slate-500">Комментариев нет.</div>
@@ -4846,36 +5134,6 @@ function CardModal(props: {
             )}
           </div>
 
-          {canEditCard ? (
-            <div className="mt-3 grid gap-2">
-              <div className="flex items-start gap-2">
-                <AvatarImg user={props.viewer} size={24} />
-                <textarea
-                  className="min-h-[80px] flex-1 rounded-xl border border-slate-200 bg-white p-2 text-sm outline-none focus:border-[#246c7c]"
-                  value={commentBody}
-                  onChange={(e) => setCommentBody(e.target.value)}
-                  placeholder="Текст комментария…"
-                />
-                <button
-                  type="button"
-                  className="grid h-10 w-10 place-items-center rounded-xl bg-[#246c7c] text-white hover:opacity-90 disabled:opacity-50"
-                  disabled={!commentBody.trim()}
-                  title="Добавить комментарий"
-                  aria-label="Добавить комментарий"
-                  onClick={() => {
-                    const body = commentBody.trim();
-                    if (!body) return;
-                    void Api.addComment(card.id, { body }).then(() => {
-                      setCommentBody("");
-                      return props.onChanged();
-                    });
-                  }}
-                >
-                  <IconPlus className="h-5 w-5" />
-                </button>
-              </div>
-            </div>
-          ) : null}
         </div>
       </div>
     </Modal>
