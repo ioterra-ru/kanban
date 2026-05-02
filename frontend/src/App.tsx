@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  type CollisionDetection,
   DndContext,
   DragOverlay,
   PointerSensor,
   closestCorners,
+  pointerWithin,
   useDroppable,
   useSensor,
   useSensors,
@@ -632,6 +634,30 @@ function App() {
     );
   }, []);
 
+  const findColumnForCard = (cardId: string): { columnId: ColumnId; index: number } | null => {
+    for (const col of columns) {
+      const idx = col.cards.findIndex((c) => c.id === cardId);
+      if (idx >= 0) return { columnId: col.id, index: idx };
+    }
+    return null;
+  };
+
+  /** Карточки: сначала цель под курсором (карточка или пустая зона column:), иначе closestCorners (в т.ч. col:… у секции). */
+  const boardCollisionDetection = useCallback<CollisionDetection>(
+    (args) => {
+      if (String(args.active.id).startsWith(COLUMN_PREFIX)) {
+        return closestCorners(args);
+      }
+      const pointerCollisions = pointerWithin(args);
+      const overCard = pointerCollisions.filter((c) => findColumnForCard(String(c.id)));
+      if (overCard.length > 0) return overCard;
+      const overColumnDrop = pointerCollisions.find((c) => String(c.id).startsWith("column:"));
+      if (overColumnDrop) return [overColumnDrop];
+      return closestCorners(args);
+    },
+    [columns],
+  );
+
   useEffect(() => {
     if (!searchQuery.trim()) {
       setSearchResults(null);
@@ -716,14 +742,6 @@ function App() {
       />
     );
   }
-
-  const findColumnForCard = (cardId: string): { columnId: ColumnId; index: number } | null => {
-    for (const col of columns) {
-      const idx = col.cards.findIndex((c) => c.id === cardId);
-      if (idx >= 0) return { columnId: col.id, index: idx };
-    }
-    return null;
-  };
 
   const moveLocally = (cardId: string, toColumn: ColumnId, toIndex: number) => {
     setColumns((prev) => {
@@ -951,7 +969,7 @@ function App() {
       <main className="flex min-h-0 flex-1 flex-col overflow-auto p-5">
         <DndContext
           sensors={sensors}
-          collisionDetection={closestCorners}
+          collisionDetection={boardCollisionDetection}
           onDragStart={(e) => {
             if (isObserver) return;
             const id = String(e.active.id);
@@ -996,6 +1014,13 @@ function App() {
               toColumn = overId.replace("column:", "") as ColumnId;
               const dest = columns.find((c) => c.id === toColumn);
               toIndex = dest ? dest.cards.length : 0;
+            } else if (overId.startsWith(COLUMN_PREFIX)) {
+              // Пустая колонка (или зона вне карточек): closestCorners часто даёт id секции `col:…`,
+              // а не внутренний droppable `column:…` — иначе findColumnForCard не находит цель.
+              toColumn = overId.slice(COLUMN_PREFIX.length) as ColumnId;
+              const dest = columns.find((c) => c.id === toColumn);
+              if (!dest) return;
+              toIndex = dest.cards.length;
             } else {
               const over = findColumnForCard(overId);
               if (!over) return;

@@ -1,10 +1,17 @@
+# syntax=docker/dockerfile:1
 FROM node:22-bookworm-slim AS build
 WORKDIR /app
 
 # Workspace install (only frontend needed)
 COPY package.json package-lock.json ./
 COPY frontend/package.json ./frontend/package.json
-RUN npm ci -w frontend
+# Slow/unstable links to npm: more retries, longer timeouts; cache speeds rebuilds.
+RUN --mount=type=cache,target=/root/.npm \
+    npm config set fetch-retries 10 \
+ && npm config set fetch-retry-mintimeout 20000 \
+ && npm config set fetch-retry-maxtimeout 180000 \
+ && npm config set fetch-timeout 600000 \
+ && npm ci -w frontend
 
 COPY frontend ./frontend
 RUN npm run build -w frontend
