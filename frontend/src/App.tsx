@@ -4922,18 +4922,17 @@ function CardModal(props: {
                     <div className="flex flex-wrap items-center gap-1">
                       <button
                         type="button"
-                        className="inline-flex h-8 items-center gap-1 rounded-lg px-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                        className="grid h-8 w-8 place-items-center rounded-lg text-slate-600 hover:bg-slate-100 hover:text-slate-900"
                         title="Добавить файл"
                         aria-label="Добавить файл"
                         onClick={() => uploadInputRef.current?.click()}
                       >
                         <IconPaperclip className="h-4 w-4" />
-                        <span className="hidden xl:inline">Добавить файл</span>
                       </button>
                       <div className="relative">
                         <button
                           type="button"
-                          className="inline-flex h-8 items-center gap-1 rounded-lg px-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                          className="grid h-8 w-8 place-items-center rounded-lg text-slate-600 hover:bg-slate-100 hover:text-slate-900"
                           title="Добавить ссылку на карточку"
                           aria-label="Добавить ссылку на карточку"
                           onClick={() => {
@@ -4942,7 +4941,6 @@ function CardModal(props: {
                           }}
                         >
                           <IconLink className="h-4 w-4" />
-                          <span className="hidden xl:inline">Добавить ссылку на карточку</span>
                         </button>
                         {commentCardLinkOpen ? (
                           <div className="absolute left-0 top-full z-30 mt-1 w-72 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg">
@@ -4980,7 +4978,7 @@ function CardModal(props: {
                       </div>
                       <button
                         type="button"
-                        className="inline-flex h-8 items-center gap-1 rounded-lg px-2 text-xs font-semibold text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                        className="grid h-8 w-8 place-items-center rounded-lg text-slate-600 hover:bg-slate-100 hover:text-slate-900"
                         title="Упомянуть пользователя"
                         aria-label="Упомянуть пользователя"
                         onClick={() => {
@@ -4999,7 +4997,6 @@ function CardModal(props: {
                         }}
                       >
                         <IconAt className="h-4 w-4" />
-                        <span className="hidden xl:inline">Упомянуть пользователя</span>
                       </button>
                     </div>
                     <button
