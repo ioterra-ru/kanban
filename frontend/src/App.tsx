@@ -3943,6 +3943,8 @@ function CardModal(props: {
   const uploadInputRef = useRef<HTMLInputElement>(null);
   const commentComposerRef = useRef<HTMLDivElement | null>(null);
   const commentTextareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const editingCommentComposerRef = useRef<HTMLDivElement | null>(null);
+  const editingCommentTextareaRef = useRef<HTMLTextAreaElement | null>(null);
   const persistInFlightRef = useRef<Promise<boolean> | null>(null);
 
   const [title, setTitle] = useState("");
@@ -3963,6 +3965,13 @@ function CardModal(props: {
   const [commentCardLinkSearching, setCommentCardLinkSearching] = useState(false);
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [editingCommentBody, setEditingCommentBody] = useState<string>("");
+  const [editingCommentMentionOpen, setEditingCommentMentionOpen] = useState(false);
+  const [editingCommentMentionQuery, setEditingCommentMentionQuery] = useState("");
+  const [editingCommentMentionStart, setEditingCommentMentionStart] = useState<number | null>(null);
+  const [editingCommentCardLinkOpen, setEditingCommentCardLinkOpen] = useState(false);
+  const [editingCommentCardLinkQuery, setEditingCommentCardLinkQuery] = useState("");
+  const [editingCommentCardLinkResults, setEditingCommentCardLinkResults] = useState<CardSearchHit[]>([]);
+  const [editingCommentCardLinkSearching, setEditingCommentCardLinkSearching] = useState(false);
 
   const [participants, setParticipants] = useState<
     Array<{ user: Pick<User, "id" | "email" | "name" | "avatarPreset" | "avatarUploadName"> }>
@@ -4022,6 +4031,12 @@ function CardModal(props: {
     setCommentCardLinkResults([]);
     setEditingCommentId(null);
     setEditingCommentBody("");
+    setEditingCommentMentionOpen(false);
+    setEditingCommentMentionQuery("");
+    setEditingCommentMentionStart(null);
+    setEditingCommentCardLinkOpen(false);
+    setEditingCommentCardLinkQuery("");
+    setEditingCommentCardLinkResults([]);
 
     // restore per-user sizes
     try {
@@ -4100,6 +4115,36 @@ function CardModal(props: {
     }, 250);
     return () => window.clearTimeout(t);
   }, [commentCardLinkOpen, commentCardLinkQuery]);
+
+  useEffect(() => {
+    if (!editingCommentMentionOpen && !editingCommentCardLinkOpen) return;
+    const onDocClick = (e: MouseEvent) => {
+      if (editingCommentComposerRef.current && !editingCommentComposerRef.current.contains(e.target as Node)) {
+        setEditingCommentMentionOpen(false);
+        setEditingCommentCardLinkOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", onDocClick);
+    return () => document.removeEventListener("mousedown", onDocClick);
+  }, [editingCommentMentionOpen, editingCommentCardLinkOpen]);
+
+  useEffect(() => {
+    if (!editingCommentCardLinkOpen) return;
+    const q = editingCommentCardLinkQuery.trim();
+    if (!q) {
+      setEditingCommentCardLinkResults([]);
+      setEditingCommentCardLinkSearching(false);
+      return;
+    }
+    setEditingCommentCardLinkSearching(true);
+    const t = window.setTimeout(() => {
+      Api.searchCards(q)
+        .then((r) => setEditingCommentCardLinkResults(r.cards))
+        .catch(() => setEditingCommentCardLinkResults([]))
+        .finally(() => setEditingCommentCardLinkSearching(false));
+    }, 250);
+    return () => window.clearTimeout(t);
+  }, [editingCommentCardLinkOpen, editingCommentCardLinkQuery]);
 
   useEffect(() => {
     if (!dragging) return;
@@ -4236,58 +4281,90 @@ function CardModal(props: {
     });
   };
 
-  const updateCommentDraft = (next: string, cursor: number) => {
-    setCommentBody(next);
+  const updateCommentDraft = (next: string, cursor: number, mode: "new" | "edit" = "new") => {
+    if (mode === "edit") setEditingCommentBody(next);
+    else setCommentBody(next);
     const beforeCursor = next.slice(0, cursor);
     const mentionMatch = beforeCursor.match(/(^|\s)@([^\s@]*)$/);
     if (!mentionMatch) {
+      if (mode === "edit") {
+        setEditingCommentMentionOpen(false);
+        setEditingCommentMentionQuery("");
+        setEditingCommentMentionStart(null);
+      } else {
+        setCommentMentionOpen(false);
+        setCommentMentionQuery("");
+        setCommentMentionStart(null);
+      }
+      return;
+    }
+    if (mode === "edit") {
+      setEditingCommentCardLinkOpen(false);
+      setEditingCommentMentionOpen(true);
+      setEditingCommentMentionQuery(mentionMatch[2] ?? "");
+      setEditingCommentMentionStart(cursor - (mentionMatch[2]?.length ?? 0) - 1);
+    } else {
+      setCommentCardLinkOpen(false);
+      setCommentMentionOpen(true);
+      setCommentMentionQuery(mentionMatch[2] ?? "");
+      setCommentMentionStart(cursor - (mentionMatch[2]?.length ?? 0) - 1);
+    }
+  };
+
+  const insertCommentMention = (user: Pick<User, "id" | "email" | "name" | "avatarPreset" | "avatarUploadName">, mode: "new" | "edit" = "new") => {
+    const textarea = mode === "edit" ? editingCommentTextareaRef.current : commentTextareaRef.current;
+    const body = mode === "edit" ? editingCommentBody : commentBody;
+    const query = mode === "edit" ? editingCommentMentionQuery : commentMentionQuery;
+    const mentionStart = mode === "edit" ? editingCommentMentionStart : commentMentionStart;
+    const cursor = textarea?.selectionStart ?? body.length;
+    const start = mentionStart ?? Math.max(0, cursor - query.length - 1);
+    const label = user.name || user.email;
+    const next = `${body.slice(0, start)}@${label} ${body.slice(cursor)}`;
+    if (mode === "edit") {
+      setEditingCommentBody(next);
+      setEditingCommentMentionOpen(false);
+      setEditingCommentMentionQuery("");
+      setEditingCommentMentionStart(null);
+    } else {
+      setCommentBody(next);
       setCommentMentionOpen(false);
       setCommentMentionQuery("");
       setCommentMentionStart(null);
-      return;
     }
-    setCommentCardLinkOpen(false);
-    setCommentMentionOpen(true);
-    setCommentMentionQuery(mentionMatch[2] ?? "");
-    setCommentMentionStart(cursor - (mentionMatch[2]?.length ?? 0) - 1);
-  };
-
-  const insertCommentMention = (user: Pick<User, "id" | "email" | "name" | "avatarPreset" | "avatarUploadName">) => {
-    const textarea = commentTextareaRef.current;
-    const cursor = textarea?.selectionStart ?? commentBody.length;
-    const start = commentMentionStart ?? Math.max(0, cursor - commentMentionQuery.length - 1);
-    const label = user.name || user.email;
-    const next = `${commentBody.slice(0, start)}@${label} ${commentBody.slice(cursor)}`;
-    setCommentBody(next);
-    setCommentMentionOpen(false);
-    setCommentMentionQuery("");
-    setCommentMentionStart(null);
     window.setTimeout(() => {
-      commentTextareaRef.current?.focus();
       const pos = start + label.length + 2;
-      commentTextareaRef.current?.setSelectionRange(pos, pos);
+      textarea?.focus();
+      textarea?.setSelectionRange(pos, pos);
     }, 0);
   };
 
-  const insertCardLink = (hit: CardSearchHit) => {
+  const insertCardLink = (hit: CardSearchHit, mode: "new" | "edit" = "new") => {
     if (!props.boardId) return;
-    const textarea = commentTextareaRef.current;
-    const cursor = textarea?.selectionStart ?? commentBody.length;
+    const textarea = mode === "edit" ? editingCommentTextareaRef.current : commentTextareaRef.current;
+    const body = mode === "edit" ? editingCommentBody : commentBody;
+    const cursor = textarea?.selectionStart ?? body.length;
     const link = getCardShareLink(props.boardId, hit.id);
     const insertion = `${hit.description}: ${link}`;
-    const prefix = commentBody.slice(0, cursor);
-    const suffix = commentBody.slice(textarea?.selectionEnd ?? cursor);
+    const prefix = body.slice(0, cursor);
+    const suffix = body.slice(textarea?.selectionEnd ?? cursor);
     const needsLeadingSpace = prefix.length > 0 && !/\s$/.test(prefix);
     const needsTrailingSpace = suffix.length > 0 && !/^\s/.test(suffix);
     const next = `${prefix}${needsLeadingSpace ? " " : ""}${insertion}${needsTrailingSpace ? " " : ""}${suffix}`;
-    setCommentBody(next);
-    setCommentCardLinkOpen(false);
-    setCommentCardLinkQuery("");
-    setCommentCardLinkResults([]);
+    if (mode === "edit") {
+      setEditingCommentBody(next);
+      setEditingCommentCardLinkOpen(false);
+      setEditingCommentCardLinkQuery("");
+      setEditingCommentCardLinkResults([]);
+    } else {
+      setCommentBody(next);
+      setCommentCardLinkOpen(false);
+      setCommentCardLinkQuery("");
+      setCommentCardLinkResults([]);
+    }
     window.setTimeout(() => {
-      commentTextareaRef.current?.focus();
       const pos = prefix.length + (needsLeadingSpace ? 1 : 0) + insertion.length + (needsTrailingSpace ? 1 : 0);
-      commentTextareaRef.current?.setSelectionRange(pos, pos);
+      textarea?.focus();
+      textarea?.setSelectionRange(pos, pos);
     }, 0);
   };
 
@@ -4303,8 +4380,41 @@ function CardModal(props: {
     });
   };
 
+  const resetEditingCommentTools = () => {
+    setEditingCommentMentionOpen(false);
+    setEditingCommentMentionQuery("");
+    setEditingCommentMentionStart(null);
+    setEditingCommentCardLinkOpen(false);
+    setEditingCommentCardLinkQuery("");
+    setEditingCommentCardLinkResults([]);
+  };
+
+  const resetEditingComment = () => {
+    setEditingCommentId(null);
+    setEditingCommentBody("");
+    resetEditingCommentTools();
+  };
+
+  const saveEditingComment = (commentId: string) => {
+    const body = editingCommentBody.trim();
+    if (!body) return;
+    void Api.updateComment(commentId, { body }).then(() => {
+      setEditingCommentId(null);
+      setEditingCommentBody("");
+      setEditingCommentMentionOpen(false);
+      setEditingCommentCardLinkOpen(false);
+      return props.onChanged();
+    });
+  };
+
   const commentMentionUsers = props.allUsers.filter((u) => {
     const q = commentMentionQuery.trim().toLowerCase();
+    if (!q) return true;
+    return (u.name ?? "").toLowerCase().includes(q) || (u.email ?? "").toLowerCase().includes(q);
+  });
+
+  const editingCommentMentionUsers = props.allUsers.filter((u) => {
+    const q = editingCommentMentionQuery.trim().toLowerCase();
     if (!q) return true;
     return (u.name ?? "").toLowerCase().includes(q) || (u.email ?? "").toLowerCase().includes(q);
   });
@@ -5073,6 +5183,7 @@ function CardModal(props: {
                             onClick={() => {
                               setEditingCommentId(c.id);
                               setEditingCommentBody(c.body ?? "");
+                              resetEditingCommentTools();
                             }}
                             title="Редактировать"
                             aria-label="Редактировать"
@@ -5092,36 +5203,136 @@ function CardModal(props: {
                     })()}
                   </div>
                   {editingCommentId === c.id ? (
-                    <div className="mt-2 grid gap-2">
-                      <textarea
-                        className="min-h-[80px] rounded-xl border border-slate-200 bg-white p-2 text-sm outline-none focus:border-[#246c7c]"
-                        value={editingCommentBody}
-                        onChange={(e) => setEditingCommentBody(e.target.value)}
-                        onBlur={() => {
-                          const body = editingCommentBody.trim();
-                          if (!body) return;
-                          void Api.updateComment(c.id, { body }).then(() => {
-                            setEditingCommentId(null);
-                            setEditingCommentBody("");
-                            return props.onChanged();
-                          });
-                        }}
-                        autoFocus
-                      />
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          type="button"
-                          className="grid h-9 w-9 place-items-center rounded-xl border border-slate-200 bg-white text-slate-800 hover:bg-slate-50"
-                          title="Отмена"
-                          aria-label="Отмена"
-                          onClick={() => {
-                            setEditingCommentId(null);
-                            setEditingCommentBody("");
-                          }}
-                        >
-                          <IconX className="h-5 w-5" />
-                        </button>
+                    <div
+                      className="relative mt-2 grid gap-2"
+                      ref={editingCommentComposerRef}
+                      onBlur={(e) => {
+                        if (e.currentTarget.contains(e.relatedTarget as Node | null)) return;
+                        saveEditingComment(c.id);
+                      }}
+                    >
+                      <div className="rounded-xl border border-slate-200 bg-white focus-within:border-[#246c7c]">
+                        <textarea
+                          ref={editingCommentTextareaRef}
+                          className="min-h-[80px] w-full resize-y rounded-t-xl border-0 bg-white p-2 text-sm outline-none"
+                          value={editingCommentBody}
+                          onChange={(e) => updateCommentDraft(e.target.value, e.target.selectionStart, "edit")}
+                          onKeyUp={(e) => updateCommentDraft(e.currentTarget.value, e.currentTarget.selectionStart, "edit")}
+                          onClick={(e) => updateCommentDraft(e.currentTarget.value, e.currentTarget.selectionStart, "edit")}
+                          autoFocus
+                        />
+                        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 px-2 py-1.5">
+                          <div className="flex flex-wrap items-center gap-1">
+                            <button
+                              type="button"
+                              className="grid h-8 w-8 place-items-center rounded-lg text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                              title="Добавить файл"
+                              aria-label="Добавить файл"
+                              onClick={() => uploadInputRef.current?.click()}
+                            >
+                              <IconPaperclip className="h-4 w-4" />
+                            </button>
+                            <div className="relative">
+                              <button
+                                type="button"
+                                className="grid h-8 w-8 place-items-center rounded-lg text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                                title="Добавить ссылку на карточку"
+                                aria-label="Добавить ссылку на карточку"
+                                onClick={() => {
+                                  setEditingCommentMentionOpen(false);
+                                  setEditingCommentCardLinkOpen((v) => !v);
+                                }}
+                              >
+                                <IconLink className="h-4 w-4" />
+                              </button>
+                              {editingCommentCardLinkOpen ? (
+                                <div className="absolute left-0 top-full z-30 mt-1 w-72 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg">
+                                  <div className="border-b border-slate-100 p-2">
+                                    <input
+                                      type="text"
+                                      className="w-full rounded-lg border border-slate-200 px-2 py-1.5 text-sm outline-none focus:border-[#246c7c]"
+                                      placeholder="Найти карточку..."
+                                      value={editingCommentCardLinkQuery}
+                                      onChange={(e) => setEditingCommentCardLinkQuery(e.target.value)}
+                                      autoFocus
+                                    />
+                                  </div>
+                                  <div className="max-h-56 overflow-auto py-1">
+                                    {editingCommentCardLinkSearching ? (
+                                      <div className="px-3 py-3 text-sm text-slate-500">Ищем...</div>
+                                    ) : editingCommentCardLinkQuery.trim() && editingCommentCardLinkResults.length === 0 ? (
+                                      <div className="px-3 py-3 text-sm text-slate-500">Ничего не найдено</div>
+                                    ) : (
+                                      editingCommentCardLinkResults.map((hit) => (
+                                        <button
+                                          key={hit.id}
+                                          type="button"
+                                          className="w-full px-3 py-2 text-left text-sm hover:bg-slate-50"
+                                          onClick={() => insertCardLink(hit, "edit")}
+                                        >
+                                          <div className="truncate font-medium text-slate-900">{hit.description}</div>
+                                          <div className="mt-0.5 text-xs text-slate-500">{hit.columnTitle}</div>
+                                        </button>
+                                      ))
+                                    )}
+                                  </div>
+                                </div>
+                              ) : null}
+                            </div>
+                            <button
+                              type="button"
+                              className="grid h-8 w-8 place-items-center rounded-lg text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                              title="Упомянуть пользователя"
+                              aria-label="Упомянуть пользователя"
+                              onClick={() => {
+                                const textarea = editingCommentTextareaRef.current;
+                                const cursor = textarea?.selectionStart ?? editingCommentBody.length;
+                                const prefix = editingCommentBody.slice(0, cursor);
+                                const suffix = editingCommentBody.slice(textarea?.selectionEnd ?? cursor);
+                                const needsSpace = prefix.length > 0 && !/\s$/.test(prefix);
+                                const next = `${prefix}${needsSpace ? " " : ""}@${suffix}`;
+                                const nextCursor = prefix.length + (needsSpace ? 1 : 0) + 1;
+                                updateCommentDraft(next, nextCursor, "edit");
+                                window.setTimeout(() => {
+                                  editingCommentTextareaRef.current?.focus();
+                                  editingCommentTextareaRef.current?.setSelectionRange(nextCursor, nextCursor);
+                                }, 0);
+                              }}
+                            >
+                              <IconAt className="h-4 w-4" />
+                            </button>
+                          </div>
+                          <button
+                            type="button"
+                            className="grid h-9 w-9 place-items-center rounded-xl border border-slate-200 bg-white text-slate-800 hover:bg-slate-50"
+                            title="Отмена"
+                            aria-label="Отмена"
+                            onClick={() => resetEditingComment()}
+                          >
+                            <IconX className="h-5 w-5" />
+                          </button>
+                        </div>
                       </div>
+                      {editingCommentMentionOpen ? (
+                        <div className="absolute left-0 right-0 top-full z-30 mt-1 max-h-56 overflow-auto rounded-xl border border-slate-200 bg-white py-1 shadow-lg">
+                          {editingCommentMentionUsers.length === 0 ? (
+                            <div className="px-3 py-3 text-sm text-slate-500">Нет пользователей</div>
+                          ) : (
+                            editingCommentMentionUsers.map((u) => (
+                              <button
+                                key={u.id}
+                                type="button"
+                                className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-800 hover:bg-slate-50"
+                                onClick={() => insertCommentMention(u, "edit")}
+                              >
+                                <AvatarImg user={u} size={24} />
+                                <span className="min-w-0 flex-1 truncate">{u.name || u.email}</span>
+                                <span className="hidden truncate text-xs text-slate-500 sm:block">{u.email}</span>
+                              </button>
+                            ))
+                          )}
+                        </div>
+                      ) : null}
                     </div>
                   ) : (
                     <div className="mt-2 whitespace-pre-wrap text-sm text-slate-900">{c.body}</div>
