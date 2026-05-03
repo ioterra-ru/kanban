@@ -1783,9 +1783,9 @@ function IconButton(props: {
   const variant = props.variant ?? "default";
   const cls =
     variant === "brand"
-      ? "bg-[#246c7c] text-white hover:opacity-90 border-slate-200"
+      ? "border-slate-200 bg-white text-[#246c7c] shadow-sm hover:bg-slate-50 hover:border-slate-300"
       : variant === "danger"
-        ? "bg-[#ac4c1c] text-white hover:opacity-90 border-slate-200"
+        ? "border-slate-200 bg-white text-rose-600 shadow-sm hover:bg-rose-50 hover:border-rose-200"
         : variant === "ghost"
           ? "border-transparent bg-transparent text-slate-800 hover:bg-slate-100"
           : variant === "ghostLink"
@@ -2223,7 +2223,7 @@ function ChangePasswordView(props: { onDone: () => Promise<void> | void }) {
           disabled={!p1 || p1 !== p2 || p1.length < 8 || submitting}
           onClick={handleSave}
         >
-          {submitting ? <IconSpinner className="h-5 w-5 text-white" /> : <IconCheck className="h-5 w-5" />}
+          {submitting ? <IconSpinner className="h-5 w-5 text-[#246c7c]" /> : <IconCheck className="h-5 w-5" />}
         </IconButton>
       </div>
     </CenteredShell>
@@ -3122,7 +3122,7 @@ function ProfileModal(props: {
                           .finally(() => setRestoring(false));
                       }}
                     >
-                      {restoring ? <IconSpinner className="h-5 w-5 text-white" /> : <IconArchiveRestore className="h-5 w-5" />}
+                      {restoring ? <IconSpinner className="h-5 w-5 text-[#246c7c]" /> : <IconArchiveRestore className="h-5 w-5" />}
                     </IconButton>
                     <IconButton title="Отмена" onClick={() => setRestoreFilename(null)}>
                       <IconX className="h-5 w-5" />
@@ -4419,6 +4419,13 @@ function CardModal(props: {
     return (u.name ?? "").toLowerCase().includes(q) || (u.email ?? "").toLowerCase().includes(q);
   });
 
+  const cardModalIconAdd =
+    "grid place-items-center rounded-lg border border-slate-200 bg-white text-slate-600 shadow-sm transition-colors hover:bg-slate-50 hover:text-[#246c7c] hover:border-slate-300";
+  const cardModalIconAddEmphasis =
+    "grid place-items-center rounded-xl border border-slate-200 bg-white text-[#246c7c] shadow-sm transition-colors hover:bg-slate-50 hover:border-[#246c7c]/35 disabled:pointer-events-none disabled:opacity-50";
+  const cardModalIconDanger =
+    "grid place-items-center rounded-lg border border-slate-200 bg-white text-slate-500 shadow-sm transition-colors hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200";
+
   if (!props.open) return null;
 
   if (!card) {
@@ -4783,7 +4790,7 @@ function CardModal(props: {
               {canManageCard ? (
                 <button
                   type="button"
-                  className="grid h-8 w-8 place-items-center rounded-lg bg-[#246c7c] text-white hover:opacity-90"
+                  className={classNames(cardModalIconAdd, "h-8 w-8")}
                   title="Добавить участника"
                   aria-label="Добавить участника"
                   onClick={() => setParticipantAddOpen((v) => !v)}
@@ -4809,7 +4816,7 @@ function CardModal(props: {
                     </div>
                     <button
                       type="button"
-                      className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-[#246c7c] text-white hover:opacity-90 disabled:opacity-50"
+                      className={classNames(cardModalIconAddEmphasis, "h-10 w-10 shrink-0")}
                       disabled={!participantAddUserId}
                       title="Добавить участника"
                       aria-label="Добавить участника"
@@ -4895,7 +4902,7 @@ function CardModal(props: {
                       {canManageCard ? (
                         <button
                           type="button"
-                          className="grid h-7 w-7 place-items-center rounded-lg bg-[#ac4c1c] text-white hover:opacity-90"
+                          className={classNames(cardModalIconDanger, "h-7 w-7")}
                           title="Удалить участника"
                           aria-label="Удалить участника"
                           onClick={() => {
@@ -4924,7 +4931,7 @@ function CardModal(props: {
               {canEditCard ? (
                 <button
                   type="button"
-                  className="grid h-8 w-8 place-items-center rounded-lg bg-[#246c7c] text-white hover:opacity-90"
+                  className={classNames(cardModalIconAdd, "h-8 w-8")}
                   onClick={() => uploadInputRef.current?.click()}
                   title="Добавить файл"
                   aria-label="Добавить файл"
@@ -4980,7 +4987,7 @@ function CardModal(props: {
                       {canEditCard ? (
                         <button
                           type="button"
-                          className="grid h-8 w-8 place-items-center rounded-lg bg-[#ac4c1c] text-white hover:opacity-90"
+                          className={classNames(cardModalIconDanger, "h-8 w-8")}
                           onClick={() => void Api.deleteAttachment(a.id).then(props.onChanged)}
                           title="Удалить"
                           aria-label="Удалить"
@@ -5111,7 +5118,7 @@ function CardModal(props: {
                     </div>
                     <button
                       type="button"
-                      className="grid h-9 w-9 place-items-center rounded-xl bg-[#246c7c] text-white hover:opacity-90 disabled:opacity-50"
+                      className={classNames(cardModalIconAddEmphasis, "h-9 w-9")}
                       disabled={!commentBody.trim()}
                       title="Добавить комментарий"
                       aria-label="Добавить комментарий"
@@ -5191,7 +5198,7 @@ function CardModal(props: {
                             <IconEdit />
                           </button>
                           <button
-                            className="grid h-8 w-8 place-items-center rounded-lg bg-[#ac4c1c] text-white hover:opacity-90"
+                            className={classNames(cardModalIconDanger, "h-8 w-8")}
                             onClick={() => void Api.deleteComment(c.id).then(props.onChanged)}
                             title="Удалить"
                             aria-label="Удалить"

@@ -66,7 +66,7 @@ export async function createCardArchive(cardId: string): Promise<string> {
     where: { id: cardId },
     include: {
       column: { select: { id: true, title: true } },
-      comments: { orderBy: { createdAt: "asc" } },
+      comments: { orderBy: { createdAt: "desc" } },
       attachments: { orderBy: { createdAt: "asc" } },
       participants: { select: { userId: true } },
     },
