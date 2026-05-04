@@ -718,7 +718,7 @@ router.get(
       where: { id, boardId },
       include: {
         column: { select: { id: true, title: true } },
-        comments: { orderBy: { createdAt: "asc" } },
+        comments: { orderBy: { createdAt: "desc" } },
         attachments: { orderBy: { createdAt: "asc" } },
         participants: { include: { user: { select: { id: true, email: true, name: true, avatarPreset: true, avatarUploadName: true } } } },
       },
