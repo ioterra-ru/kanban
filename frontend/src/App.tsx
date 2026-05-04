@@ -81,6 +81,7 @@ function Modal(props: {
   title?: string;
   headerLeft?: React.ReactNode;
   headerRight?: React.ReactNode;
+  headerClassName?: string;
   showCloseButton?: boolean;
   panelClassName?: string;
   panelStyle?: React.CSSProperties;
@@ -115,7 +116,12 @@ function Modal(props: {
         style={props.panelStyle}
       >
         {(headerLeft || headerRight) && (
-          <div className="flex items-start justify-between gap-4 border-b border-slate-200 p-4">
+          <div
+            className={classNames(
+              "flex items-start justify-between gap-4 border-b border-slate-200 p-4",
+              props.headerClassName,
+            )}
+          >
             <div className="min-w-0 flex-1">{headerLeft}</div>
             <div className="shrink-0">{headerRight}</div>
           </div>
@@ -383,21 +389,6 @@ function CardTile(props: {
                     <IconShare className="h-4 w-4 shrink-0" />
                   </button>
                 ) : null}
-                {props.onDelete ? (
-                  <button
-                    type="button"
-                    className="flex w-full items-center justify-center px-3 py-2 text-slate-700 hover:bg-slate-50"
-                    title="Удалить"
-                    aria-label="Удалить"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setActionsOpen(false);
-                      props.onDelete?.();
-                    }}
-                  >
-                    <IconTrash className="h-4 w-4 shrink-0" />
-                  </button>
-                ) : null}
                 {props.onArchive ? (
                   <button
                     type="button"
@@ -411,6 +402,21 @@ function CardTile(props: {
                     }}
                   >
                     <IconArchive className="h-4 w-4 shrink-0" />
+                  </button>
+                ) : null}
+                {props.onDelete ? (
+                  <button
+                    type="button"
+                    className="flex w-full items-center justify-center border-t border-slate-100 px-3 py-2 text-rose-700 hover:bg-rose-50"
+                    title="Удалить"
+                    aria-label="Удалить"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setActionsOpen(false);
+                      props.onDelete?.();
+                    }}
+                  >
+                    <IconTrash className="h-4 w-4 shrink-0 text-rose-600" />
                   </button>
                 ) : null}
               </div>
@@ -1098,6 +1104,22 @@ function App() {
                                 <button
                                   type="button"
                                   className="flex w-full items-center justify-center px-3 py-2 text-slate-700 hover:bg-slate-50"
+                                  title="В архив"
+                                  aria-label="В архив"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setColumnActionsOpen(null);
+                                    if (!currentBoardId) return;
+                                    void Api.archiveColumn(currentBoardId, col.id)
+                                      .then(() => reload())
+                                      .catch((e) => setError((e as Error).message));
+                                  }}
+                                >
+                                  <IconArchive className="h-4 w-4 shrink-0" />
+                                </button>
+                                <button
+                                  type="button"
+                                  className="flex w-full items-center justify-center border-t border-slate-100 px-3 py-2 text-rose-700 hover:bg-rose-50"
                                   title="Удалить колонку"
                                   aria-label="Удалить колонку"
                                   onClick={(e) => {
@@ -1114,23 +1136,7 @@ function App() {
                                       .catch((e) => setError((e as Error).message));
                                   }}
                                 >
-                                  <IconTrash className="h-4 w-4 shrink-0" />
-                                </button>
-                                <button
-                                  type="button"
-                                  className="flex w-full items-center justify-center px-3 py-2 text-slate-700 hover:bg-slate-50"
-                                  title="В архив"
-                                  aria-label="В архив"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setColumnActionsOpen(null);
-                                    if (!currentBoardId) return;
-                                    void Api.archiveColumn(currentBoardId, col.id)
-                                      .then(() => reload())
-                                      .catch((e) => setError((e as Error).message));
-                                  }}
-                                >
-                                  <IconArchive className="h-4 w-4 shrink-0" />
+                                  <IconTrash className="h-4 w-4 shrink-0 text-rose-600" />
                                 </button>
                               </div>
                             ) : null}
@@ -1159,7 +1165,12 @@ function App() {
                               isObserver
                                 ? undefined
                                 : () => {
-                                    if (!confirm("Удалить карточку?")) return;
+                                    if (
+                                      !confirm(
+                                        "Вы точно хотите удалить эту карточку? Это действие нельзя отменить.",
+                                      )
+                                    )
+                                      return;
                                     void Api.deleteCard(card.id).then(() => reload()).catch((e) => setError((e as Error).message));
                                   }
                             }
@@ -1783,14 +1794,14 @@ function IconButton(props: {
   const variant = props.variant ?? "default";
   const cls =
     variant === "brand"
-      ? "border-slate-200 bg-white text-[#246c7c] shadow-sm hover:bg-slate-50 hover:border-slate-300"
+      ? "border-2 border-teal-400/70 bg-white text-[#246c7c] shadow-sm hover:bg-teal-50/70 hover:border-teal-500"
       : variant === "danger"
-        ? "border-slate-200 bg-white text-rose-600 shadow-sm hover:bg-rose-50 hover:border-rose-200"
+        ? "border-2 border-rose-300 bg-white text-rose-600 shadow-sm hover:bg-rose-50 hover:border-rose-400"
         : variant === "ghost"
           ? "border-transparent bg-transparent text-slate-800 hover:bg-slate-100"
           : variant === "ghostLink"
             ? "border-transparent bg-transparent text-[#246c7c] hover:bg-slate-100"
-            : "border-slate-200 bg-white text-slate-800 hover:bg-slate-50";
+            : "border-2 border-slate-300 bg-white text-slate-800 hover:bg-slate-50 hover:border-slate-400";
 
   return (
     <button
@@ -3995,6 +4006,8 @@ function CardModal(props: {
   const [panelResizing, setPanelResizing] = useState(false);
   const panelResizeRef = useRef<{ startX: number; startY: number; startW: number; startH: number } | null>(null);
   const lastLoadedIdRef = useRef<string | null>(null);
+  const [headerActionsOpen, setHeaderActionsOpen] = useState(false);
+  const headerActionsRef = useRef<HTMLDivElement | null>(null);
 
   const canEditCard = props.viewer.role !== "OBSERVER";
   const canManageCard =
@@ -4037,6 +4050,7 @@ function CardModal(props: {
     setEditingCommentCardLinkOpen(false);
     setEditingCommentCardLinkQuery("");
     setEditingCommentCardLinkResults([]);
+    setHeaderActionsOpen(false);
 
     // restore per-user sizes
     try {
@@ -4085,6 +4099,22 @@ function CardModal(props: {
     document.addEventListener("mousedown", onDocClick);
     return () => document.removeEventListener("mousedown", onDocClick);
   }, [participantAddOpen]);
+
+  useEffect(() => {
+    if (!headerActionsOpen) return;
+    const onMouseDown = (e: MouseEvent) => {
+      if (headerActionsRef.current && !headerActionsRef.current.contains(e.target as Node)) setHeaderActionsOpen(false);
+    };
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setHeaderActionsOpen(false);
+    };
+    window.addEventListener("mousedown", onMouseDown, true);
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      window.removeEventListener("mousedown", onMouseDown, true);
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [headerActionsOpen]);
 
   useEffect(() => {
     if (!commentMentionOpen && !commentCardLinkOpen) return;
@@ -4420,11 +4450,11 @@ function CardModal(props: {
   });
 
   const cardModalIconAdd =
-    "grid place-items-center rounded-lg border border-slate-200 bg-white text-slate-600 shadow-sm transition-colors hover:bg-slate-50 hover:text-[#246c7c] hover:border-slate-300";
+    "grid place-items-center rounded-lg border-2 border-teal-300/80 bg-white text-slate-700 shadow-sm transition-colors hover:bg-teal-50/70 hover:text-[#246c7c] hover:border-teal-500";
   const cardModalIconAddEmphasis =
-    "grid place-items-center rounded-xl border border-slate-200 bg-white text-[#246c7c] shadow-sm transition-colors hover:bg-slate-50 hover:border-[#246c7c]/35 disabled:pointer-events-none disabled:opacity-50";
+    "grid place-items-center rounded-xl border-2 border-[#246c7c]/55 bg-white text-[#246c7c] shadow-sm transition-colors hover:bg-teal-50/80 hover:border-[#246c7c] disabled:pointer-events-none disabled:opacity-50";
   const cardModalIconDanger =
-    "grid place-items-center rounded-lg border border-slate-200 bg-white text-slate-500 shadow-sm transition-colors hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200";
+    "grid place-items-center rounded-lg border-2 border-rose-300 bg-white text-rose-600 shadow-sm transition-colors hover:bg-rose-50 hover:border-rose-400";
 
   if (!props.open) return null;
 
@@ -4447,6 +4477,7 @@ function CardModal(props: {
         void closeAndRefresh();
       }}
       showCloseButton={false}
+      headerClassName="bg-gradient-to-b from-slate-100 to-slate-50"
       panelClassName="max-w-none"
       panelStyle={{
         width: Math.min(panelSize.w, window.innerWidth - 32),
@@ -4708,19 +4739,90 @@ function CardModal(props: {
       }
       headerRight={
         <div className="flex items-center gap-2">
-          {props.boardId && props.onShareLink ? (
-            <IconButton
-              title="Поделиться"
-              onClick={() => {
-                const link = getCardShareLink(props.boardId!, card.id);
-                navigator.clipboard.writeText(link).then(
-                  () => props.onShareLink?.(card.description ?? "", link),
-                  () => props.onShareLink?.(card.description ?? "", link),
-                );
-              }}
-            >
-              <IconShare className="h-5 w-5" />
-            </IconButton>
+          {(props.boardId && props.onShareLink) || canEditCard ? (
+            <div className="relative" ref={headerActionsRef}>
+              <button
+                type="button"
+                className="rounded-md p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                title="Действия"
+                aria-label="Действия"
+                aria-expanded={headerActionsOpen}
+                onClick={() => setHeaderActionsOpen((v) => !v)}
+              >
+                <IconMoreVertical className="h-5 w-5" />
+              </button>
+              {headerActionsOpen ? (
+                <div className="absolute right-0 top-full z-30 mt-1 min-w-[2.5rem] rounded-lg border border-slate-200 bg-white py-1 shadow-lg">
+                  {props.boardId && props.onShareLink ? (
+                    <button
+                      type="button"
+                      className="flex w-full items-center justify-center px-3 py-2 text-slate-700 hover:bg-slate-50"
+                      title="Поделиться"
+                      aria-label="Поделиться"
+                      onClick={() => {
+                        setHeaderActionsOpen(false);
+                        const link = getCardShareLink(props.boardId!, card.id);
+                        navigator.clipboard.writeText(link).then(
+                          () => props.onShareLink?.(card.description ?? "", link),
+                          () => props.onShareLink?.(card.description ?? "", link),
+                        );
+                      }}
+                    >
+                      <IconShare className="h-4 w-4 shrink-0" />
+                    </button>
+                  ) : null}
+                  {canEditCard ? (
+                    <button
+                      type="button"
+                      className="flex w-full items-center justify-center px-3 py-2 text-slate-700 hover:bg-slate-50"
+                      title="В архив"
+                      aria-label="В архив"
+                      onClick={() => {
+                        setHeaderActionsOpen(false);
+                        void Api.archiveCard(card.id)
+                          .then(async () => {
+                            await props.onDeleted();
+                            props.onClose();
+                          })
+                          .catch((e) => setSaveError((e as Error).message));
+                      }}
+                    >
+                      <IconArchive className="h-4 w-4 shrink-0" />
+                    </button>
+                  ) : null}
+                  {canEditCard ? (
+                    <button
+                      type="button"
+                      className="flex w-full items-center justify-center border-t border-slate-100 px-3 py-2 text-rose-700 hover:bg-rose-50"
+                      title="Удалить карточку"
+                      aria-label="Удалить карточку"
+                      onClick={() => {
+                        setHeaderActionsOpen(false);
+                        if (
+                          !confirm(
+                            "Вы точно хотите удалить эту карточку? Это действие нельзя отменить.",
+                          )
+                        )
+                          return;
+                        setSaveError(null);
+                        setDeleting(true);
+                        void Api.deleteCard(card.id)
+                          .then(async () => {
+                            await props.onDeleted();
+                            props.onClose();
+                          })
+                          .catch((e) => {
+                            setDeleting(false);
+                            setSaveError((e as Error).message);
+                          });
+                      }}
+                    >
+                      <IconTrash className="h-4 w-4 shrink-0 text-rose-600" />
+                    </button>
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
           ) : null}
           <IconButton
             title="Закрыть"
@@ -4734,29 +4836,6 @@ function CardModal(props: {
           >
             <IconX className="h-5 w-5" />
           </IconButton>
-          {canEditCard ? (
-            <IconButton
-              className="ml-3"
-              title="Удалить карточку"
-              variant="danger"
-              onClick={() => {
-                if (!confirm("Удалить карточку?")) return;
-                setSaveError(null);
-                setDeleting(true);
-                void Api.deleteCard(card.id)
-                  .then(async () => {
-                    await props.onDeleted(); // only reload board; do not refetch deleted card
-                    props.onClose();
-                  })
-                  .catch((e) => {
-                    setDeleting(false);
-                    setSaveError((e as Error).message);
-                  });
-              }}
-            >
-              <IconTrash className="h-5 w-5" />
-            </IconButton>
-          ) : null}
         </div>
       }
     >
@@ -4916,7 +4995,7 @@ function CardModal(props: {
                               .catch((e) => setParticipantError((e as Error).message));
                           }}
                         >
-                          <IconTrash className="h-4 w-4" />
+                          <IconTrash className="h-4 w-4 text-rose-600" />
                         </button>
                       ) : null}
                     </div>
@@ -4992,7 +5071,7 @@ function CardModal(props: {
                           title="Удалить"
                           aria-label="Удалить"
                         >
-                          <IconTrash />
+                          <IconTrash className="h-4 w-4 text-rose-600" />
                         </button>
                       ) : null}
                     </div>
@@ -5203,7 +5282,7 @@ function CardModal(props: {
                             title="Удалить"
                             aria-label="Удалить"
                           >
-                            <IconTrash />
+                            <IconTrash className="h-4 w-4 text-rose-600" />
                           </button>
                         </div>
                       );
