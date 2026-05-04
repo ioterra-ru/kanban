@@ -86,6 +86,7 @@ model Card {
   comments    Comment[]
   attachments Attachment[]
   participants CardParticipant[]
+  favorites     CardFavorite[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -154,11 +155,38 @@ model User {
   boardMemberships BoardMembership[]
   trustedDevices TrustedDevice[]
   passwordResetTokens PasswordResetToken[]
+  cardFavorites      CardFavorite[]
+  activityLogs       UserActivityLog[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([defaultBoardId])
+}
+
+model CardFavorite {
+  userId String
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  cardId String
+  card   Card @relation(fields: [cardId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@id([userId, cardId])
+  @@index([userId])
+}
+
+model UserActivityLog {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kind      String
+  cardId    String?
+  boardId   String?
+  summary   String
+  createdAt DateTime @default(now())
+
+  @@index([userId, createdAt(sort: Desc)])
 }
 
 model PasswordResetToken {
