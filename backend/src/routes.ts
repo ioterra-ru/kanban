@@ -32,6 +32,16 @@ function assertCanMutateBoardContent(user: { role: Role }) {
   if (user.role === Role.OBSERVER) throw new HttpError(403, "Forbidden");
 }
 
+/** Email пользователя из таблицы User, иначе 400. Пустое значение → null. */
+async function normalizeCustomerEmail(raw: unknown): Promise<string | null> {
+  if (raw === undefined || raw === null) return null;
+  const t = String(raw).trim();
+  if (!t) return null;
+  const u = await prisma.user.findUnique({ where: { email: t }, select: { id: true } });
+  if (!u) throw new HttpError(400, "Заказчик: пользователь с таким email не найден в системе");
+  return t;
+}
+
 router.use(requireLogin(), requireTwoFactor());
 
 const SelectBoardSchema = z.object({
@@ -718,6 +728,7 @@ router.get(
       where: { id, boardId },
       include: {
         column: { select: { id: true, title: true } },
+        author: { select: { id: true, email: true, name: true, avatarPreset: true, avatarUploadName: true } },
         comments: { orderBy: { createdAt: "desc" } },
         attachments: { orderBy: { createdAt: "asc" } },
         participants: { include: { user: { select: { id: true, email: true, name: true, avatarPreset: true, avatarUploadName: true } } } },
@@ -732,6 +743,7 @@ const CardCreateSchema = z.object({
   description: z.string().min(1),
   details: z.string().optional().nullable(),
   assignee: z.string().min(1).optional().nullable(),
+  customer: z.string().max(320).optional().nullable(),
   dueDate: z.string().datetime().optional().nullable(),
   columnId: z.string().uuid(),
   importance: z.enum(ImportanceIds).optional().default("MEDIUM"),
@@ -759,12 +771,15 @@ router.post(
     });
     const position = (agg._max.position ?? -1) + 1;
 
+    const customerEmail = await normalizeCustomerEmail(data.customer);
+
     const card = await prisma.card.create({
       data: {
         boardId,
         description: data.description,
         details: data.details ?? null,
         assignee: data.assignee ?? null,
+        customer: customerEmail,
         dueDate: data.dueDate ? new Date(data.dueDate) : null,
         columnId: data.columnId,
         position,
@@ -781,6 +796,7 @@ const CardUpdateSchema = z.object({
   description: z.string().min(1).optional(),
   details: z.string().nullable().optional(),
   assignee: z.string().min(1).nullable().optional(),
+  customer: z.string().max(320).nullable().optional(),
   dueDate: z.string().datetime().nullable().optional(),
   importance: z.enum(ImportanceIds).optional(),
   paused: z.boolean().optional(),
@@ -799,6 +815,10 @@ router.patch(
     if (!exists) throw new HttpError(404, "Card not found");
     const canManage = actor.role === Role.ADMIN || (!!exists.authorId && exists.authorId === actor.id);
     if (data.assignee !== undefined && !canManage) throw new HttpError(403, "Forbidden");
+    if (data.customer !== undefined && !canManage) throw new HttpError(403, "Forbidden");
+
+    const customerNext =
+      data.customer !== undefined ? await normalizeCustomerEmail(data.customer) : undefined;
 
     const card = await prisma.card.update({
       where: { id },
@@ -806,6 +826,7 @@ router.patch(
         ...(data.description !== undefined ? { description: data.description } : {}),
         ...(data.details !== undefined ? { details: data.details } : {}),
         ...(data.assignee !== undefined ? { assignee: data.assignee } : {}),
+        ...(customerNext !== undefined ? { customer: customerNext } : {}),
         ...(data.dueDate !== undefined
           ? { dueDate: data.dueDate ? new Date(data.dueDate) : null }
           : {}),

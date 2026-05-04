@@ -69,6 +69,8 @@ model Card {
   description String
   details     String?
   assignee    String?
+  /** Заказчик: email зарегистрированного пользователя (таблица User), как у assignee. */
+  customer    String?
   dueDate     DateTime?
 
   columnId  String

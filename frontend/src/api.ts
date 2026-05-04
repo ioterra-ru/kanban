@@ -55,6 +55,7 @@ export const Api = {
     description: string;
     details?: string | null;
     assignee?: string | null;
+    customer?: string | null;
     dueDate?: string | null;
     columnId: string;
     importance?: Importance;
@@ -67,6 +68,7 @@ export const Api = {
       description?: string;
       details?: string | null;
       assignee?: string | null;
+      customer?: string | null;
       dueDate?: string | null;
       importance?: Importance;
       paused?: boolean;

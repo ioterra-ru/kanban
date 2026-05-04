@@ -107,6 +107,8 @@ export type CardDetail = {
   description: string;
   details: string | null;
   assignee: string | null;
+  /** Заказчик: email зарегистрированного пользователя. */
+  customer?: string | null;
   dueDate: string | null;
   column: { id: string; title: string };
   position: number;
@@ -114,6 +116,8 @@ export type CardDetail = {
   paused: boolean;
   createdAt: string;
   updatedAt: string;
+  authorId?: string | null;
+  author?: Pick<User, "id" | "email" | "name" | "avatarPreset" | "avatarUploadName"> | null;
   comments: Comment[];
   attachments: Attachment[];
   participants?: CardParticipant[];

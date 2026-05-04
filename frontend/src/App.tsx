@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from "react";
 import {
   type CollisionDetection,
   DndContext,
@@ -109,7 +109,7 @@ function Modal(props: {
     >
       <div
         className={classNames(
-          "relative flex w-full max-w-5xl flex-col rounded-2xl border border-slate-200 bg-white shadow-2xl",
+          "relative flex w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl",
           props.panelStyle?.height ? "" : "max-h-[80vh]",
           props.panelClassName,
         )}
@@ -450,6 +450,7 @@ function App() {
   const [createColumn, setCreateColumn] = useState<ColumnId>("");
   const [createTitle, setCreateTitle] = useState("");
   const [createDetails, setCreateDetails] = useState("");
+  const [createCustomer, setCreateCustomer] = useState("");
 
   const [cardOpen, setCardOpen] = useState(false);
   const [cardDetail, setCardDetail] = useState<CardDetail | null>(null);
@@ -859,6 +860,7 @@ function App() {
                 setCreateColumn(columns[0]?.id ?? "");
                 setCreateTitle("");
                 setCreateDetails("");
+                setCreateCustomer("");
                 setCreateOpen(true);
               }}
             >
@@ -1076,6 +1078,7 @@ function App() {
                               setCreateColumn(col.id);
                               setCreateTitle("");
                               setCreateDetails("");
+                              setCreateCustomer("");
                               setCreateOpen(true);
                             }}
                           >
@@ -1247,6 +1250,21 @@ function App() {
               placeholder="Что нужно сделать?"
             />
           </label>
+          <label className="grid gap-1">
+            <div className="text-xs text-slate-600">Заказчик</div>
+            <select
+              className="rounded-xl border border-slate-200 bg-white p-2 text-sm outline-none focus:border-[#246c7c]"
+              value={createCustomer}
+              onChange={(e) => setCreateCustomer(e.target.value)}
+            >
+              <option value="">— не выбран</option>
+              {(allUsers ?? []).map((u) => (
+                <option key={u.id} value={u.email}>
+                  {u.name || u.email}
+                </option>
+              ))}
+            </select>
+          </label>
           {columns.length > 0 ? (
             <label className="grid gap-1">
               <div className="text-xs text-slate-600">Колонка</div>
@@ -1277,6 +1295,7 @@ function App() {
                   details,
                   columnId: createColumn,
                   assignee: me?.user?.email ?? undefined,
+                  customer: createCustomer.trim() ? createCustomer.trim() : undefined,
                 }).then(async () => {
                   setCreateOpen(false);
                   await reload();
@@ -3938,6 +3957,123 @@ function BoardsModal(props: {
   );
 }
 
+type CardModalUserLite = Pick<User, "id" | "email" | "name" | "avatarPreset" | "avatarUploadName">;
+
+function CardModalUserEmailField(props: {
+  label: string;
+  valueEmail: string;
+  onPick: (email: string) => void;
+  isOpen: boolean;
+  setIsOpen: (next: boolean) => void;
+  onBeforeOpen: () => void;
+  users: CardModalUserLite[];
+  canManage: boolean;
+  containerRef: RefObject<HTMLDivElement | null>;
+  onPersist: () => void;
+}) {
+  const selected = useMemo(() => props.users.find((u) => u.email === props.valueEmail) ?? null, [props.users, props.valueEmail]);
+  return (
+    <div className="grid gap-2 sm:grid-cols-[10rem,minmax(0,1fr)] sm:items-start sm:gap-x-3">
+      <div className="text-xs font-semibold uppercase tracking-wide text-slate-500 sm:pt-2">{props.label}</div>
+      <div className="relative min-w-0" ref={props.containerRef}>
+        {props.canManage ? (
+          <>
+            <button
+              type="button"
+              className="flex w-full min-w-0 items-center gap-2 rounded-xl border border-slate-200 bg-white px-2.5 py-2 text-left text-sm text-slate-800 outline-none hover:bg-slate-50 focus:border-[#246c7c]"
+              onClick={() => {
+                props.onBeforeOpen();
+                props.setIsOpen(!props.isOpen);
+              }}
+              aria-haspopup="listbox"
+              aria-expanded={props.isOpen}
+            >
+              {props.valueEmail ? (
+                selected ? (
+                  <>
+                    <AvatarImg user={selected} size={24} />
+                    <span className="min-w-0 flex-1 truncate">{selected.name || selected.email}</span>
+                  </>
+                ) : (
+                  <span className="min-w-0 flex-1 truncate text-slate-600">{props.valueEmail}</span>
+                )
+              ) : (
+                <span className="text-slate-500">Не выбрано</span>
+              )}
+              <span className="shrink-0 text-slate-400">
+                {props.isOpen ? <IconChevronUp className="h-4 w-4" /> : <IconChevronDown className="h-4 w-4" />}
+              </span>
+            </button>
+            {props.isOpen ? (
+              <div
+                className="absolute left-0 top-full z-30 mt-1 max-h-56 w-full min-w-[12rem] overflow-auto rounded-xl border border-slate-200 bg-white py-1 shadow-lg"
+                role="listbox"
+              >
+                <button
+                  type="button"
+                  role="option"
+                  aria-selected={!props.valueEmail}
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-800 hover:bg-slate-50"
+                  onClick={() => {
+                    props.onPick("");
+                    props.setIsOpen(false);
+                    setTimeout(() => props.onPersist(), 0);
+                  }}
+                >
+                  <span className="text-slate-500">Не выбрано</span>
+                </button>
+                {props.valueEmail && !props.users.some((u) => u.email === props.valueEmail) ? (
+                  <button
+                    type="button"
+                    role="option"
+                    aria-selected={true}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-800 hover:bg-slate-50"
+                    onClick={() => props.setIsOpen(false)}
+                  >
+                    <span className="min-w-0 truncate">{props.valueEmail}</span>
+                  </button>
+                ) : null}
+                {props.users.map((u) => (
+                  <button
+                    key={u.id}
+                    type="button"
+                    role="option"
+                    aria-selected={props.valueEmail === u.email}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-800 hover:bg-slate-50"
+                    onClick={() => {
+                      props.onPick(u.email);
+                      props.setIsOpen(false);
+                      setTimeout(() => props.onPersist(), 0);
+                    }}
+                  >
+                    <AvatarImg user={u} size={24} />
+                    <span className="min-w-0 flex-1 truncate">{u.name || u.email}</span>
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </>
+        ) : (
+          <div className="flex min-h-[2.5rem] items-center gap-2 rounded-xl border border-transparent px-1 py-2 text-sm text-slate-800">
+            {props.valueEmail ? (
+              selected ? (
+                <>
+                  <AvatarImg user={selected} size={24} />
+                  <span className="min-w-0 truncate">{selected.name || selected.email}</span>
+                </>
+              ) : (
+                <span className="min-w-0 truncate">{props.valueEmail}</span>
+              )
+            ) : (
+              <span className="text-slate-500">—</span>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function CardModal(props: {
   open: boolean;
   card: CardDetail | null;
@@ -3961,6 +4097,7 @@ function CardModal(props: {
   const [title, setTitle] = useState("");
   const [details, setDetails] = useState("");
   const [assignee, setAssignee] = useState("");
+  const [customer, setCustomer] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [importance, setImportance] = useState<Importance>("MEDIUM");
   const [paused, setPaused] = useState(false);
@@ -3992,7 +4129,9 @@ function CardModal(props: {
   const [participantAddSearch, setParticipantAddSearch] = useState("");
   const [participantError, setParticipantError] = useState<string | null>(null);
   const [assigneeSelectOpen, setAssigneeSelectOpen] = useState(false);
+  const [customerSelectOpen, setCustomerSelectOpen] = useState(false);
   const assigneeSelectRef = useRef<HTMLDivElement>(null);
+  const customerSelectRef = useRef<HTMLDivElement>(null);
   const participantAddRef = useRef<HTMLDivElement>(null);
 
   const [rightWidth, setRightWidth] = useState(420);
@@ -4016,14 +4155,19 @@ function CardModal(props: {
     (props.viewer.role === "ADMIN" || ((card as any).authorId as string | null | undefined) === props.viewer.id);
 
   const userById = useMemo(() => new Map(props.allUsers.map((u) => [u.id, u])), [props.allUsers]);
-  const userByEmail = useMemo(() => new Map(props.allUsers.map((u) => [u.email, u])), [props.allUsers]);
-  const selectedAssigneeUser = useMemo(() => (assignee && assignee.includes("@") ? userByEmail.get(assignee) ?? null : null), [assignee, userByEmail]);
+
+  const authorDisplay = useMemo(() => {
+    const a = card?.author;
+    if (!a) return null;
+    return userById.get(a.id) ?? a;
+  }, [card, userById]);
 
   useEffect(() => {
     if (!card) return;
     setTitle(card.description ?? "");
     setDetails(card.details ?? "");
     setAssignee(card.assignee ?? "");
+    setCustomer(card.customer ?? "");
     setDueDate(toDateTimeLocalValue(card.dueDate));
     setImportance(card.importance);
     setPaused(card.paused);
@@ -4033,6 +4177,7 @@ function CardModal(props: {
     setParticipantAddSearch("");
     setParticipantError(null);
     setAssigneeSelectOpen(false);
+    setCustomerSelectOpen(false);
     setSaveError(null);
     setDeleting(false);
     setCommentBody("");
@@ -4088,6 +4233,17 @@ function CardModal(props: {
     document.addEventListener("mousedown", onDocClick);
     return () => document.removeEventListener("mousedown", onDocClick);
   }, [assigneeSelectOpen]);
+
+  useEffect(() => {
+    if (!customerSelectOpen) return;
+    const onDocClick = (e: MouseEvent) => {
+      if (customerSelectRef.current && !customerSelectRef.current.contains(e.target as Node)) {
+        setCustomerSelectOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", onDocClick);
+    return () => document.removeEventListener("mousedown", onDocClick);
+  }, [customerSelectOpen]);
 
   useEffect(() => {
     if (!participantAddOpen) return;
@@ -4249,6 +4405,7 @@ function CardModal(props: {
       description: string;
       details: string | null;
       assignee: string | null;
+      customer: string | null;
       dueDate: string | null;
       importance: Importance;
       paused: boolean;
@@ -4274,6 +4431,15 @@ function CardModal(props: {
           description: override?.description ?? (title.trim() || "Без названия"),
           details: override?.details ?? (details.trim() ? details.trim() : null),
           ...(canManageCard ? { assignee: override?.assignee ?? (assignee.trim() ? assignee.trim() : null) } : {}),
+          ...(canManageCard
+            ? {
+                customer: (() => {
+                  const raw = override?.customer !== undefined ? override.customer : customer;
+                  if (raw == null || String(raw).trim() === "") return null;
+                  return String(raw).trim();
+                })(),
+              }
+            : {}),
           dueDate: dueDateIso,
           importance: override?.importance ?? importance,
           paused: override?.paused ?? paused,
@@ -4623,104 +4789,6 @@ function CardModal(props: {
                 </span>
               )}
             </span>
-            <span
-              className="inline-flex min-w-0 max-w-[min(280px,92vw)] items-center gap-1.5 rounded-md bg-slate-100 px-2.5 py-1.5"
-              ref={assigneeSelectRef}
-            >
-              <span className="shrink-0 text-slate-600">Ответственный:</span>
-              <div className="relative min-w-0 flex-1">
-                {canManageCard ? (
-                  <>
-                    <button
-                      type="button"
-                      className="flex w-full min-w-0 items-center gap-1 rounded border-0 bg-transparent py-0 text-left text-xs text-slate-800 outline-none focus:ring-1 focus:ring-slate-300"
-                      onClick={() => setAssigneeSelectOpen((v) => !v)}
-                      aria-haspopup="listbox"
-                      aria-expanded={assigneeSelectOpen}
-                    >
-                      {assignee ? (
-                        selectedAssigneeUser ? (
-                          <>
-                            <AvatarImg user={selectedAssigneeUser} size={18} />
-                            <span className="min-w-0 flex-1 truncate">{selectedAssigneeUser.name || selectedAssigneeUser.email}</span>
-                          </>
-                        ) : (
-                          <span className="min-w-0 flex-1 truncate">{assignee}</span>
-                        )
-                      ) : (
-                        <span className="text-slate-500">—</span>
-                      )}
-                      <span className="shrink-0 text-slate-400">
-                        {assigneeSelectOpen ? <IconChevronUp className="h-4 w-4" /> : <IconChevronDown className="h-4 w-4" />}
-                      </span>
-                    </button>
-                    {assigneeSelectOpen ? (
-                      <div
-                        className="absolute left-0 top-full z-30 mt-1 max-h-56 w-[min(100%,18rem)] min-w-[12rem] overflow-auto rounded-xl border border-slate-200 bg-white py-1 shadow-lg"
-                        role="listbox"
-                      >
-                        <button
-                          type="button"
-                          role="option"
-                          aria-selected={!assignee}
-                          className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-800 hover:bg-slate-50"
-                          onClick={() => {
-                            setAssignee("");
-                            setAssigneeSelectOpen(false);
-                            setTimeout(() => void persist(), 0);
-                          }}
-                        >
-                          <span className="text-slate-500">—</span>
-                        </button>
-                        {assignee && !props.allUsers.some((u) => u.email === assignee) ? (
-                          <button
-                            type="button"
-                            role="option"
-                            aria-selected={true}
-                            className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-800 hover:bg-slate-50"
-                            onClick={() => setAssigneeSelectOpen(false)}
-                          >
-                            <span className="min-w-0 truncate">{assignee}</span>
-                          </button>
-                        ) : null}
-                        {props.allUsers.map((u) => (
-                          <button
-                            key={u.id}
-                            type="button"
-                            role="option"
-                            aria-selected={assignee === u.email}
-                            className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-800 hover:bg-slate-50"
-                            onClick={() => {
-                              setAssignee(u.email);
-                              setAssigneeSelectOpen(false);
-                              setTimeout(() => void persist(), 0);
-                            }}
-                          >
-                            <AvatarImg user={u} size={24} />
-                            <span className="min-w-0 flex-1 truncate">{u.name || u.email}</span>
-                          </button>
-                        ))}
-                      </div>
-                    ) : null}
-                  </>
-                ) : (
-                  <div className="flex min-h-[1.25rem] items-center gap-1 text-xs text-slate-800">
-                    {assignee ? (
-                      selectedAssigneeUser ? (
-                        <>
-                          <AvatarImg user={selectedAssigneeUser} size={18} />
-                          <span className="min-w-0 flex-1 truncate">{selectedAssigneeUser.name || selectedAssigneeUser.email}</span>
-                        </>
-                      ) : (
-                        <span className="min-w-0 flex-1 truncate">{assignee}</span>
-                      )
-                    ) : (
-                      <span className="text-slate-500">—</span>
-                    )}
-                  </div>
-                )}
-              </div>
-            </span>
             <span className="inline-flex items-center gap-1.5 rounded-md bg-slate-100 px-2.5 py-1.5">
               <span className="shrink-0 text-slate-600">Срок исполнения:</span>
               <input
@@ -4864,20 +4932,71 @@ function CardModal(props: {
           </div>
 
           <div className="rounded-2xl border border-slate-200 bg-white p-4">
-            <div className="mb-3 flex items-center justify-between gap-2">
-              <div className="text-sm font-semibold text-slate-900">Участники</div>
-              {canManageCard ? (
-                <button
-                  type="button"
-                  className={classNames(cardModalIconAdd, "h-8 w-8")}
-                  title="Добавить участника"
-                  aria-label="Добавить участника"
-                  onClick={() => setParticipantAddOpen((v) => !v)}
-                >
-                  <IconPlus className="h-4 w-4" />
-                </button>
-              ) : null}
+            <div className="grid gap-4">
+              <div className="grid gap-2 sm:grid-cols-[10rem,minmax(0,1fr)] sm:items-start sm:gap-x-3">
+                <div className="text-xs font-semibold uppercase tracking-wide text-slate-500 sm:pt-2">Автор</div>
+                <div className="flex min-w-0 items-start gap-2.5">
+                  {authorDisplay ? (
+                    <AvatarImg user={authorDisplay} size={32} />
+                  ) : (
+                    <div
+                      className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-slate-200 bg-slate-100 text-xs font-medium text-slate-500"
+                      title="Автор неизвестен"
+                    >
+                      ?
+                    </div>
+                  )}
+                  <div className="min-w-0">
+                    <div className="text-sm font-medium text-slate-900">
+                      {authorDisplay ? authorDisplay.name || authorDisplay.email : "Не указано"}
+                    </div>
+                    <div className="mt-0.5 text-xs text-slate-600">
+                      {format(new Date(card.createdAt), "yyyy-MM-dd HH:mm")}
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <CardModalUserEmailField
+                label="Заказчик"
+                valueEmail={customer}
+                onPick={setCustomer}
+                isOpen={customerSelectOpen}
+                setIsOpen={setCustomerSelectOpen}
+                onBeforeOpen={() => setAssigneeSelectOpen(false)}
+                users={props.allUsers}
+                canManage={canManageCard}
+                containerRef={customerSelectRef}
+                onPersist={() => void persist()}
+              />
+              <CardModalUserEmailField
+                label="Ответственный"
+                valueEmail={assignee}
+                onPick={setAssignee}
+                isOpen={assigneeSelectOpen}
+                setIsOpen={setAssigneeSelectOpen}
+                onBeforeOpen={() => setCustomerSelectOpen(false)}
+                users={props.allUsers}
+                canManage={canManageCard}
+                containerRef={assigneeSelectRef}
+                onPersist={() => void persist()}
+              />
             </div>
+
+            <div className="mt-5 border-t border-slate-200 pt-4">
+              <div className="mb-3 flex items-center justify-between gap-2">
+                <div className="text-sm font-semibold text-slate-900">Участники</div>
+                {canManageCard ? (
+                  <button
+                    type="button"
+                    className={classNames(cardModalIconAdd, "h-8 w-8")}
+                    title="Добавить участника"
+                    aria-label="Добавить участника"
+                    onClick={() => setParticipantAddOpen((v) => !v)}
+                  >
+                    <IconPlus className="h-4 w-4" />
+                  </button>
+                ) : null}
+              </div>
               {participantAddOpen && canManageCard ? (
                 <div className="mt-2 flex flex-col gap-2" ref={participantAddRef}>
                   <div className="flex items-center gap-2">
@@ -4891,7 +5010,9 @@ function CardModal(props: {
                         autoFocus
                         aria-label="Поиск пользователя"
                       />
-                      <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" aria-hidden>🔍</span>
+                      <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" aria-hidden>
+                        🔍
+                      </span>
                     </div>
                     <button
                       type="button"
@@ -4975,9 +5096,7 @@ function CardModal(props: {
                       title={p.user.email}
                     >
                       <AvatarImg user={p.user} size={24} />
-                      <div className="max-w-[320px] truncate">
-                        {p.user.name || p.user.email}
-                      </div>
+                      <div className="max-w-[320px] truncate">{p.user.name || p.user.email}</div>
                       {canManageCard ? (
                         <button
                           type="button"
@@ -5002,6 +5121,7 @@ function CardModal(props: {
                   ))
                 )}
               </div>
+            </div>
           </div>
 
           <div className="rounded-2xl border border-slate-200 bg-white p-4">
