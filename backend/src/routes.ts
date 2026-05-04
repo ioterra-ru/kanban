@@ -11,7 +11,7 @@ import { ImportanceIds } from "./domain.js";
 import { asyncHandler } from "./utils/asyncHandler.js";
 import { HttpError } from "./utils/httpError.js";
 import { requireLogin, requireTwoFactor } from "./auth/middleware.js";
-import { Role } from "@prisma/client";
+import { Role, type Prisma } from "@prisma/client";
 import { sendEmail } from "./mail/mailer.js";
 import { BoardIdSchema } from "./boards/ids.js";
 import {
@@ -21,6 +21,7 @@ import {
   listArchiveFilenames,
   restoreCardFromArchive,
 } from "./archive.js";
+import { logUserActivity } from "./userActivity.js";
 
 const router = express.Router();
 
@@ -100,6 +101,315 @@ router.post(
     req.session.boardId = boardId;
     await new Promise<void>((resolve, reject) => req.session.save((e) => (e ? reject(e) : resolve())));
     res.json({ ok: true, currentBoardId: boardId });
+  }),
+);
+
+async function accessibleBoardIds(user: { id: string; role: Role }): Promise<string[]> {
+  if (user.role === Role.ADMIN) {
+    const rows = await prisma.board.findMany({ select: { id: true } });
+    return rows.map((r) => r.id);
+  }
+  const rows = await prisma.boardMembership.findMany({
+    where: { userId: user.id },
+    select: { boardId: true },
+  });
+  return rows.map((r) => r.boardId);
+}
+
+function encodeActivityCursor(createdAt: Date, id: string): string {
+  return Buffer.from(JSON.stringify({ t: createdAt.toISOString(), id }), "utf8").toString("base64url");
+}
+
+function decodeActivityCursor(raw: string | undefined): { createdAt: Date; id: string } | null {
+  if (!raw) return null;
+  try {
+    const j = JSON.parse(Buffer.from(raw, "base64url").toString("utf8")) as { t?: string; id?: string };
+    if (!j.t || !j.id) return null;
+    const d = new Date(j.t);
+    if (Number.isNaN(d.getTime())) return null;
+    return { createdAt: d, id: j.id };
+  } catch {
+    return null;
+  }
+}
+
+const MeActivityQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(100).optional().default(30),
+  cursor: z.string().optional(),
+});
+
+const MeCardFilterQuerySchema = z.object({
+  authorId: z.string().optional(),
+  customer: z.string().optional(),
+  assignee: z.string().optional(),
+  participantUserIds: z.string().optional(),
+  text: z.string().optional(),
+});
+
+router.get(
+  "/me/my-cards",
+  asyncHandler(async (req, res) => {
+    const user = (req as any).user as { id: string; email: string; role: Role };
+    const boardIds = await accessibleBoardIds(user);
+    if (boardIds.length === 0) {
+      res.json({ cards: [] });
+      return;
+    }
+    const cards = await prisma.card.findMany({
+      where: {
+        boardId: { in: boardIds },
+        OR: [
+          { authorId: user.id },
+          { assignee: user.email },
+          { customer: user.email },
+          { participants: { some: { userId: user.id } } },
+        ],
+      },
+      orderBy: { updatedAt: "desc" },
+      select: {
+        id: true,
+        description: true,
+        assignee: true,
+        dueDate: true,
+        columnId: true,
+        position: true,
+        importance: true,
+        paused: true,
+        boardId: true,
+        board: { select: { name: true } },
+        column: { select: { title: true } },
+        _count: { select: { comments: true, attachments: true } },
+      },
+    });
+    res.json({
+      cards: cards.map((c) => ({
+        id: c.id,
+        boardId: c.boardId,
+        boardName: c.board.name,
+        description: c.description,
+        assignee: c.assignee,
+        dueDate: c.dueDate,
+        columnId: c.columnId,
+        columnTitle: c.column.title,
+        position: c.position,
+        importance: c.importance,
+        paused: c.paused,
+        commentCount: c._count.comments,
+        attachmentCount: c._count.attachments,
+      })),
+    });
+  }),
+);
+
+router.get(
+  "/me/activity",
+  asyncHandler(async (req, res) => {
+    const user = (req as any).user as { id: string };
+    const { limit, cursor } = MeActivityQuerySchema.parse({
+      limit: req.query.limit,
+      cursor: req.query.cursor,
+    });
+    const cur = decodeActivityCursor(cursor);
+    const take = limit + 1;
+    const rows = await prisma.userActivityLog.findMany({
+      where: {
+        userId: user.id,
+        ...(cur
+          ? {
+              OR: [
+                { createdAt: { lt: cur.createdAt } },
+                { AND: [{ createdAt: cur.createdAt }, { id: { lt: cur.id } }] },
+              ],
+            }
+          : {}),
+      },
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      take,
+      select: { id: true, kind: true, summary: true, cardId: true, boardId: true, createdAt: true },
+    });
+    const hasMore = rows.length > limit;
+    const slice = hasMore ? rows.slice(0, limit) : rows;
+    const last = slice[slice.length - 1];
+    res.json({
+      items: slice.map((r) => ({
+        id: r.id,
+        kind: r.kind,
+        summary: r.summary,
+        cardId: r.cardId,
+        boardId: r.boardId,
+        createdAt: r.createdAt,
+      })),
+      nextCursor: hasMore && last ? encodeActivityCursor(last.createdAt, last.id) : null,
+    });
+  }),
+);
+
+router.get(
+  "/me/cards/filter",
+  asyncHandler(async (req, res) => {
+    const user = (req as any).user as { id: string; role: Role };
+    const q = MeCardFilterQuerySchema.parse({
+      authorId: req.query.authorId,
+      customer: req.query.customer,
+      assignee: req.query.assignee,
+      participantUserIds: req.query.participantUserIds,
+      text: req.query.text,
+    });
+    const boardIds = await accessibleBoardIds(user);
+    if (boardIds.length === 0) {
+      res.json({ cards: [] });
+      return;
+    }
+    const and: Prisma.CardWhereInput[] = [{ boardId: { in: boardIds } }];
+    const authorParsed = q.authorId?.trim() ? z.string().uuid().safeParse(q.authorId.trim()) : null;
+    if (authorParsed?.success) and.push({ authorId: authorParsed.data });
+    const customerTrim = (q.customer ?? "").trim();
+    if (customerTrim && z.string().email().safeParse(customerTrim).success) and.push({ customer: customerTrim });
+    const assigneeTrim = (q.assignee ?? "").trim();
+    if (assigneeTrim && z.string().email().safeParse(assigneeTrim).success) and.push({ assignee: assigneeTrim });
+    const pids = (q.participantUserIds ?? "")
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .filter((id) => z.string().uuid().safeParse(id).success);
+    if (pids.length > 0) {
+      and.push({
+        participants: { some: { userId: { in: pids } } },
+      });
+    }
+    const t = (q.text ?? "").trim();
+    if (t) {
+      and.push({
+        OR: [
+          { description: { contains: t, mode: "insensitive" } },
+          { details: { contains: t, mode: "insensitive" } },
+          { comments: { some: { body: { contains: t, mode: "insensitive" } } } },
+        ],
+      });
+    }
+    const cards = await prisma.card.findMany({
+      where: { AND: and },
+      orderBy: { updatedAt: "desc" },
+      take: 200,
+      select: {
+        id: true,
+        description: true,
+        assignee: true,
+        dueDate: true,
+        columnId: true,
+        position: true,
+        importance: true,
+        paused: true,
+        boardId: true,
+        board: { select: { name: true } },
+        column: { select: { title: true } },
+        _count: { select: { comments: true, attachments: true } },
+      },
+    });
+    res.json({
+      cards: cards.map((c) => ({
+        id: c.id,
+        boardId: c.boardId,
+        boardName: c.board.name,
+        description: c.description,
+        assignee: c.assignee,
+        dueDate: c.dueDate,
+        columnId: c.columnId,
+        columnTitle: c.column.title,
+        position: c.position,
+        importance: c.importance,
+        paused: c.paused,
+        commentCount: c._count.comments,
+        attachmentCount: c._count.attachments,
+      })),
+    });
+  }),
+);
+
+router.get(
+  "/me/favorites",
+  asyncHandler(async (req, res) => {
+    const user = (req as any).user as { id: string };
+    const favs = await prisma.cardFavorite.findMany({
+      where: { userId: user.id },
+      orderBy: { createdAt: "desc" },
+      select: {
+        card: {
+          select: {
+            id: true,
+            description: true,
+            boardId: true,
+            board: { select: { name: true } },
+            column: { select: { title: true } },
+          },
+        },
+      },
+    });
+    res.json({
+      items: favs.map((f) => ({
+        cardId: f.card.id,
+        boardId: f.card.boardId,
+        boardName: f.card.board.name,
+        description: f.card.description,
+        columnTitle: f.card.column.title,
+      })),
+    });
+  }),
+);
+
+router.post(
+  "/me/favorites/:cardId",
+  asyncHandler(async (req, res) => {
+    const user = (req as any).user as { id: string; role: Role };
+    const cardId = z.string().uuid().parse(req.params.cardId);
+    const boardIds = await accessibleBoardIds(user);
+    const card = await prisma.card.findFirst({
+      where: { id: cardId, boardId: { in: boardIds } },
+      select: { id: true, boardId: true, description: true },
+    });
+    if (!card) throw new HttpError(404, "Card not found");
+    const hadFavorite = await prisma.cardFavorite.findUnique({
+      where: { userId_cardId: { userId: user.id, cardId } },
+      select: { cardId: true },
+    });
+    await prisma.cardFavorite.upsert({
+      where: { userId_cardId: { userId: user.id, cardId } },
+      create: { userId: user.id, cardId },
+      update: {},
+    });
+    if (!hadFavorite) {
+      logUserActivity({
+        userId: user.id,
+        kind: "FAVORITE_ADD",
+        cardId,
+        boardId: card.boardId,
+        summary: `В избранном: «${card.description}»`,
+      });
+    }
+    res.json({ ok: true });
+  }),
+);
+
+router.delete(
+  "/me/favorites/:cardId",
+  asyncHandler(async (req, res) => {
+    const user = (req as any).user as { id: string };
+    const cardId = z.string().uuid().parse(req.params.cardId);
+    const existing = await prisma.cardFavorite.findUnique({
+      where: { userId_cardId: { userId: user.id, cardId } },
+      select: { card: { select: { boardId: true, description: true } } },
+    });
+    await prisma.cardFavorite.deleteMany({ where: { userId: user.id, cardId } });
+    if (existing?.card) {
+      logUserActivity({
+        userId: user.id,
+        kind: "FAVORITE_REMOVE",
+        cardId,
+        boardId: existing.card.boardId,
+        summary: `Убрано из избранного: «${existing.card.description}»`,
+      });
+    }
+    res.json({ ok: true });
   }),
 );
 
@@ -611,6 +921,13 @@ router.get(
   "/board",
   asyncHandler(async (req, res) => {
     const boardId = (req as any).boardId as string;
+    const user = (req as any).user as { id: string };
+    const favRows = await prisma.cardFavorite.findMany({
+      where: { userId: user.id, card: { boardId } },
+      select: { cardId: true },
+    });
+    const favoriteCardIds = new Set(favRows.map((r) => r.cardId));
+
     const boardColumns = await prisma.boardColumn.findMany({
       where: { boardId },
       orderBy: { position: "asc" },
@@ -642,6 +959,7 @@ router.get(
             updatedAt: c.updatedAt,
             commentCount: c._count.comments,
             attachmentCount: c._count.attachments,
+            isFavorite: favoriteCardIds.has(c.id),
           })),
         };
       }),
@@ -723,6 +1041,7 @@ router.get(
   "/cards/:id",
   asyncHandler(async (req, res) => {
     const boardId = (req as any).boardId as string;
+    const user = (req as any).user as { id: string };
     const id = z.string().uuid().parse(req.params.id);
     const card = await prisma.card.findFirst({
       where: { id, boardId },
@@ -735,7 +1054,11 @@ router.get(
       },
     });
     if (!card) throw new HttpError(404, "Card not found");
-    res.json({ card });
+    const fav = await prisma.cardFavorite.findUnique({
+      where: { userId_cardId: { userId: user.id, cardId: id } },
+      select: { cardId: true },
+    });
+    res.json({ card: { ...card, isFavorite: !!fav } });
   }),
 );
 
@@ -788,6 +1111,13 @@ router.post(
         authorId: userId,
       },
     });
+    logUserActivity({
+      userId: userId,
+      kind: "CARD_CREATE",
+      cardId: card.id,
+      boardId,
+      summary: `Создана карточка «${data.description}»`,
+    });
     res.status(201).json({ card });
   }),
 );
@@ -833,6 +1163,13 @@ router.patch(
         ...(data.importance !== undefined ? { importance: data.importance } : {}),
         ...(data.paused !== undefined ? { paused: data.paused } : {}),
       },
+    });
+    logUserActivity({
+      userId: actor.id,
+      kind: "CARD_UPDATE",
+      cardId: id,
+      boardId,
+      summary: `Обновлена карточка «${card.description}»`,
     });
     void notifyCardParticipants({ cardId: id, actor, event: "updated" }).catch(() => undefined);
     res.json({ card });
@@ -900,6 +1237,13 @@ router.post(
           prisma.card.update({ where: { id: cardId }, data: { position } }),
         ),
       );
+      logUserActivity({
+        userId: actor.id,
+        kind: "CARD_MOVE",
+        cardId: id,
+        boardId,
+        summary: `Перемещена карточка «${card.description}»`,
+      });
       res.json({ ok: true });
       return;
     }
@@ -928,6 +1272,13 @@ router.post(
     ];
 
     await prisma.$transaction(tx);
+    logUserActivity({
+      userId: actor.id,
+      kind: "CARD_MOVE",
+      cardId: id,
+      boardId,
+      summary: `Перемещена карточка «${card.description}»: ${card.column.title} → ${toColumnExists.title}`,
+    });
     void notifyCardParticipants({
       cardId: id,
       actor,
@@ -968,6 +1319,18 @@ router.post(
       update: {},
     });
 
+    const cardRow = await prisma.card.findFirst({
+      where: { id: cardId, boardId },
+      select: { description: true },
+    });
+    logUserActivity({
+      userId: actor.id,
+      kind: "PARTICIPANT_ADD",
+      cardId,
+      boardId,
+      summary: `Участник ${user.name} в «${cardRow?.description ?? ""}»`,
+    });
+
     res.status(201).json({ participant: user });
   }),
 );
@@ -986,7 +1349,19 @@ router.delete(
     const canManage = actor.role === Role.ADMIN || (!!card.authorId && card.authorId === actor.id);
     if (!canManage) throw new HttpError(403, "Forbidden");
 
+    const removedUser = await prisma.user.findUnique({ where: { id: userId }, select: { name: true } });
+    const cardDesc = await prisma.card.findFirst({
+      where: { id: cardId, boardId },
+      select: { description: true },
+    });
     await prisma.cardParticipant.deleteMany({ where: { cardId, userId } });
+    logUserActivity({
+      userId: actor.id,
+      kind: "PARTICIPANT_REMOVE",
+      cardId,
+      boardId,
+      summary: `Удалён участник ${removedUser?.name ?? userId} из «${cardDesc?.description ?? ""}»`,
+    });
     res.json({ ok: true });
   }),
 );
@@ -996,13 +1371,21 @@ router.delete(
   asyncHandler(async (req, res) => {
     const boardId = (req as any).boardId as string;
     const id = z.string().uuid().parse(req.params.id);
-    const actor = (req as any).user as { role: Role };
+    const actor = (req as any).user as { id: string; role: Role };
     assertCanMutateBoardContent(actor);
     const card = await prisma.card.findFirst({
       where: { id, boardId },
-      select: { id: true, attachments: { select: { relativePath: true } } },
+      select: { id: true, description: true, attachments: { select: { relativePath: true } } },
     });
     if (!card) throw new HttpError(404, "Card not found");
+
+    logUserActivity({
+      userId: actor.id,
+      kind: "CARD_DELETE",
+      cardId: id,
+      boardId,
+      summary: `Удалена карточка «${card.description}»`,
+    });
 
     await prisma.card.delete({ where: { id } });
 
@@ -1035,11 +1418,19 @@ router.post(
     assertCanMutateBoardContent(actor);
     const card = await prisma.card.findFirst({
       where: { id, boardId },
-      select: { id: true, authorId: true, attachments: { select: { relativePath: true } } },
+      select: { id: true, authorId: true, description: true, attachments: { select: { relativePath: true } } },
     });
     if (!card) throw new HttpError(404, "Card not found");
     const canManage = actor.role === Role.ADMIN || (!!card.authorId && card.authorId === actor.id);
     if (!canManage) throw new HttpError(403, "Forbidden");
+
+    logUserActivity({
+      userId: actor.id,
+      kind: "CARD_ARCHIVE",
+      cardId: id,
+      boardId,
+      summary: `В архив: «${card.description}»`,
+    });
 
     await createCardArchive(id);
 
@@ -1090,6 +1481,17 @@ router.post(
         body: data.body,
       },
     });
+    const cinfo = await prisma.card.findFirst({
+      where: { id: cardId, boardId },
+      select: { description: true },
+    });
+    logUserActivity({
+      userId: user.id,
+      kind: "COMMENT_ADD",
+      cardId,
+      boardId,
+      summary: `Комментарий к «${cinfo?.description ?? ""}»`,
+    });
     void notifyCardParticipants({ cardId, actor: { id: user.id, name: user.name, email: user.email }, event: "updated" }).catch(
       () => undefined,
     );
@@ -1115,6 +1517,17 @@ router.patch(
     if (user.role !== Role.ADMIN && c.authorId !== user.id) throw new HttpError(403, "Forbidden");
 
     const comment = await prisma.comment.update({ where: { id }, data: { body: data.body } });
+    const cinfo = await prisma.card.findFirst({
+      where: { id: c.cardId, boardId },
+      select: { description: true },
+    });
+    logUserActivity({
+      userId: user.id,
+      kind: "COMMENT_EDIT",
+      cardId: c.cardId,
+      boardId,
+      summary: `Изменён комментарий в «${cinfo?.description ?? ""}»`,
+    });
     void notifyCardParticipants({ cardId: c.cardId, actor: { id: user.id, name: user.name, email: user.email }, event: "updated" }).catch(
       () => undefined,
     );
@@ -1136,7 +1549,18 @@ router.delete(
     if (!c) throw new HttpError(404, "Comment not found");
     if (c.card.boardId !== boardId) throw new HttpError(404, "Comment not found");
     if (user.role !== Role.ADMIN && c.authorId !== user.id) throw new HttpError(403, "Forbidden");
+    const cinfo = await prisma.card.findFirst({
+      where: { id: c.cardId, boardId },
+      select: { description: true },
+    });
     await prisma.comment.delete({ where: { id } });
+    logUserActivity({
+      userId: user.id,
+      kind: "COMMENT_DELETE",
+      cardId: c.cardId,
+      boardId,
+      summary: `Удалён комментарий в «${cinfo?.description ?? ""}»`,
+    });
     void notifyCardParticipants({ cardId: c.cardId, actor: { id: user.id, name: user.name, email: user.email }, event: "updated" }).catch(
       () => undefined,
     );
@@ -1210,6 +1634,17 @@ router.post(
         size: req.file.size,
         relativePath,
       },
+    });
+    const cinfo = await prisma.card.findFirst({
+      where: { id: cardId, boardId },
+      select: { description: true },
+    });
+    logUserActivity({
+      userId: actor.id,
+      kind: "ATTACHMENT_ADD",
+      cardId,
+      boardId,
+      summary: `Файл «${repairedOriginalName}» к «${cinfo?.description ?? ""}»`,
     });
     void notifyCardParticipants({ cardId, actor, event: "updated" }).catch(() => undefined);
 

@@ -20,7 +20,18 @@ import { CSS } from "@dnd-kit/utilities";
 import { format } from "date-fns";
 
 import { Api } from "./api";
-import type { Board, BoardColumn, CardDetail, CardSearchHit, CardSummary, ColumnId, Importance, User } from "./types";
+import { MarkdownHtmlBlock, MarkdownRichEditor } from "./components/MarkdownRichEditor";
+import type {
+  Board,
+  BoardColumn,
+  CardDetail,
+  CardSearchHit,
+  CardSummary,
+  ColumnId,
+  Importance,
+  User,
+  UserActivityListItem,
+} from "./types";
 import { compactFileName } from "./utils/files";
 import { AVATAR_PRESETS, autoAvatarPreset, avatarSrc } from "./utils/avatar";
 
@@ -86,11 +97,14 @@ function Modal(props: {
   panelClassName?: string;
   panelStyle?: React.CSSProperties;
   panelOverlay?: React.ReactNode;
+  /** Панель на весь вьюпорт без отступов оверлея (окно «на весь экран»). */
+  fillViewport?: boolean;
   children: React.ReactNode;
   onClose: () => void;
 }) {
   if (!props.open) return null;
   const showClose = props.showCloseButton ?? true;
+  const fill = !!props.fillViewport;
   const headerLeft = props.headerLeft ?? (props.title ? <div className="text-lg font-semibold">{props.title}</div> : null);
   const headerRight =
     props.headerRight ??
@@ -102,15 +116,23 @@ function Modal(props: {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+      className={classNames(
+        "fixed inset-0 z-50 flex bg-black/60",
+        fill ? "items-stretch justify-stretch p-0" : "items-center justify-center p-4",
+      )}
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) props.onClose();
       }}
     >
       <div
         className={classNames(
-          "relative flex w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl",
-          props.panelStyle?.height ? "" : "max-h-[80vh]",
+          "relative flex flex-col overflow-hidden bg-white shadow-2xl",
+          fill
+            ? "h-full max-h-full w-full rounded-none"
+            : classNames(
+                "w-full max-w-5xl rounded-2xl border border-slate-200",
+                props.panelStyle?.height ? "" : "max-h-[80vh]",
+              ),
           props.panelClassName,
         )}
         style={props.panelStyle}
@@ -126,7 +148,7 @@ function Modal(props: {
             <div className="shrink-0">{headerRight}</div>
           </div>
         )}
-        <div className="flex-1 overflow-x-hidden overflow-y-auto p-4">{props.children}</div>
+        <div className={classNames("flex-1 overflow-x-hidden overflow-y-auto p-4", fill && "min-h-0")}>{props.children}</div>
         {props.panelOverlay}
       </div>
     </div>
@@ -327,11 +349,18 @@ function CardTile(props: {
           </div>
         </div>
         <div className="flex flex-col items-end gap-1">
-          <span
-            className={classNames("inline-block h-2.5 w-2.5 shrink-0 rounded", importanceBadge(props.card.importance))}
-            title={importanceLabel(props.card.importance)}
-            aria-label={importanceLabel(props.card.importance)}
-          />
+          <div className="flex items-center gap-1.5">
+            {props.card.isFavorite ? (
+              <span className="text-amber-500" title="В избранном" aria-label="В избранном">
+                <IconStarFilled className="h-4 w-4" />
+              </span>
+            ) : null}
+            <span
+              className={classNames("inline-block h-2.5 w-2.5 shrink-0 rounded", importanceBadge(props.card.importance))}
+              title={importanceLabel(props.card.importance)}
+              aria-label={importanceLabel(props.card.importance)}
+            />
+          </div>
           {props.card.paused ? (
             <span className="rounded-md bg-amber-300 px-2 py-0.5 text-[11px] font-semibold text-amber-950">
               Пауза
@@ -433,10 +462,553 @@ function toDateTimeLocalValue(iso: string | null) {
   return format(new Date(iso), "yyyy-MM-dd'T'HH:mm");
 }
 
+function IconMenu(props: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className={props.className ?? "h-6 w-6"}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      aria-hidden
+    >
+      <path d="M4 6h16M4 12h16M4 18h16" />
+    </svg>
+  );
+}
+
+function IconStarOutline(props: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={props.className ?? "h-5 w-5"} fill="none" stroke="currentColor" strokeWidth={2} aria-hidden>
+      <path
+        strokeLinejoin="round"
+        d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
+      />
+    </svg>
+  );
+}
+
+function IconStarFilled(props: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={props.className ?? "h-5 w-5"} fill="currentColor" aria-hidden>
+      <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+    </svg>
+  );
+}
+
+function IconActivity(props: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className={props.className ?? "h-5 w-5"}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+    </svg>
+  );
+}
+
+function IconFilter(props: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      className={props.className ?? "h-5 w-5"}
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" />
+    </svg>
+  );
+}
+
+type MainMenuPanel = "main" | "activity" | "filter" | "favorites" | "boards";
+
+function MainAppMenuFlyout(props: {
+  boards: Board[];
+  currentBoardId: string | null;
+  allUsers: Array<Pick<User, "id" | "email" | "name" | "avatarPreset" | "avatarUploadName">>;
+  onSelectBoard: (boardId: string) => Promise<void>;
+  onOpenCardOnBoard: (boardId: string, cardId: string) => Promise<void>;
+  setError: (msg: string | null) => void;
+  onApplyBoardCardFilter: (cardIds: Iterable<string>) => void;
+  onShowMyCardsOnBoard: () => Promise<void>;
+}) {
+  const leaveTimer = useRef<number | null>(null);
+  const [hoverOpen, setHoverOpen] = useState(false);
+  const [panel, setPanel] = useState<MainMenuPanel>("main");
+
+  const [activity, setActivity] = useState<UserActivityListItem[]>([]);
+  const [activityNext, setActivityNext] = useState<string | null>(null);
+  const [activityLoading, setActivityLoading] = useState(false);
+
+  const [favorites, setFavorites] = useState<
+    Array<{ cardId: string; boardId: string; boardName: string; description: string; columnTitle: string }> | null
+  >(null);
+
+  const [filterAuthorId, setFilterAuthorId] = useState("");
+  const [filterCustomer, setFilterCustomer] = useState("");
+  const [filterAssignee, setFilterAssignee] = useState("");
+  const [filterParticipantIds, setFilterParticipantIds] = useState<string[]>([]);
+  const [filterText, setFilterText] = useState("");
+  const [filterBusy, setFilterBusy] = useState(false);
+  const [filterBoardMessage, setFilterBoardMessage] = useState<string | null>(null);
+  const [filterParticipantAddOpen, setFilterParticipantAddOpen] = useState(false);
+  const [filterParticipantAddSearch, setFilterParticipantAddSearch] = useState("");
+  const filterParticipantPickerRef = useRef<HTMLDivElement | null>(null);
+
+  const clearLeave = () => {
+    if (leaveTimer.current !== null) {
+      window.clearTimeout(leaveTimer.current);
+      leaveTimer.current = null;
+    }
+  };
+  const openHover = () => {
+    clearLeave();
+    setHoverOpen(true);
+  };
+  const scheduleClose = () => {
+    clearLeave();
+    leaveTimer.current = window.setTimeout(() => {
+      setHoverOpen(false);
+      setPanel("main");
+      leaveTimer.current = null;
+    }, 240);
+  };
+
+  useEffect(() => {
+    if (panel !== "activity") {
+      setActivity([]);
+      setActivityNext(null);
+      return;
+    }
+    let cancelled = false;
+    setActivityLoading(true);
+    void Api.myActivity(null, 30)
+      .then((d) => {
+        if (cancelled) return;
+        setActivity(d.items);
+        setActivityNext(d.nextCursor);
+      })
+      .catch((e) => {
+        if (!cancelled) props.setError((e as Error).message);
+      })
+      .finally(() => {
+        if (!cancelled) setActivityLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [panel]);
+
+  useEffect(() => {
+    if (panel !== "favorites") {
+      setFavorites(null);
+      return;
+    }
+    void Api.listFavorites()
+      .then((d) => setFavorites(d.items))
+      .catch((e) => props.setError((e as Error).message));
+  }, [panel]);
+
+  useEffect(() => {
+    if (panel !== "filter") {
+      setFilterBoardMessage(null);
+      setFilterParticipantAddOpen(false);
+      setFilterParticipantAddSearch("");
+    }
+  }, [panel]);
+
+  useEffect(() => {
+    if (!filterParticipantAddOpen) return;
+    const onDoc = (e: MouseEvent) => {
+      if (filterParticipantPickerRef.current && !filterParticipantPickerRef.current.contains(e.target as Node)) {
+        setFilterParticipantAddOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", onDoc, true);
+    return () => document.removeEventListener("mousedown", onDoc, true);
+  }, [filterParticipantAddOpen]);
+
+  const loadMoreActivity = () => {
+    if (!activityNext || activityLoading) return;
+    setActivityLoading(true);
+    void Api.myActivity(activityNext, 30)
+      .then((d) => {
+        setActivity((prev) => [...prev, ...d.items]);
+        setActivityNext(d.nextCursor);
+      })
+      .catch((e) => props.setError((e as Error).message))
+      .finally(() => setActivityLoading(false));
+  };
+
+  const onActivityScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const el = e.currentTarget;
+    if (el.scrollHeight - el.scrollTop - el.clientHeight > 120) return;
+    loadMoreActivity();
+  };
+
+  const runFilter = () => {
+    const has =
+      !!filterAuthorId.trim() ||
+      !!filterCustomer.trim() ||
+      !!filterAssignee.trim() ||
+      filterParticipantIds.length > 0 ||
+      !!filterText.trim();
+    if (!has) {
+      props.setError("Укажите хотя бы одно поле фильтра");
+      return;
+    }
+    props.setError(null);
+    setFilterBusy(true);
+    void Api.filterCardsGlobal({
+      authorId: filterAuthorId.trim() || undefined,
+      customer: filterCustomer.trim() || undefined,
+      assignee: filterAssignee.trim() || undefined,
+      participantUserIds: filterParticipantIds.length ? filterParticipantIds : undefined,
+      text: filterText.trim() || undefined,
+    })
+      .then((d) => {
+        props.onApplyBoardCardFilter(d.cards.map((c) => c.id));
+        const bid = props.currentBoardId;
+        const onThis = bid ? d.cards.filter((c) => c.boardId === bid).length : 0;
+        setFilterBoardMessage(
+          d.cards.length === 0
+            ? "Ничего не найдено — на доске карточки скрыты."
+            : `Найдено карточек: ${d.cards.length}. На текущей доске отображается: ${onThis}.`,
+        );
+      })
+      .catch((e) => props.setError((e as Error).message))
+      .finally(() => setFilterBusy(false));
+  };
+
+  const removeFilterParticipant = (id: string) => {
+    setFilterParticipantIds((prev) => prev.filter((x) => x !== id));
+  };
+
+  const filterParticipantUsers = filterParticipantIds
+    .map((id) => props.allUsers.find((u) => u.id === id))
+    .filter(Boolean) as Array<Pick<User, "id" | "email" | "name" | "avatarPreset" | "avatarUploadName">>;
+
+  const filterParticipantAddCandidates = (() => {
+    const q = filterParticipantAddSearch.trim().toLowerCase();
+    return props.allUsers
+      .filter((u) => !filterParticipantIds.includes(u.id))
+      .filter(
+        (u) =>
+          !q || (u.name ?? "").toLowerCase().includes(q) || (u.email ?? "").toLowerCase().includes(q),
+      );
+  })();
+
+  const back = () => {
+    setPanel("main");
+    props.setError(null);
+  };
+
+  const menuBtnClass =
+    "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-slate-800 hover:bg-slate-100";
+  const menuItemIconClass = "h-5 w-5 shrink-0 text-slate-500";
+
+  return (
+    <div className="relative z-[70] flex shrink-0 items-stretch" onMouseEnter={openHover} onMouseLeave={scheduleClose}>
+      <button
+        type="button"
+        className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+        aria-label="Меню"
+        title="Меню"
+      >
+        <IconMenu className="h-6 w-6" />
+      </button>
+      <div
+        className={classNames(
+          "pointer-events-none fixed left-0 top-0 z-[75] flex h-screen w-[min(22rem,calc(100vw-1rem))] -translate-x-full flex-col border-r border-slate-200 bg-white opacity-0 shadow-2xl transition-[transform,opacity] duration-200 ease-out",
+          hoverOpen && "pointer-events-auto translate-x-0 opacity-100",
+        )}
+        onMouseEnter={openHover}
+        onMouseLeave={scheduleClose}
+      >
+        <div className="flex items-center justify-between border-b border-slate-200 px-3 py-3">
+          {panel === "main" ? (
+            <div className="flex min-w-0 items-center gap-2.5">
+              <img src="/ioterra.svg" alt="" className="h-9 w-9 shrink-0" width={36} height={36} aria-hidden />
+              <span className="text-sm font-bold text-slate-900">Меню</span>
+            </div>
+          ) : (
+            <button type="button" className="text-sm font-semibold text-[#246c7c] hover:underline" onClick={back}>
+              ← Назад
+            </button>
+          )}
+        </div>
+        <div className="min-h-0 flex-1 overflow-y-auto p-2">
+          {panel === "main" ? (
+            <nav className="flex flex-col gap-0.5">
+              <button
+                type="button"
+                className={menuBtnClass}
+                onClick={() => {
+                  clearLeave();
+                  setHoverOpen(false);
+                  setPanel("main");
+                  void props.onShowMyCardsOnBoard().catch((e) => props.setError((e as Error).message));
+                }}
+              >
+                <IconColumns className={menuItemIconClass} />
+                <span>Карточки</span>
+              </button>
+              <button type="button" className={menuBtnClass} onClick={() => setPanel("activity")}>
+                <IconActivity className={menuItemIconClass} />
+                <span>Активность</span>
+              </button>
+              <button type="button" className={menuBtnClass} onClick={() => setPanel("filter")}>
+                <IconFilter className={menuItemIconClass} />
+                <span>Фильтр</span>
+              </button>
+              <button type="button" className={menuBtnClass} onClick={() => setPanel("favorites")}>
+                <IconStarOutline className={menuItemIconClass} />
+                <span>Избранное</span>
+              </button>
+              <button type="button" className={menuBtnClass} onClick={() => setPanel("boards")}>
+                <IconLayoutKanban className={menuItemIconClass} />
+                <span>Доски</span>
+              </button>
+            </nav>
+          ) : null}
+
+          {panel === "activity" ? (
+            <div className="flex max-h-[calc(100vh-8rem)] flex-col gap-2 overflow-y-auto" onScroll={onActivityScroll}>
+              {activityLoading && activity.length === 0 ? (
+                <div className="p-3 text-sm text-slate-500">Загрузка…</div>
+              ) : !activity.length ? (
+                <div className="p-3 text-sm text-slate-500">Пока нет записей активности.</div>
+              ) : (
+                <ul className="flex flex-col gap-2">
+                  {activity.map((a) => (
+                    <li key={a.id} className="rounded-lg border border-slate-100 bg-slate-50/80 px-2 py-2 text-sm">
+                      <div className="text-slate-800">{a.summary}</div>
+                      <div className="mt-1 text-xs text-slate-500">{format(new Date(a.createdAt), "yyyy-MM-dd HH:mm")}</div>
+                      {a.cardId && a.boardId ? (
+                        <button
+                          type="button"
+                          className="mt-1 text-xs font-semibold text-[#246c7c] hover:underline"
+                          onClick={() => {
+                            clearLeave();
+                            setHoverOpen(false);
+                            setPanel("main");
+                            void props.onOpenCardOnBoard(a.boardId!, a.cardId!);
+                          }}
+                        >
+                          Открыть карточку
+                        </button>
+                      ) : null}
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {activityLoading && activity.length > 0 ? <div className="py-2 text-center text-xs text-slate-400">…</div> : null}
+            </div>
+          ) : null}
+
+          {panel === "filter" ? (
+            <div className="flex flex-col gap-3 px-1">
+              <label className="block text-xs font-semibold text-slate-600">
+                Автор
+                <select
+                  className="mt-1 w-full rounded-lg border border-slate-200 px-2 py-1.5 text-sm"
+                  value={filterAuthorId}
+                  onChange={(e) => setFilterAuthorId(e.target.value)}
+                >
+                  <option value="">—</option>
+                  {props.allUsers.map((u) => (
+                    <option key={u.id} value={u.id}>
+                      {u.name || u.email}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="block text-xs font-semibold text-slate-600">
+                Заказчик (email)
+                <input
+                  className="mt-1 w-full rounded-lg border border-slate-200 px-2 py-1.5 text-sm"
+                  value={filterCustomer}
+                  onChange={(e) => setFilterCustomer(e.target.value)}
+                  placeholder="user@example.com"
+                />
+              </label>
+              <label className="block text-xs font-semibold text-slate-600">
+                Ответственный (email)
+                <input
+                  className="mt-1 w-full rounded-lg border border-slate-200 px-2 py-1.5 text-sm"
+                  value={filterAssignee}
+                  onChange={(e) => setFilterAssignee(e.target.value)}
+                  placeholder="user@example.com"
+                />
+              </label>
+              <div className="text-xs font-semibold text-slate-600">Участники</div>
+              <div className="flex flex-wrap items-center gap-1.5">
+                {filterParticipantUsers.map((u) => (
+                  <div
+                    key={u.id}
+                    className="inline-flex max-w-[200px] items-center gap-1 rounded-full border border-slate-200 bg-slate-50 py-0.5 pl-0.5 pr-1 text-xs shadow-sm"
+                    title={u.email}
+                  >
+                    <AvatarImg user={u} size={22} />
+                    <span className="min-w-0 truncate font-medium text-slate-800">{u.name || u.email}</span>
+                    <button
+                      type="button"
+                      className="grid h-6 w-6 shrink-0 place-items-center rounded-full text-slate-500 hover:bg-slate-200 hover:text-slate-800"
+                      title="Убрать"
+                      aria-label="Убрать"
+                      onClick={() => removeFilterParticipant(u.id)}
+                    >
+                      <IconX className="h-3 w-3" />
+                    </button>
+                  </div>
+                ))}
+                <button
+                  type="button"
+                  className={classNames(
+                    "grid h-8 w-8 shrink-0 place-items-center rounded-lg border-2 border-teal-300/80 bg-white text-slate-700 shadow-sm transition-colors hover:bg-teal-50/70 hover:text-[#246c7c] hover:border-teal-500",
+                  )}
+                  title="Добавить участника в фильтр"
+                  aria-label="Добавить участника в фильтр"
+                  onClick={() => setFilterParticipantAddOpen((v) => !v)}
+                >
+                  <IconPlus className="h-4 w-4" />
+                </button>
+              </div>
+              {filterParticipantAddOpen ? (
+                <div ref={filterParticipantPickerRef} className="rounded-xl border border-slate-200 bg-white p-2 shadow-sm">
+                  <input
+                    type="text"
+                    className="w-full rounded-lg border border-slate-200 bg-white py-2 pl-3 pr-9 text-sm outline-none focus:border-[#246c7c]"
+                    placeholder="Поиск пользователя…"
+                    value={filterParticipantAddSearch}
+                    onChange={(e) => setFilterParticipantAddSearch(e.target.value)}
+                    autoFocus
+                    aria-label="Поиск пользователя для фильтра"
+                  />
+                  <div className="mt-2 max-h-40 overflow-auto rounded-lg border border-slate-100 py-1">
+                    {filterParticipantAddCandidates.length === 0 ? (
+                      <div className="px-3 py-3 text-center text-sm text-slate-500">Нет пользователей</div>
+                    ) : (
+                      filterParticipantAddCandidates.map((u) => (
+                        <button
+                          key={u.id}
+                          type="button"
+                          className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-800 hover:bg-slate-50"
+                          onClick={() => {
+                            setFilterParticipantIds((prev) => (prev.includes(u.id) ? prev : [...prev, u.id]));
+                            setFilterParticipantAddSearch("");
+                          }}
+                        >
+                          <AvatarImg user={u} size={24} />
+                          <span className="min-w-0 flex-1 truncate">{u.name || u.email}</span>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                </div>
+              ) : null}
+              <label className="block text-xs font-semibold text-slate-600">
+                Текст в описании и комментариях
+                <input
+                  className="mt-1 w-full rounded-lg border border-slate-200 px-2 py-1.5 text-sm"
+                  value={filterText}
+                  onChange={(e) => setFilterText(e.target.value)}
+                  placeholder="Поиск…"
+                />
+              </label>
+              <button
+                type="button"
+                disabled={filterBusy}
+                className="rounded-xl bg-[#246c7c] px-3 py-2 text-sm font-semibold text-white hover:opacity-95 disabled:opacity-50"
+                onClick={runFilter}
+              >
+                {filterBusy ? "Поиск…" : "Найти"}
+              </button>
+              {filterBoardMessage ? (
+                <p className="rounded-lg border border-slate-100 bg-slate-50/90 px-2 py-2 text-xs text-slate-700">{filterBoardMessage}</p>
+              ) : null}
+            </div>
+          ) : null}
+
+          {panel === "favorites" ? (
+            <div>
+              {!favorites ? (
+                <div className="p-3 text-sm text-slate-500">Загрузка…</div>
+              ) : favorites.length === 0 ? (
+                <div className="p-3 text-sm text-slate-500">Нет избранных карточек.</div>
+              ) : (
+                <ul className="flex flex-col gap-1">
+                  {favorites.map((f) => (
+                    <li key={f.cardId}>
+                      <button
+                        type="button"
+                        className="w-full rounded-lg border border-slate-100 px-2 py-2 text-left text-sm hover:bg-slate-50"
+                        onClick={() => {
+                          clearLeave();
+                          setHoverOpen(false);
+                          setPanel("main");
+                          void props.onOpenCardOnBoard(f.boardId, f.cardId);
+                        }}
+                      >
+                        <div className="font-medium text-slate-900 line-clamp-2">{f.description}</div>
+                        <div className="text-xs text-slate-500">
+                          {f.boardName} · {f.columnTitle}
+                        </div>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          ) : null}
+
+          {panel === "boards" ? (
+            <ul className="flex flex-col gap-1">
+              {props.boards.map((b) => (
+                <li key={b.id}>
+                  <button
+                    type="button"
+                    className={classNames(
+                      "w-full rounded-lg border px-2 py-2 text-left text-sm hover:bg-slate-50",
+                      b.id === props.currentBoardId ? "border-[#246c7c] bg-teal-50/50" : "border-slate-100",
+                    )}
+                    onClick={() => {
+                      clearLeave();
+                      setHoverOpen(false);
+                      setPanel("main");
+                      void props.onSelectBoard(b.id);
+                    }}
+                  >
+                    <div className="font-medium text-slate-900">{b.name}</div>
+                    {b.description ? <div className="text-xs text-slate-500 line-clamp-2">{b.description}</div> : null}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function App() {
   const [me, setMe] = useState<{ user: User | null; twoFactorPassed: boolean } | null>(null);
   const [resetToken, setResetToken] = useState<string | null>(null);
   const [columns, setColumns] = useState<BoardColumn[]>([]);
+  /** Если задан — на доске показываются только карточки с этими id (меню «Карточки» / «Фильтр»). */
+  const [boardVisibleCardIds, setBoardVisibleCardIds] = useState<Set<string> | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [allUsers, setAllUsers] = useState<Array<Pick<User, "id" | "email" | "name" | "avatarPreset" | "avatarUploadName">> | null>(null);
@@ -470,11 +1042,39 @@ function App() {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
   const isObserver = me?.user?.role === "OBSERVER";
 
+  const displayColumns = useMemo(() => {
+    if (!boardVisibleCardIds) return columns;
+    return columns.map((col) => ({
+      ...col,
+      cards: col.cards.filter((c) => boardVisibleCardIds.has(c.id)),
+    }));
+  }, [columns, boardVisibleCardIds]);
+
+  const boardFilterActive = boardVisibleCardIds !== null;
+
   const cardsById = useMemo(() => {
     const m = new Map<string, CardSummary>();
     for (const col of columns) for (const c of col.cards) m.set(c.id, c);
     return m;
   }, [columns]);
+
+  const clearBoardCardFilter = useCallback(() => {
+    setBoardVisibleCardIds(null);
+  }, []);
+
+  const onShowMyCardsOnBoard = useCallback(async () => {
+    setError(null);
+    const d = await Api.myParticipatedCards();
+    if (!d.cards.length) {
+      setError("Нет карточек, где вы участвуете.");
+      return;
+    }
+    setBoardVisibleCardIds(new Set(d.cards.map((c) => c.id)));
+  }, []);
+
+  const onApplyBoardCardFilter = useCallback((cardIds: Iterable<string>) => {
+    setBoardVisibleCardIds(new Set(cardIds));
+  }, []);
 
   const userNameByEmail = useMemo(() => {
     const m = new Map<string, string>();
@@ -787,6 +1387,32 @@ function App() {
     }
   };
 
+  const navigateToBoardAndOpenCard = async (boardId: string, cardId: string) => {
+    try {
+      setError(null);
+      setSearchOpen(false);
+      setSearchQuery("");
+      setSearchResults(null);
+      if (currentBoardId !== boardId) {
+        setBoardVisibleCardIds(null);
+        setLoading(true);
+        await Api.selectBoard({ boardId });
+        setCurrentBoardId(boardId);
+        await Promise.all([
+          reload(),
+          Api.listAllUsers()
+            .then((d) => setAllUsers(d.users as any))
+            .catch(() => setAllUsers([])),
+        ]);
+        setLoading(false);
+      }
+      await onOpenCard(cardId);
+    } catch (e) {
+      setError((e as Error).message);
+      setLoading(false);
+    }
+  };
+
   const goToCard = (cardId: string, columnId: string) => {
     setSearchOpen(false);
     setSearchQuery("");
@@ -811,13 +1437,51 @@ function App() {
       <header className="border-b border-slate-200 bg-white px-5 py-4">
         <div className="flex items-center gap-4 min-w-0">
           <div className="flex items-center gap-3 flex-shrink-0">
-            <img src="/ioterra.svg" alt="ИоТерра" className="h-16 w-16" />
-            <div className="leading-tight">
-              <div className="text-2xl font-extrabold text-slate-900">ИоТерра Канбан</div>
-              <div className="text-xs font-medium text-slate-400 mt-0.5">
-                v{import.meta.env.VITE_APP_VERSION || 'dev'} · © ИоТерра {new Date().getFullYear()}
+            <MainAppMenuFlyout
+              boards={boards}
+              currentBoardId={currentBoardId}
+              allUsers={allUsers ?? []}
+              onSelectBoard={async (boardId) => {
+                if (!boardId) return;
+                setBoardVisibleCardIds(null);
+                setLoading(true);
+                try {
+                  await Api.selectBoard({ boardId });
+                  setCurrentBoardId(boardId);
+                  await Promise.all([
+                    reload(),
+                    Api.listAllUsers()
+                      .then((d) => setAllUsers(d.users as any))
+                      .catch(() => setAllUsers([])),
+                  ]);
+                } catch (e) {
+                  setError((e as Error).message);
+                } finally {
+                  setLoading(false);
+                }
+              }}
+              onOpenCardOnBoard={navigateToBoardAndOpenCard}
+              setError={setError}
+              onApplyBoardCardFilter={onApplyBoardCardFilter}
+              onShowMyCardsOnBoard={onShowMyCardsOnBoard}
+            />
+            <button
+              type="button"
+              onClick={() => {
+                clearBoardCardFilter();
+                setError(null);
+              }}
+              className="flex items-center gap-3 rounded-lg text-left outline-none ring-offset-2 focus-visible:ring-2 focus-visible:ring-[#246c7c]/40"
+              title="Показать все карточки на доске"
+            >
+              <img src="/ioterra.svg" alt="ИоТерра" className="h-16 w-16 shrink-0" />
+              <div className="leading-tight">
+                <div className="text-2xl font-extrabold text-slate-900">ИоТерра Канбан</div>
+                <div className="mt-0.5 text-xs font-medium text-slate-400">
+                  v{import.meta.env.VITE_APP_VERSION || "dev"} · © ИоТерра {new Date().getFullYear()}
+                </div>
               </div>
-            </div>
+            </button>
           </div>
           <div className="flex-1 flex justify-center items-stretch gap-2 min-w-0 h-12">
             {boards.length ? (
@@ -827,6 +1491,7 @@ function App() {
                 onChange={(e) => {
                   const id = e.target.value;
                   if (!id) return;
+                  setBoardVisibleCardIds(null);
                   setLoading(true);
                   void Api.selectBoard({ boardId: id })
                     .then(() => {
@@ -974,6 +1639,16 @@ function App() {
         {error ? <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-800">{error}</div> : null}
       </header>
 
+      {boardFilterActive ? (
+        <div
+          role="status"
+          className="border-b border-teal-200/90 bg-teal-50 px-4 py-2 text-center text-sm text-slate-800"
+        >
+          Показаны только отфильтрованные карточки. Полный вид доски — нажмите{" "}
+          <span className="font-semibold text-[#1a4d58]">«ИоТерра Канбан»</span> или логотип ИоТерра слева.
+        </div>
+      ) : null}
+
       <main className="flex min-h-0 flex-1 flex-col overflow-auto p-5">
         <DndContext
           sensors={sensors}
@@ -1049,7 +1724,7 @@ function App() {
               items={columns.map((c) => `${COLUMN_PREFIX}${c.id}`)}
               strategy={horizontalListSortingStrategy}
             >
-              {columns.map((col) => (
+              {displayColumns.map((col) => (
                 <SortableColumnSection
                   key={col.id}
                   col={col}
@@ -1156,7 +1831,7 @@ function App() {
                           <CardTile
                             key={card.id}
                             card={card}
-                            dragDisabled={isObserver}
+                            dragDisabled={isObserver || boardFilterActive}
                             assigneeDisplay={assigneeDisplay(card.assignee)}
                             assigneeUser={assigneeUser(card.assignee)}
                             onClick={() => void onOpenCard(card.id)}
@@ -1380,6 +2055,22 @@ function IconX(props: { className?: string }) {
   );
 }
 
+function IconExpandPanel(props: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={props.className ?? "h-4 w-4"} fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function IconShrinkPanel(props: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={props.className ?? "h-4 w-4"} fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 function IconTrash(props: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" className={props.className ?? "h-4 w-4"} fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -1496,6 +2187,22 @@ function IconChevronUp(props: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" className={props.className ?? "h-5 w-5"} fill="none" xmlns="http://www.w3.org/2000/svg">
       <path d="M18 15l-6-6-6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function IconChevronLeft(props: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={props.className ?? "h-4 w-4"} fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M15 18l-6-6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+function IconChevronRight(props: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={props.className ?? "h-4 w-4"} fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -3970,17 +4677,20 @@ function CardModalUserEmailField(props: {
   canManage: boolean;
   containerRef: RefObject<HTMLDivElement | null>;
   onPersist: () => void;
+  /** Одна строка «лейбл: значение», как у полей колонки/важности. */
+  compact?: boolean;
 }) {
   const selected = useMemo(() => props.users.find((u) => u.email === props.valueEmail) ?? null, [props.users, props.valueEmail]);
-  return (
-    <div className="grid gap-2 sm:grid-cols-[10rem,minmax(0,1fr)] sm:items-start sm:gap-x-3">
-      <div className="text-xs font-semibold uppercase tracking-wide text-slate-500 sm:pt-2">{props.label}</div>
-      <div className="relative min-w-0" ref={props.containerRef}>
+  const inner = (
+    <div className="relative min-w-0" ref={props.containerRef}>
         {props.canManage ? (
           <>
             <button
               type="button"
-              className="flex w-full min-w-0 items-center gap-2 rounded-xl border border-slate-200 bg-white px-2.5 py-2 text-left text-sm text-slate-800 outline-none hover:bg-slate-50 focus:border-[#246c7c]"
+              className={classNames(
+                "flex w-full min-w-0 items-center gap-2 border border-slate-200 bg-white text-left text-slate-800 outline-none hover:bg-slate-50 focus:border-[#246c7c]",
+                props.compact ? "rounded-md px-1.5 py-0.5 text-[11px] leading-snug" : "rounded-xl px-2.5 py-2 text-sm",
+              )}
               onClick={() => {
                 props.onBeforeOpen();
                 props.setIsOpen(!props.isOpen);
@@ -3991,7 +4701,7 @@ function CardModalUserEmailField(props: {
               {props.valueEmail ? (
                 selected ? (
                   <>
-                    <AvatarImg user={selected} size={24} />
+                    <AvatarImg user={selected} size={props.compact ? 18 : 24} />
                     <span className="min-w-0 flex-1 truncate">{selected.name || selected.email}</span>
                   </>
                 ) : (
@@ -4001,7 +4711,11 @@ function CardModalUserEmailField(props: {
                 <span className="text-slate-500">Не выбрано</span>
               )}
               <span className="shrink-0 text-slate-400">
-                {props.isOpen ? <IconChevronUp className="h-4 w-4" /> : <IconChevronDown className="h-4 w-4" />}
+                {props.isOpen ? (
+                  <IconChevronUp className={props.compact ? "h-3 w-3" : "h-4 w-4"} />
+                ) : (
+                  <IconChevronDown className={props.compact ? "h-3 w-3" : "h-4 w-4"} />
+                )}
               </span>
             </button>
             {props.isOpen ? (
@@ -4054,11 +4768,16 @@ function CardModalUserEmailField(props: {
             ) : null}
           </>
         ) : (
-          <div className="flex min-h-[2.5rem] items-center gap-2 rounded-xl border border-transparent px-1 py-2 text-sm text-slate-800">
+          <div
+            className={classNames(
+              "flex items-center gap-2 border border-transparent text-slate-800",
+              props.compact ? "min-h-0 rounded-md px-1 py-0.5 text-[11px] leading-snug" : "min-h-[2.5rem] rounded-xl px-1 py-2 text-sm",
+            )}
+          >
             {props.valueEmail ? (
               selected ? (
                 <>
-                  <AvatarImg user={selected} size={24} />
+                  <AvatarImg user={selected} size={props.compact ? 18 : 24} />
                   <span className="min-w-0 truncate">{selected.name || selected.email}</span>
                 </>
               ) : (
@@ -4069,7 +4788,20 @@ function CardModalUserEmailField(props: {
             )}
           </div>
         )}
+    </div>
+  );
+  if (props.compact) {
+    return (
+      <div className="flex min-w-0 flex-wrap items-center gap-1.5 rounded-md bg-slate-100 px-2 py-1 text-[11px] leading-snug">
+        <span className="shrink-0 text-slate-600">{props.label}:</span>
+        {inner}
       </div>
+    );
+  }
+  return (
+    <div className="grid gap-2 sm:grid-cols-[10rem,minmax(0,1fr)] sm:items-start sm:gap-x-3">
+      <div className="text-xs font-semibold uppercase tracking-wide text-slate-500 sm:pt-2">{props.label}</div>
+      {inner}
     </div>
   );
 }
@@ -4093,9 +4825,12 @@ function CardModal(props: {
   const editingCommentComposerRef = useRef<HTMLDivElement | null>(null);
   const editingCommentTextareaRef = useRef<HTMLTextAreaElement | null>(null);
   const persistInFlightRef = useRef<Promise<boolean> | null>(null);
+  const detailsTextareaRef = useRef<HTMLTextAreaElement>(null);
+  const detailsEditWrapperRef = useRef<HTMLDivElement>(null);
 
   const [title, setTitle] = useState("");
   const [details, setDetails] = useState("");
+  const [detailsEditing, setDetailsEditing] = useState(false);
   const [assignee, setAssignee] = useState("");
   const [customer, setCustomer] = useState("");
   const [dueDate, setDueDate] = useState("");
@@ -4128,31 +4863,61 @@ function CardModal(props: {
   const [participantAddUserId, setParticipantAddUserId] = useState("");
   const [participantAddSearch, setParticipantAddSearch] = useState("");
   const [participantError, setParticipantError] = useState<string | null>(null);
-  const [assigneeSelectOpen, setAssigneeSelectOpen] = useState(false);
   const [customerSelectOpen, setCustomerSelectOpen] = useState(false);
-  const assigneeSelectRef = useRef<HTMLDivElement>(null);
   const customerSelectRef = useRef<HTMLDivElement>(null);
+  const [participantMenuUserId, setParticipantMenuUserId] = useState<string | null>(null);
   const participantAddRef = useRef<HTMLDivElement>(null);
 
   const [rightWidth, setRightWidth] = useState(420);
   const [dragging, setDragging] = useState(false);
   const dragStateRef = useRef<{ startX: number; startW: number } | null>(null);
+  const cardLayoutRef = useRef<HTMLDivElement>(null);
+  const [leftPaneCollapsed, setLeftPaneCollapsed] = useState(false);
+  const [rightPaneCollapsed, setRightPaneCollapsed] = useState(false);
   const [isLg, setIsLg] = useState(true);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [panelSize, setPanelSize] = useState<{ w: number; h: number }>({ w: 1120, h: 740 });
   const [panelHasCustomSize, setPanelHasCustomSize] = useState(false);
   const [panelResizing, setPanelResizing] = useState(false);
+  const [panelFullscreen, setPanelFullscreen] = useState(false);
   const panelResizeRef = useRef<{ startX: number; startY: number; startW: number; startH: number } | null>(null);
   const lastLoadedIdRef = useRef<string | null>(null);
   const [headerActionsOpen, setHeaderActionsOpen] = useState(false);
   const headerActionsRef = useRef<HTMLDivElement | null>(null);
+  const [favorite, setFavorite] = useState(false);
 
   const canEditCard = props.viewer.role !== "OBSERVER";
   const canManageCard =
     !!card &&
     canEditCard &&
     (props.viewer.role === "ADMIN" || ((card as any).authorId as string | null | undefined) === props.viewer.id);
+
+  const participantChips = useMemo(() => {
+    const aEmail = assignee.trim();
+    const assigneeResolved = aEmail ? props.allUsers.find((x) => x.email === aEmail) ?? null : null;
+    const chips: Array<{ user: CardModalUserLite; isAssignee: boolean }> = [];
+    if (assigneeResolved) {
+      chips.push({ user: assigneeResolved, isAssignee: true });
+    } else if (aEmail) {
+      chips.push({
+        user: {
+          id: "legacy-assignee",
+          email: aEmail,
+          name: aEmail,
+          avatarPreset: null,
+          avatarUploadName: null,
+        },
+        isAssignee: true,
+      });
+    }
+    for (const p of participants) {
+      if (assigneeResolved && p.user.id === assigneeResolved.id) continue;
+      if (aEmail && p.user.email === aEmail) continue;
+      chips.push({ user: p.user as CardModalUserLite, isAssignee: false });
+    }
+    return chips;
+  }, [participants, assignee, props.allUsers]);
 
   const userById = useMemo(() => new Map(props.allUsers.map((u) => [u.id, u])), [props.allUsers]);
 
@@ -4162,12 +4927,30 @@ function CardModal(props: {
     return userById.get(a.id) ?? a;
   }, [card, userById]);
 
+  const cardParamRowClass =
+    "flex min-w-0 flex-wrap items-center gap-1.5 rounded-md bg-slate-100 px-2 py-1 text-[11px] leading-snug";
+
+  /** Ширина колонки со сплиттером и кнопками «свернуть» (px), совпадает с Tailwind `w-5`. */
+  const CARD_SPLITTER_COL_PX = 20;
+  const CARD_MIN_LEFT_PX = 160;
+  const CARD_MIN_RIGHT_PX = 200;
+
+  const collapseLeftPane = () => {
+    if (rightPaneCollapsed) setRightPaneCollapsed(false);
+    setLeftPaneCollapsed(true);
+  };
+  const collapseRightPane = () => {
+    if (leftPaneCollapsed) setLeftPaneCollapsed(false);
+    setRightPaneCollapsed(true);
+  };
+
   useEffect(() => {
     if (!card) return;
     setTitle(card.description ?? "");
     setDetails(card.details ?? "");
     setAssignee(card.assignee ?? "");
-    setCustomer(card.customer ?? "");
+    const authorEmail = (card.author?.email ?? "").trim();
+    setCustomer((card.customer ?? "").trim() || authorEmail);
     setDueDate(toDateTimeLocalValue(card.dueDate));
     setImportance(card.importance);
     setPaused(card.paused);
@@ -4176,8 +4959,8 @@ function CardModal(props: {
     setParticipantAddUserId("");
     setParticipantAddSearch("");
     setParticipantError(null);
-    setAssigneeSelectOpen(false);
     setCustomerSelectOpen(false);
+    setParticipantMenuUserId(null);
     setSaveError(null);
     setDeleting(false);
     setCommentBody("");
@@ -4195,7 +4978,11 @@ function CardModal(props: {
     setEditingCommentCardLinkOpen(false);
     setEditingCommentCardLinkQuery("");
     setEditingCommentCardLinkResults([]);
+    setDetailsEditing(false);
     setHeaderActionsOpen(false);
+    setPanelFullscreen(false);
+    setLeftPaneCollapsed(false);
+    setRightPaneCollapsed(false);
 
     // restore per-user sizes
     try {
@@ -4206,7 +4993,10 @@ function CardModal(props: {
         const nextH = typeof parsed.h === "number" ? parsed.h : panelSize.h;
         const nextRightW = typeof parsed.rightW === "number" ? parsed.rightW : rightWidth;
         setPanelSize({ w: clamp(nextW, 720, 1600), h: clamp(nextH, 520, 900) });
-        setRightWidth(clamp(nextRightW, 240, 1100));
+        const layoutGuess =
+          typeof window !== "undefined" ? Math.max(480, window.innerWidth - 48) : Math.max(480, nextW);
+        const maxRight = Math.max(CARD_MIN_RIGHT_PX, layoutGuess - CARD_MIN_LEFT_PX - CARD_SPLITTER_COL_PX);
+        setRightWidth(clamp(nextRightW, CARD_MIN_RIGHT_PX, maxRight));
         setPanelHasCustomSize(true);
       }
     } catch {
@@ -4214,6 +5004,19 @@ function CardModal(props: {
     }
     lastLoadedIdRef.current = card.id;
   }, [card?.id]);
+
+  useEffect(() => {
+    if (!detailsEditing) return;
+    const id = window.requestAnimationFrame(() => {
+      detailsTextareaRef.current?.focus();
+    });
+    return () => window.cancelAnimationFrame(id);
+  }, [detailsEditing]);
+
+  useEffect(() => {
+    if (!card) return;
+    setFavorite(!!card.isFavorite);
+  }, [card?.id, card?.isFavorite]);
 
   useEffect(() => {
     const mq = window.matchMedia("(min-width: 1024px)");
@@ -4224,15 +5027,11 @@ function CardModal(props: {
   }, []);
 
   useEffect(() => {
-    if (!assigneeSelectOpen) return;
-    const onDocClick = (e: MouseEvent) => {
-      if (assigneeSelectRef.current && !assigneeSelectRef.current.contains(e.target as Node)) {
-        setAssigneeSelectOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", onDocClick);
-    return () => document.removeEventListener("mousedown", onDocClick);
-  }, [assigneeSelectOpen]);
+    if (!isLg) {
+      setLeftPaneCollapsed(false);
+      setRightPaneCollapsed(false);
+    }
+  }, [isLg]);
 
   useEffect(() => {
     if (!customerSelectOpen) return;
@@ -4255,6 +5054,17 @@ function CardModal(props: {
     document.addEventListener("mousedown", onDocClick);
     return () => document.removeEventListener("mousedown", onDocClick);
   }, [participantAddOpen]);
+
+  useEffect(() => {
+    if (!participantMenuUserId) return;
+    const close = (e: MouseEvent) => {
+      const el = e.target as HTMLElement;
+      if (el.closest?.("[data-participant-chip-menu]")) return;
+      setParticipantMenuUserId(null);
+    };
+    document.addEventListener("mousedown", close, true);
+    return () => document.removeEventListener("mousedown", close, true);
+  }, [participantMenuUserId]);
 
   useEffect(() => {
     if (!headerActionsOpen) return;
@@ -4339,9 +5149,14 @@ function CardModal(props: {
       if (!st) return;
       const delta = e.clientX - st.startX;
       const next = Math.round(st.startW - delta);
-      const minLeft = 320;
-      const maxRight = Math.max(360, panelSize.w - minLeft - 20);
-      setRightWidth(clamp(next, 240, Math.min(1100, maxRight)));
+      const el = cardLayoutRef.current;
+      const layoutW =
+        el?.clientWidth ??
+        (typeof window !== "undefined"
+          ? Math.min(panelSize.w, window.innerWidth - 32)
+          : panelSize.w);
+      const maxRight = Math.max(CARD_MIN_RIGHT_PX, layoutW - CARD_MIN_LEFT_PX - CARD_SPLITTER_COL_PX);
+      setRightWidth(clamp(next, CARD_MIN_RIGHT_PX, maxRight));
     };
     const onUp = () => {
       setDragging(false);
@@ -4364,6 +5179,23 @@ function CardModal(props: {
       window.removeEventListener("mouseup", onUp);
     };
   }, [dragging, panelSize.h, panelSize.w, props.viewer.id, rightWidth]);
+
+  useEffect(() => {
+    if (!isLg) return;
+    if (leftPaneCollapsed || rightPaneCollapsed) return;
+    const el = cardLayoutRef.current;
+    if (!el) return;
+    const apply = () => {
+      const w = el.clientWidth;
+      if (w < 120) return;
+      const maxR = Math.max(CARD_MIN_RIGHT_PX, w - CARD_MIN_LEFT_PX - CARD_SPLITTER_COL_PX);
+      setRightWidth((rw) => clamp(rw, CARD_MIN_RIGHT_PX, maxR));
+    };
+    apply();
+    const ro = new ResizeObserver(() => apply());
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [isLg, leftPaneCollapsed, rightPaneCollapsed, card?.id, panelFullscreen, panelSize.w]);
 
   useEffect(() => {
     if (!panelResizing) return;
@@ -4455,6 +5287,13 @@ function CardModal(props: {
 
     persistInFlightRef.current = p;
     return await p;
+  };
+
+  const applyAssigneeEmail = (email: string) => {
+    if (!canManageCard) return;
+    setAssignee(email);
+    setParticipantMenuUserId(null);
+    void persist({ assignee: email.trim() ? email.trim() : null });
   };
 
   const closeAndRefresh = async () => {
@@ -4643,34 +5482,40 @@ function CardModal(props: {
         void closeAndRefresh();
       }}
       showCloseButton={false}
+      fillViewport={panelFullscreen}
       headerClassName="bg-gradient-to-b from-slate-100 to-slate-50"
-      panelClassName="max-w-none"
-      panelStyle={{
-        width: Math.min(panelSize.w, window.innerWidth - 32),
-        ...(panelHasCustomSize || panelResizing
-          ? { height: Math.min(panelSize.h, window.innerHeight - 32) }
-          : { maxHeight: window.innerHeight - 32 }),
-      }}
+      panelClassName={classNames("max-w-none", panelFullscreen && "rounded-none border border-slate-200")}
+      panelStyle={
+        panelFullscreen
+          ? { width: "100%", height: "100%", maxHeight: "100%" }
+          : {
+              width: Math.min(panelSize.w, window.innerWidth - 32),
+              ...(panelHasCustomSize || panelResizing
+                ? { height: Math.min(panelSize.h, window.innerHeight - 32) }
+                : { maxHeight: window.innerHeight - 32 }),
+            }
+      }
       panelOverlay={
-        <div
-          className="absolute bottom-1 right-1 h-5 w-5 cursor-se-resize select-none"
-          title="Изменить размер"
-          onMouseDown={(e) => {
-            panelResizeRef.current = { startX: e.clientX, startY: e.clientY, startW: panelSize.w, startH: panelSize.h };
-            setPanelResizing(true);
-            setPanelHasCustomSize(true);
-            document.body.style.cursor = "se-resize";
-            document.body.style.userSelect = "none";
-            e.preventDefault();
-            e.stopPropagation();
-          }}
-        >
-          {/* diagonal lines like textarea resize grip */}
-          <div className="absolute inset-0">
-            <div className="absolute bottom-0 right-0 h-[10px] w-[10px] border-b-2 border-r-2 border-slate-300" />
-            <div className="absolute bottom-1 right-1 h-[8px] w-[8px] border-b-2 border-r-2 border-slate-200" />
+        panelFullscreen ? null : (
+          <div
+            className="absolute bottom-1 right-1 h-5 w-5 cursor-se-resize select-none"
+            title="Изменить размер"
+            onMouseDown={(e) => {
+              panelResizeRef.current = { startX: e.clientX, startY: e.clientY, startW: panelSize.w, startH: panelSize.h };
+              setPanelResizing(true);
+              setPanelHasCustomSize(true);
+              document.body.style.cursor = "se-resize";
+              document.body.style.userSelect = "none";
+              e.preventDefault();
+              e.stopPropagation();
+            }}
+          >
+            <div className="absolute inset-0">
+              <div className="absolute bottom-0 right-0 h-[10px] w-[10px] border-b-2 border-r-2 border-slate-300" />
+              <div className="absolute bottom-1 right-1 h-[8px] w-[8px] border-b-2 border-r-2 border-slate-200" />
+            </div>
           </div>
-        </div>
+        )
       }
       headerLeft={
         <div className="min-w-0">
@@ -4682,131 +5527,36 @@ function CardModal(props: {
             onBlur={() => void persist()}
             placeholder="Название карточки"
           />
-          <div className="mt-2 flex w-full min-w-0 min-h-[2.75rem] flex-wrap items-center gap-x-2 gap-y-2 py-2 text-xs text-slate-600">
-            {canEditCard ? (
-              <button
-                type="button"
-                className={classNames(
-                  "inline-flex shrink-0 items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-semibold",
-                  paused ? "bg-amber-100 text-amber-900" : "border border-amber-200 bg-white text-amber-900 hover:bg-amber-50",
-                )}
-                title={paused ? "Снять паузу" : "Пауза"}
-                aria-label={paused ? "Снять паузу" : "Пауза"}
-                onMouseDown={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                }}
-                onClick={() => {
-                  const next = !paused;
-                  setPaused(next);
-                  setSaveError(null);
-                  void persist({ paused: next });
-                }}
-              >
-                <span
-                  className={classNames(
-                    "grid h-4 w-4 place-items-center rounded border",
-                    paused ? "border-amber-300 bg-amber-200" : "border-amber-200 bg-white",
-                  )}
-                  aria-hidden="true"
-                >
-                  {paused ? "✓" : ""}
-                </span>
-                Пауза
-              </button>
-            ) : (
-              <span
-                className={classNames(
-                  "inline-flex shrink-0 items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-semibold",
-                  paused ? "bg-amber-100 text-amber-900" : "border border-amber-200 bg-slate-50 text-amber-900",
-                )}
-                title={paused ? "На паузе" : "Пауза"}
-              >
-                <span
-                  className={classNames(
-                    "grid h-4 w-4 place-items-center rounded border",
-                    paused ? "border-amber-300 bg-amber-200" : "border-amber-200 bg-white",
-                  )}
-                  aria-hidden="true"
-                >
-                  {paused ? "✓" : ""}
-                </span>
-                Пауза
-              </span>
-            )}
-            <span className="inline-flex items-center gap-1.5 rounded-md bg-slate-100 px-2.5 py-1.5">
-              <span className="shrink-0 text-slate-600">Колонка:</span>
-              {canEditCard ? (
-                <select
-                  className="max-w-[min(220px,45vw)] rounded border-0 bg-transparent py-0 pr-5 text-slate-800 outline-none focus:ring-1 focus:ring-slate-300"
-                  value={card.column.id}
-                  onChange={(e) => {
-                    const toColumnId = e.target.value;
-                    if (toColumnId === card.column.id) return;
-                    setSaveError(null);
-                    void Api.moveCard(card.id, { toColumnId, toIndex: 0 })
-                      .then(() => void props.onChanged())
-                      .catch((err) => setSaveError((err as Error).message));
-                  }}
-                >
-                  {props.columns.map((col) => (
-                    <option key={col.id} value={col.id}>
-                      {col.title}
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <span className="truncate text-slate-800">{card.column.title}</span>
-              )}
-            </span>
-            <span className="inline-flex items-center gap-1.5 rounded-md bg-slate-100 px-2.5 py-1.5">
-              <span className="shrink-0 text-slate-600">Важность:</span>
-              {canEditCard ? (
-                <>
-                  <select
-                    className="rounded border-0 bg-transparent py-0 pr-4 font-semibold text-slate-800 outline-none focus:ring-1 focus:ring-slate-300"
-                    value={importance}
-                    onChange={(e) => {
-                      const next = e.target.value as Importance;
-                      setImportance(next);
-                      setSaveError(null);
-                      void Api.updateCard(card.id, { importance: next }).catch((err) => setSaveError((err as Error).message));
-                    }}
-                  >
-                    <option value="LOW">Низкая</option>
-                    <option value="MEDIUM">Средняя</option>
-                    <option value="HIGH">Высокая</option>
-                  </select>
-                  <span
-                    className={classNames("h-4 w-4 shrink-0 rounded-sm border border-slate-200/80", importanceBadge(importance))}
-                    title={importanceLabel(importance)}
-                    aria-hidden
-                  />
-                </>
-              ) : (
-                <span className={classNames("rounded px-1.5 py-0.5 font-semibold", importanceBadge(importance))}>
-                  {importanceLabel(importance)}
-                </span>
-              )}
-            </span>
-            <span className="inline-flex items-center gap-1.5 rounded-md bg-slate-100 px-2.5 py-1.5">
-              <span className="shrink-0 text-slate-600">Срок исполнения:</span>
-              <input
-                type="datetime-local"
-                className="min-w-0 max-w-[11.5rem] rounded border-0 bg-transparent py-0.5 text-xs text-slate-800 outline-none focus:ring-1 focus:ring-slate-300 read-only:cursor-default disabled:opacity-70"
-                value={dueDate}
-                readOnly={!canEditCard}
-                disabled={!canEditCard}
-                onChange={(e) => setDueDate(e.target.value)}
-                onBlur={() => void persist()}
-              />
-            </span>
-            {saveError ? <span className="rounded-md bg-rose-50 px-2 py-1.5 text-rose-800">Не сохранено</span> : null}
-          </div>
+          {saveError ? <div className="mt-2 text-xs text-rose-700">{saveError}</div> : null}
         </div>
       }
       headerRight={
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            className={classNames(
+              "rounded-md p-1.5 transition-colors",
+              favorite
+                ? "bg-amber-100 text-amber-600 ring-1 ring-amber-300/80 hover:bg-amber-200/90"
+                : "text-amber-500 hover:bg-amber-50 hover:text-amber-600",
+            )}
+            title={favorite ? "Убрать из избранного" : "В избранное"}
+            aria-label={favorite ? "Убрать из избранного" : "В избранное"}
+            onClick={() => {
+              if (!card) return;
+              setSaveError(null);
+              const next = !favorite;
+              setFavorite(next);
+              void (next ? Api.addFavorite(card.id) : Api.removeFavorite(card.id))
+                .then(() => props.onChanged())
+                .catch((e) => {
+                  setFavorite(!next);
+                  setSaveError((e as Error).message);
+                });
+            }}
+          >
+            {favorite ? <IconStarFilled className="h-5 w-5" /> : <IconStarOutline className="h-5 w-5" />}
+          </button>
           {(props.boardId && props.onShareLink) || canEditCard ? (
             <div className="relative" ref={headerActionsRef}>
               <button
@@ -4893,6 +5643,13 @@ function CardModal(props: {
             </div>
           ) : null}
           <IconButton
+            title={panelFullscreen ? "Обычный размер окна" : "На весь экран"}
+            aria-label={panelFullscreen ? "Обычный размер окна" : "На весь экран"}
+            onClick={() => setPanelFullscreen((v) => !v)}
+          >
+            {panelFullscreen ? <IconShrinkPanel className="h-5 w-5" /> : <IconExpandPanel className="h-5 w-5" />}
+          </IconButton>
+          <IconButton
             title="Закрыть"
             onClick={() => {
               if (deleting) {
@@ -4908,83 +5665,221 @@ function CardModal(props: {
       }
     >
       <div
-        className="grid gap-4 lg:gap-0"
-        style={
-          isLg
-            ? {
-                gridTemplateColumns: `minmax(0, 1fr) ${dragging ? "12px" : "10px"} ${rightWidth}px`,
-              }
-            : undefined
-        }
+        ref={cardLayoutRef}
+        className={classNames("flex min-h-0 w-full", isLg ? "flex-row items-stretch gap-0" : "flex-col gap-4")}
       >
-        {/* Left */}
-        <div className="grid gap-4 pr-0 lg:pr-4">
-          <div className="rounded-2xl border border-slate-200 bg-white p-4">
-            <div className="mb-2 text-sm font-semibold text-slate-900">Описание</div>
-            <textarea
-              className="min-h-[140px] w-full rounded-xl border border-slate-200 bg-white p-3 text-sm text-slate-900 outline-none focus:border-[#246c7c] read-only:cursor-default read-only:bg-slate-50"
-              value={details}
-              readOnly={!canEditCard}
-              onChange={(e) => setDetails(e.target.value)}
-              onBlur={() => void persist()}
-              placeholder="Введите описание…"
-            />
-          </div>
-
-          <div className="rounded-2xl border border-slate-200 bg-white p-4">
-            <div className="grid gap-4">
-              <div className="grid gap-2 sm:grid-cols-[10rem,minmax(0,1fr)] sm:items-start sm:gap-x-3">
-                <div className="text-xs font-semibold uppercase tracking-wide text-slate-500 sm:pt-2">Автор</div>
-                <div className="flex min-w-0 items-start gap-2.5">
+        {(!isLg || !leftPaneCollapsed) ? (
+        <div
+          className={classNames(
+            "grid min-w-0 max-w-full gap-3 overflow-x-hidden pr-0",
+            isLg && "lg:min-w-0 lg:basis-0 lg:pr-1",
+            isLg && !rightPaneCollapsed && !leftPaneCollapsed && "lg:flex-1",
+            isLg && rightPaneCollapsed && "lg:flex-1",
+          )}
+        >
+          <div className="rounded-2xl border border-slate-200 bg-white p-2">
+            <div className="mb-1.5 text-sm font-semibold text-slate-900">Параметры</div>
+            <div className="grid gap-[2px]">
+              <div className={cardParamRowClass}>
+                <span className="shrink-0 text-slate-600">Автор:</span>
+                <div className="flex min-w-0 flex-1 items-center gap-1.5">
                   {authorDisplay ? (
-                    <AvatarImg user={authorDisplay} size={32} />
+                    <AvatarImg user={authorDisplay} size={18} />
                   ) : (
-                    <div
-                      className="grid h-8 w-8 shrink-0 place-items-center rounded-full border border-slate-200 bg-slate-100 text-xs font-medium text-slate-500"
-                      title="Автор неизвестен"
-                    >
+                    <div className="grid h-[18px] w-[18px] shrink-0 place-items-center rounded-full border border-slate-200 bg-slate-200 text-[9px] font-medium text-slate-500">
                       ?
                     </div>
                   )}
-                  <div className="min-w-0">
-                    <div className="text-sm font-medium text-slate-900">
-                      {authorDisplay ? authorDisplay.name || authorDisplay.email : "Не указано"}
-                    </div>
-                    <div className="mt-0.5 text-xs text-slate-600">
-                      {format(new Date(card.createdAt), "yyyy-MM-dd HH:mm")}
-                    </div>
-                  </div>
+                  <span className="min-w-0 truncate font-medium text-slate-800">
+                    {authorDisplay ? authorDisplay.name || authorDisplay.email : "Не указано"}
+                  </span>
+                  <span className="shrink-0 text-slate-500">{format(new Date(card.createdAt), "yyyy-MM-dd HH:mm")}</span>
                 </div>
               </div>
               <CardModalUserEmailField
                 label="Заказчик"
+                compact
                 valueEmail={customer}
                 onPick={setCustomer}
                 isOpen={customerSelectOpen}
                 setIsOpen={setCustomerSelectOpen}
-                onBeforeOpen={() => setAssigneeSelectOpen(false)}
+                onBeforeOpen={() => {}}
                 users={props.allUsers}
                 canManage={canManageCard}
                 containerRef={customerSelectRef}
                 onPersist={() => void persist()}
               />
-              <CardModalUserEmailField
-                label="Ответственный"
-                valueEmail={assignee}
-                onPick={setAssignee}
-                isOpen={assigneeSelectOpen}
-                setIsOpen={setAssigneeSelectOpen}
-                onBeforeOpen={() => setCustomerSelectOpen(false)}
-                users={props.allUsers}
-                canManage={canManageCard}
-                containerRef={assigneeSelectRef}
-                onPersist={() => void persist()}
-              />
+              <div className={cardParamRowClass}>
+                <span className="shrink-0 text-slate-600">Пауза:</span>
+                <div className="min-w-0 flex-1">
+                  {canEditCard ? (
+                    <button
+                      type="button"
+                      className={classNames(
+                        "inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-semibold leading-snug",
+                        paused ? "bg-amber-200 text-amber-950" : "border border-amber-200 bg-white text-amber-900 hover:bg-amber-50",
+                      )}
+                      title={paused ? "Снять паузу" : "Пауза"}
+                      onMouseDown={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                      }}
+                      onClick={() => {
+                        const next = !paused;
+                        setPaused(next);
+                        setSaveError(null);
+                        void persist({ paused: next });
+                      }}
+                    >
+                      <span
+                        className={classNames(
+                          "grid h-3 w-3 place-items-center rounded border text-[9px]",
+                          paused ? "border-amber-400 bg-amber-100" : "border-amber-200 bg-white",
+                        )}
+                        aria-hidden
+                      >
+                        {paused ? "✓" : ""}
+                      </span>
+                      {paused ? "На паузе" : "Нет"}
+                    </button>
+                  ) : (
+                    <span className="text-slate-800">{paused ? "Да" : "Нет"}</span>
+                  )}
+                </div>
+              </div>
+              <div className={cardParamRowClass}>
+                <span className="shrink-0 text-slate-600">Колонка:</span>
+                <div className="min-w-0 flex-1">
+                  {canEditCard ? (
+                    <select
+                      className="w-full max-w-full rounded border-0 bg-transparent py-0 text-[11px] font-medium text-slate-800 outline-none focus:ring-1 focus:ring-slate-300"
+                      value={card.column.id}
+                      onChange={(e) => {
+                        const toColumnId = e.target.value;
+                        if (toColumnId === card.column.id) return;
+                        setSaveError(null);
+                        void Api.moveCard(card.id, { toColumnId, toIndex: 0 })
+                          .then(() => void props.onChanged())
+                          .catch((err) => setSaveError((err as Error).message));
+                      }}
+                    >
+                      {props.columns.map((col) => (
+                        <option key={col.id} value={col.id}>
+                          {col.title}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <span className="font-medium text-slate-800">{card.column.title}</span>
+                  )}
+                </div>
+              </div>
+              <div className={cardParamRowClass}>
+                <span className="shrink-0 text-slate-600">Важность:</span>
+                <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1">
+                  {canEditCard ? (
+                    <>
+                      <select
+                        className="rounded border-0 bg-transparent py-0 text-[11px] font-semibold text-slate-800 outline-none focus:ring-1 focus:ring-slate-300"
+                        value={importance}
+                        onChange={(e) => {
+                          const next = e.target.value as Importance;
+                          setImportance(next);
+                          setSaveError(null);
+                          void Api.updateCard(card.id, { importance: next }).catch((err) => setSaveError((err as Error).message));
+                        }}
+                      >
+                        <option value="LOW">Низкая</option>
+                        <option value="MEDIUM">Средняя</option>
+                        <option value="HIGH">Высокая</option>
+                      </select>
+                      <span
+                        className={classNames("h-2.5 w-2.5 shrink-0 rounded-sm border border-slate-200/80", importanceBadge(importance))}
+                        title={importanceLabel(importance)}
+                        aria-hidden
+                      />
+                    </>
+                  ) : (
+                    <span className={classNames("rounded px-1 py-px text-[11px] font-semibold leading-snug", importanceBadge(importance))}>
+                      {importanceLabel(importance)}
+                    </span>
+                  )}
+                </div>
+              </div>
+              <div className={cardParamRowClass}>
+                <span className="shrink-0 text-slate-600">Срок исполнения:</span>
+                <div className="min-w-0 flex-1">
+                  <input
+                    type="datetime-local"
+                    className="w-full max-w-[14rem] rounded border-0 bg-transparent py-0 text-[11px] text-slate-800 outline-none focus:ring-1 focus:ring-slate-300 read-only:cursor-default disabled:opacity-70"
+                    value={dueDate}
+                    readOnly={!canEditCard}
+                    disabled={!canEditCard}
+                    onChange={(e) => setDueDate(e.target.value)}
+                    onBlur={() => void persist()}
+                  />
+                </div>
+              </div>
             </div>
+          </div>
 
-            <div className="mt-5 border-t border-slate-200 pt-4">
-              <div className="mb-3 flex items-center justify-between gap-2">
-                <div className="text-sm font-semibold text-slate-900">Участники</div>
+          <div className="rounded-2xl border border-slate-200 bg-white p-2">
+            <div className="mb-1.5 flex items-center justify-between gap-2">
+              <div className="text-sm font-semibold text-slate-900">Описание</div>
+              {canEditCard && !detailsEditing ? (
+                <button
+                  type="button"
+                  className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-slate-200 bg-white text-slate-800 hover:bg-slate-50"
+                  onClick={() => setDetailsEditing(true)}
+                  title="Редактировать"
+                  aria-label="Редактировать"
+                >
+                  <IconEdit className="h-4 w-4" />
+                </button>
+              ) : null}
+            </div>
+            {canEditCard && detailsEditing ? (
+              <div
+                ref={detailsEditWrapperRef}
+                onBlur={(e) => {
+                  if (e.currentTarget.contains(e.relatedTarget as Node | null)) return;
+                  void persist().then((ok) => {
+                    if (ok) setDetailsEditing(false);
+                  });
+                }}
+              >
+                <MarkdownRichEditor
+                  ref={detailsTextareaRef}
+                  value={details}
+                  onChange={(v) => setDetails(v)}
+                  minHeight="180px"
+                  ariaLabel="Описание карточки"
+                />
+                <div className="mt-1.5 flex justify-end">
+                  <button
+                    type="button"
+                    className="grid h-9 w-9 place-items-center rounded-xl border border-slate-200 bg-white text-slate-800 hover:bg-slate-50"
+                    onClick={() => {
+                      setDetails(card.details ?? "");
+                      setDetailsEditing(false);
+                    }}
+                    title="Отмена"
+                    aria-label="Отмена"
+                  >
+                    <IconX className="h-5 w-5" />
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="rounded-xl border border-slate-100 bg-slate-50/90 p-2">
+                <MarkdownHtmlBlock source={details} />
+              </div>
+            )}
+          </div>
+
+          <div className="rounded-2xl border border-slate-200 bg-white p-2">
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <div className="text-sm font-semibold text-slate-900">Участники и ответственный</div>
                 {canManageCard ? (
                   <button
                     type="button"
@@ -5085,47 +5980,107 @@ function CardModal(props: {
                 </div>
               ) : null}
               {participantError ? <div className="mt-2 text-xs text-rose-700">{participantError}</div> : null}
-              <div className="mt-2 flex flex-wrap gap-2">
-                {participants.length === 0 ? (
-                  <div className="text-xs text-slate-500">Участников нет.</div>
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                {participantChips.length === 0 ? (
+                  <span className="text-xs text-slate-500">Нет ответственного и участников.</span>
                 ) : (
-                  participants.map((p) => (
-                    <div
-                      key={p.user.id}
-                      className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-800"
-                      title={p.user.email}
-                    >
-                      <AvatarImg user={p.user} size={24} />
-                      <div className="max-w-[320px] truncate">{p.user.name || p.user.email}</div>
-                      {canManageCard ? (
-                        <button
-                          type="button"
-                          className={classNames(cardModalIconDanger, "h-7 w-7")}
-                          title="Удалить участника"
-                          aria-label="Удалить участника"
-                          onClick={() => {
-                            if (!card) return;
-                            setParticipantError(null);
-                            void Api.removeParticipant(card.id, p.user.id)
-                              .then(() => {
-                                setParticipants((prev) => prev.filter((x) => x.user.id !== p.user.id));
-                                return props.onChanged();
-                              })
-                              .catch((e) => setParticipantError((e as Error).message));
-                          }}
+                  participantChips.map(({ user: u, isAssignee }) => {
+                    const inParticipants = participants.some((p) => p.user.id === u.id);
+                    const menuOpen = participantMenuUserId === u.id;
+                    return (
+                      <div key={`${u.id}-${isAssignee ? "a" : "p"}`} className="relative">
+                        <div
+                          className={classNames(
+                            "inline-flex max-w-[220px] items-center gap-1 rounded-full border bg-white py-0.5 pl-0.5 pr-1.5 text-xs shadow-sm",
+                            isAssignee ? "border-amber-400 ring-1 ring-amber-200" : "border-slate-200",
+                          )}
+                          title={u.email}
                         >
-                          <IconTrash className="h-4 w-4 text-rose-600" />
-                        </button>
-                      ) : null}
-                    </div>
-                  ))
+                          <AvatarImg user={u} size={26} />
+                          <span className="min-w-0 truncate font-medium text-slate-800">{u.name || u.email}</span>
+                          {isAssignee ? (
+                            <span className="shrink-0 rounded bg-amber-100 px-1 py-px text-[9px] font-bold uppercase text-amber-900">
+                              Отв.
+                            </span>
+                          ) : null}
+                          {canManageCard ? (
+                            <button
+                              type="button"
+                              className="ml-0.5 grid h-6 w-6 shrink-0 place-items-center rounded-full text-slate-500 hover:bg-slate-100 hover:text-slate-800"
+                              title="Действия"
+                              aria-label="Действия"
+                              data-participant-chip-menu
+                              onMouseDown={(e) => e.stopPropagation()}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setParticipantMenuUserId((prev) => (prev === u.id ? null : u.id));
+                              }}
+                            >
+                              <IconMoreVertical className="h-3.5 w-3.5" />
+                            </button>
+                          ) : null}
+                        </div>
+                        {menuOpen && canManageCard ? (
+                          <div
+                            data-participant-chip-menu
+                            className="absolute left-0 top-full z-40 mt-1 min-w-[11rem] rounded-lg border border-slate-200 bg-white py-1 text-xs shadow-lg"
+                            onMouseDown={(e) => e.stopPropagation()}
+                          >
+                            {u.id !== "legacy-assignee" && !isAssignee ? (
+                              <button
+                                type="button"
+                                className="flex w-full px-3 py-2 text-left hover:bg-slate-50"
+                                onClick={() => applyAssigneeEmail(u.email)}
+                              >
+                                Сделать ответственным
+                              </button>
+                            ) : null}
+                            {isAssignee ? (
+                              <button
+                                type="button"
+                                className="flex w-full px-3 py-2 text-left hover:bg-slate-50"
+                                onClick={() => {
+                                  setParticipantMenuUserId(null);
+                                  applyAssigneeEmail("");
+                                }}
+                              >
+                                Снять ответственного
+                              </button>
+                            ) : null}
+                            {inParticipants ? (
+                              <button
+                                type="button"
+                                className="flex w-full px-3 py-2 text-left text-rose-700 hover:bg-rose-50"
+                                onClick={() => {
+                                  if (!card) return;
+                                  setParticipantMenuUserId(null);
+                                  setParticipantError(null);
+                                  void Api.removeParticipant(card.id, u.id)
+                                    .then(async () => {
+                                      setParticipants((prev) => prev.filter((x) => x.user.id !== u.id));
+                                      if (assignee.trim() === u.email) {
+                                        setAssignee("");
+                                        await persist({ assignee: null });
+                                      }
+                                      await props.onChanged();
+                                    })
+                                    .catch((er) => setParticipantError((er as Error).message));
+                                }}
+                              >
+                                Удалить из участников
+                              </button>
+                            ) : null}
+                          </div>
+                        ) : null}
+                      </div>
+                    );
+                  })
                 )}
               </div>
-            </div>
           </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-white p-4">
-            <div className="mb-2 flex items-center justify-between gap-2">
+          <div className="rounded-2xl border border-slate-200 bg-white p-2">
+            <div className="mb-1.5 flex items-center justify-between gap-2">
               <div className="text-sm font-semibold text-slate-900">Вложения</div>
               {canEditCard ? (
                 <button
@@ -5157,7 +6112,7 @@ function CardModal(props: {
                 {compactFileName(uploadSelectedName, 70)}
               </div>
             ) : null}
-            <div className="mt-3 grid gap-2">
+            <div className="mt-2 grid gap-2">
               {card.attachments.length === 0 ? (
                 <div className="text-xs text-slate-500">Пока нет файлов.</div>
               ) : (
@@ -5201,40 +6156,95 @@ function CardModal(props: {
             </div>
           </div>
         </div>
-
-        {/* Splitter */}
-        <div className="relative hidden lg:block">
-          <div
-            className="absolute inset-0 mx-auto w-[10px] cursor-col-resize"
-            onMouseDown={(e) => {
-              dragStateRef.current = { startX: e.clientX, startW: rightWidth };
-              setDragging(true);
-              document.body.style.cursor = "col-resize";
-              document.body.style.userSelect = "none";
-            }}
+        ) : isLg ? (
+          <button
+            type="button"
+            className="flex w-7 shrink-0 flex-col items-center justify-center border-r border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100"
+            title="Показать параметры и описание"
+            aria-label="Показать левую панель"
+            onClick={() => setLeftPaneCollapsed(false)}
           >
-            <div className="mx-auto h-full w-[2px] bg-slate-200" />
-          </div>
-        </div>
+            <IconChevronRight className="h-4 w-4" />
+          </button>
+        ) : null}
 
-        {/* Right */}
-        <div className="rounded-2xl border border-slate-200 bg-white p-4">
-          <div className="mb-2 text-sm font-semibold text-slate-900">Комментарии</div>
+        {isLg && !leftPaneCollapsed && !rightPaneCollapsed ? (
+          <div className="relative flex w-5 shrink-0 flex-col items-stretch border-x border-slate-200/80 bg-slate-50/90 py-0.5">
+            <button
+              type="button"
+              className="mx-auto grid h-5 w-5 shrink-0 place-items-center rounded text-slate-500 hover:bg-white hover:text-slate-800"
+              title="Свернуть левую колонку"
+              aria-label="Свернуть левую колонку"
+              onClick={collapseLeftPane}
+            >
+              <IconChevronLeft className="h-3.5 w-3.5" />
+            </button>
+            <div
+              className="relative mx-auto min-h-[120px] flex-1 cursor-col-resize px-0.5"
+              onMouseDown={(e) => {
+                dragStateRef.current = { startX: e.clientX, startW: rightWidth };
+                setDragging(true);
+                document.body.style.cursor = "col-resize";
+                document.body.style.userSelect = "none";
+                e.preventDefault();
+                e.stopPropagation();
+              }}
+            >
+              <div
+                className={classNames(
+                  "pointer-events-none absolute inset-y-0.5 left-1/2 w-px -translate-x-1/2 bg-slate-300",
+                  dragging && "bg-[#246c7c]/80",
+                )}
+              />
+            </div>
+            <button
+              type="button"
+              className="mx-auto grid h-5 w-5 shrink-0 place-items-center rounded text-slate-500 hover:bg-white hover:text-slate-800"
+              title="Свернуть комментарии"
+              aria-label="Свернуть комментарии"
+              onClick={collapseRightPane}
+            >
+              <IconChevronRight className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        ) : null}
+
+        {isLg && !leftPaneCollapsed && rightPaneCollapsed ? (
+          <button
+            type="button"
+            className="flex w-7 shrink-0 flex-col items-center justify-center border-l border-slate-200 bg-slate-50 text-slate-600 hover:bg-slate-100"
+            title="Показать комментарии"
+            aria-label="Показать комментарии"
+            onClick={() => setRightPaneCollapsed(false)}
+          >
+            <IconChevronLeft className="h-4 w-4" />
+          </button>
+        ) : null}
+
+        {(!isLg || !rightPaneCollapsed) ? (
+        <div
+          className={classNames(
+            "rounded-2xl border border-slate-200 bg-white p-2",
+            isLg && leftPaneCollapsed && "min-w-0 flex-1",
+            isLg && !leftPaneCollapsed && "min-w-0 shrink-0",
+            !isLg && "w-full",
+          )}
+          style={isLg && !leftPaneCollapsed ? { width: rightWidth } : undefined}
+        >
+          <div className="mb-1.5 text-sm font-semibold text-slate-900">Комментарии</div>
           {canEditCard ? (
-            <div className="mb-3 grid gap-2" ref={commentComposerRef}>
+            <div className="mb-2 grid gap-2" ref={commentComposerRef}>
               <div className="relative flex items-start gap-2">
                 <AvatarImg user={props.viewer} size={24} />
-                <div className="min-w-0 flex-1 rounded-xl border border-slate-200 bg-white focus-within:border-[#246c7c]">
-                  <textarea
+                <div className="min-w-0 flex-1 space-y-1">
+                  <MarkdownRichEditor
                     ref={commentTextareaRef}
-                    className="min-h-[80px] w-full resize-y rounded-t-xl border-0 bg-white p-2 text-sm outline-none"
                     value={commentBody}
-                    onChange={(e) => updateCommentDraft(e.target.value, e.target.selectionStart)}
-                    onKeyUp={(e) => updateCommentDraft(e.currentTarget.value, e.currentTarget.selectionStart)}
-                    onClick={(e) => updateCommentDraft(e.currentTarget.value, e.currentTarget.selectionStart)}
-                    placeholder="Текст комментария..."
+                    onChange={(v, c) => updateCommentDraft(v, c ?? v.length)}
+                    minHeight="100px"
+                    ariaLabel="Текст комментария"
                   />
-                  <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 px-2 py-1.5">
+                  <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50/90 px-2 py-1.5">
                     <div className="flex flex-wrap items-center gap-1">
                       <button
                         type="button"
@@ -5417,17 +6427,15 @@ function CardModal(props: {
                         saveEditingComment(c.id);
                       }}
                     >
-                      <div className="rounded-xl border border-slate-200 bg-white focus-within:border-[#246c7c]">
-                        <textarea
+                      <div className="space-y-1">
+                        <MarkdownRichEditor
                           ref={editingCommentTextareaRef}
-                          className="min-h-[80px] w-full resize-y rounded-t-xl border-0 bg-white p-2 text-sm outline-none"
                           value={editingCommentBody}
-                          onChange={(e) => updateCommentDraft(e.target.value, e.target.selectionStart, "edit")}
-                          onKeyUp={(e) => updateCommentDraft(e.currentTarget.value, e.currentTarget.selectionStart, "edit")}
-                          onClick={(e) => updateCommentDraft(e.currentTarget.value, e.currentTarget.selectionStart, "edit")}
-                          autoFocus
+                          onChange={(v, c) => updateCommentDraft(v, c ?? v.length, "edit")}
+                          minHeight="100px"
+                          ariaLabel="Редактирование комментария"
                         />
-                        <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 px-2 py-1.5">
+                        <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50/90 px-2 py-1.5">
                           <div className="flex flex-wrap items-center gap-1">
                             <button
                               type="button"
@@ -5541,7 +6549,7 @@ function CardModal(props: {
                       ) : null}
                     </div>
                   ) : (
-                    <div className="mt-2 whitespace-pre-wrap text-sm text-slate-900">{c.body}</div>
+                    <MarkdownHtmlBlock source={c.body} className="mt-2" />
                   )}
                 </div>
               ))
@@ -5549,6 +6557,7 @@ function CardModal(props: {
           </div>
 
         </div>
+        ) : null}
       </div>
     </Modal>
   );

@@ -44,6 +44,8 @@ export type CardSummary = {
   updatedAt: string;
   commentCount: number;
   attachmentCount: number;
+  /** В избранном у текущего пользователя (из GET /api/board). */
+  isFavorite?: boolean;
 };
 
 export type BoardColumn = {
@@ -121,5 +123,33 @@ export type CardDetail = {
   comments: Comment[];
   attachments: Attachment[];
   participants?: CardParticipant[];
+  /** Карточка в избранном у текущего пользователя. */
+  isFavorite?: boolean;
+};
+
+/** Карточка с контекстом доски (списки «мои карточки», фильтр, избранное). */
+export type CardBoardListRow = {
+  id: string;
+  boardId: string;
+  boardName: string;
+  description: string;
+  assignee: string | null;
+  dueDate: string | null;
+  columnId: string;
+  columnTitle: string;
+  position: number;
+  importance: Importance;
+  paused: boolean;
+  commentCount: number;
+  attachmentCount: number;
+};
+
+export type UserActivityListItem = {
+  id: string;
+  kind: string;
+  summary: string;
+  cardId: string | null;
+  boardId: string | null;
+  createdAt: string;
 };
 

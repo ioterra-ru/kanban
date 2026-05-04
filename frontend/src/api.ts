@@ -1,4 +1,4 @@
-import type { BoardResponse, CardDetail, CardSearchHit, Importance } from "./types";
+import type { BoardResponse, CardBoardListRow, CardDetail, CardSearchHit, Importance, UserActivityListItem } from "./types";
 
 // In containers we use same-origin (nginx proxies /api and /uploads to backend),
 // so default base URL is empty (relative requests).
@@ -47,6 +47,40 @@ export const Api = {
 
   searchCards: (q: string) =>
     api<{ cards: CardSearchHit[] }>(`/api/board/search?q=${encodeURIComponent(q)}`),
+
+  myParticipatedCards: () => api<{ cards: CardBoardListRow[] }>("/api/me/my-cards"),
+
+  myActivity: (cursor?: string | null, limit = 30) => {
+    const sp = new URLSearchParams();
+    sp.set("limit", String(limit));
+    if (cursor) sp.set("cursor", cursor);
+    return api<{ items: UserActivityListItem[]; nextCursor: string | null }>(`/api/me/activity?${sp}`);
+  },
+
+  filterCardsGlobal: (params: {
+    authorId?: string;
+    customer?: string;
+    assignee?: string;
+    participantUserIds?: string[];
+    text?: string;
+  }) => {
+    const sp = new URLSearchParams();
+    if (params.authorId) sp.set("authorId", params.authorId);
+    if (params.customer?.trim()) sp.set("customer", params.customer.trim());
+    if (params.assignee?.trim()) sp.set("assignee", params.assignee.trim());
+    if (params.participantUserIds?.length) sp.set("participantUserIds", params.participantUserIds.join(","));
+    if (params.text?.trim()) sp.set("text", params.text.trim());
+    return api<{ cards: CardBoardListRow[] }>(`/api/me/cards/filter?${sp}`);
+  },
+
+  listFavorites: () =>
+    api<{
+      items: Array<{ cardId: string; boardId: string; boardName: string; description: string; columnTitle: string }>;
+    }>("/api/me/favorites"),
+
+  addFavorite: (cardId: string) => api<{ ok: true }>(`/api/me/favorites/${cardId}`, { method: "POST" }),
+
+  removeFavorite: (cardId: string) => api<{ ok: true }>(`/api/me/favorites/${cardId}`, { method: "DELETE" }),
 
 
   fetchCard: (id: string) => api<{ card: CardDetail }>(`/api/cards/${id}`),
