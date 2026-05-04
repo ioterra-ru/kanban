@@ -83,6 +83,7 @@ export async function createCardArchive(cardId: string): Promise<string> {
       description: card.description,
       details: card.details,
       assignee: card.assignee,
+      customer: card.customer,
       dueDate: card.dueDate?.toISOString() ?? null,
       importance: card.importance,
       paused: card.paused,
@@ -135,6 +136,7 @@ type RestoreCardPayload = {
   description: string;
   details: string | null;
   assignee: string | null;
+  customer: string | null;
   dueDate: string | null;
   importance: string;
   paused: boolean;
@@ -178,6 +180,12 @@ function parseArchiveCardJson(jsonStr: string): RestoreCardPayload {
       ? null
       : String(rawAssignee);
 
+  const rawCustomer = cardSection.customer;
+  const customer =
+    rawCustomer === undefined || rawCustomer === null || rawCustomer === ""
+      ? null
+      : String(rawCustomer);
+
   const rawDue = cardSection.dueDate;
   const dueDate =
     rawDue === undefined || rawDue === null || rawDue === ""
@@ -193,6 +201,7 @@ function parseArchiveCardJson(jsonStr: string): RestoreCardPayload {
     description,
     details,
     assignee,
+    customer,
     dueDate,
     importance,
     paused: Boolean(cardSection.paused),
@@ -246,6 +255,7 @@ export async function restoreCardFromArchive(
         description: data.description,
         details: data.details ?? null,
         assignee: data.assignee ?? null,
+        customer: data.customer ?? null,
         dueDate: data.dueDate ? new Date(data.dueDate) : null,
         importance: (data.importance as "LOW" | "MEDIUM" | "HIGH") || "MEDIUM",
         paused: data.paused,
