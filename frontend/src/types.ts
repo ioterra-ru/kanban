@@ -72,11 +72,14 @@ export type Comment = {
   authorId?: string | null;
   body: string;
   createdAt: string;
+  /** Вложения комментария (при детальной загрузке карточки). */
+  attachments?: Attachment[];
 };
 
 export type Attachment = {
   id: string;
   cardId: string;
+  commentId?: string | null;
   filename: string;
   storedName: string;
   mimeType: string;

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type RefObject } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type RefObject } from "react";
 import {
   type CollisionDetection,
   DndContext,
@@ -28,10 +28,12 @@ import type {
   CardSearchHit,
   CardSummary,
   ColumnId,
+  Comment as CardComment,
   Importance,
   User,
   UserActivityListItem,
 } from "./types";
+import { extractAttachmentIdsFromMarkdown, markdownForUploadedAttachment } from "./utils/commentAttachments";
 import { compactFileName } from "./utils/files";
 import { AVATAR_PRESETS, autoAvatarPreset, avatarSrc } from "./utils/avatar";
 
@@ -2513,11 +2515,14 @@ function IconButton(props: {
   onClick?: () => void;
   type?: "button" | "submit";
   variant?: "default" | "danger" | "brand" | "ghost" | "ghostLink";
+  /** ~2/3 of default — used in карточке для заголовка */
+  size?: "default" | "compact";
   disabled?: boolean;
   className?: string;
   children: React.ReactNode;
 }) {
   const variant = props.variant ?? "default";
+  const size = props.size ?? "default";
   const cls =
     variant === "brand"
       ? "border-2 border-teal-400/70 bg-white text-[#246c7c] shadow-sm hover:bg-teal-50/70 hover:border-teal-500"
@@ -2528,12 +2533,16 @@ function IconButton(props: {
           : variant === "ghostLink"
             ? "border-transparent bg-transparent text-[#246c7c] hover:bg-slate-100"
             : "border-2 border-slate-300 bg-white text-slate-800 hover:bg-slate-50 hover:border-slate-400";
+  const sizeCls =
+    size === "compact"
+      ? "grid h-7 w-7 min-h-7 min-w-7 place-items-center rounded-lg border disabled:opacity-50 disabled:pointer-events-none"
+      : "grid h-10 w-10 place-items-center rounded-xl border disabled:opacity-50 disabled:pointer-events-none";
 
   return (
     <button
       type={props.type ?? "button"}
       className={classNames(
-        "grid h-10 w-10 place-items-center rounded-xl border disabled:opacity-50 disabled:pointer-events-none",
+        sizeCls,
         cls,
         props.className,
       )}
@@ -4820,10 +4829,15 @@ function CardModal(props: {
 }) {
   const card = props.card;
   const uploadInputRef = useRef<HTMLInputElement>(null);
+  type CardFileUploadTarget = { kind: "card" } | { kind: "newComment" } | { kind: "editComment"; commentId: string };
+  const uploadTargetRef = useRef<CardFileUploadTarget>({ kind: "card" });
   const commentComposerRef = useRef<HTMLDivElement | null>(null);
   const commentTextareaRef = useRef<HTMLTextAreaElement | null>(null);
+  /** Позиция каретки в черновике комментария: при вкладке «Просмотр» textarea снят с DOM, при выборе файла фокус уходит — без ref вставки уезжают в конец. */
+  const commentCaretRef = useRef(0);
   const editingCommentComposerRef = useRef<HTMLDivElement | null>(null);
   const editingCommentTextareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const editingCommentCaretRef = useRef(0);
   const persistInFlightRef = useRef<Promise<boolean> | null>(null);
   const detailsTextareaRef = useRef<HTMLTextAreaElement>(null);
   const detailsEditWrapperRef = useRef<HTMLDivElement>(null);
@@ -4964,6 +4978,7 @@ function CardModal(props: {
     setSaveError(null);
     setDeleting(false);
     setCommentBody("");
+    commentCaretRef.current = 0;
     setCommentMentionOpen(false);
     setCommentMentionQuery("");
     setCommentMentionStart(null);
@@ -4972,6 +4987,7 @@ function CardModal(props: {
     setCommentCardLinkResults([]);
     setEditingCommentId(null);
     setEditingCommentBody("");
+    editingCommentCaretRef.current = 0;
     setEditingCommentMentionOpen(false);
     setEditingCommentMentionQuery("");
     setEditingCommentMentionStart(null);
@@ -5012,6 +5028,14 @@ function CardModal(props: {
     });
     return () => window.cancelAnimationFrame(id);
   }, [detailsEditing]);
+
+  useEffect(() => {
+    if (!editingCommentId) return;
+    const id = window.requestAnimationFrame(() => {
+      editingCommentTextareaRef.current?.focus();
+    });
+    return () => window.cancelAnimationFrame(id);
+  }, [editingCommentId]);
 
   useEffect(() => {
     if (!card) return;
@@ -5307,18 +5331,63 @@ function CardModal(props: {
     props.onClose();
   };
 
-  const uploadAttachmentForCard = (file: File) => {
-    if (!card) return;
-    setUploadSelectedName(file.name);
-    void Api.uploadAttachment(card.id, file).then(() => {
-      setUploadSelectedName("");
-      return props.onChanged();
-    });
+  const insertAttachmentMarkdownIntoComment = (mode: "new" | "edit", markdown: string) => {
+    const textarea = mode === "edit" ? editingCommentTextareaRef.current : commentTextareaRef.current;
+    const body = mode === "edit" ? editingCommentBody : commentBody;
+    const caret = mode === "edit" ? editingCommentCaretRef.current : commentCaretRef.current;
+    const start = Math.max(0, Math.min(caret, body.length));
+    const end = start;
+    const next = body.slice(0, start) + markdown + body.slice(end);
+    const cursor = start + markdown.length;
+    updateCommentDraft(next, cursor, mode);
+    window.setTimeout(() => {
+      textarea?.focus();
+      textarea?.setSelectionRange(cursor, cursor);
+    }, 0);
+  };
+
+  const onAttachmentFileInputChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const f = e.target.files?.[0];
+    e.target.value = "";
+    if (!f || !card) return;
+    const t = uploadTargetRef.current;
+    if (t.kind === "card") {
+      setUploadSelectedName(f.name);
+      void Api.uploadAttachment(card.id, f)
+        .then(() => {
+          setUploadSelectedName("");
+          return props.onChanged();
+        })
+        .catch((err) => {
+          setUploadSelectedName("");
+          setSaveError((err as Error).message);
+        });
+      return;
+    }
+    setUploadSelectedName(f.name);
+    setSaveError(null);
+    void Api.uploadAttachment(card.id, f, t.kind === "editComment" ? { commentId: t.commentId } : undefined)
+      .then((res) => {
+        const att = res.attachment as { id: string; filename: string; mimeType: string };
+        insertAttachmentMarkdownIntoComment(t.kind === "editComment" ? "edit" : "new", markdownForUploadedAttachment(att));
+        setUploadSelectedName("");
+        return props.onChanged();
+      })
+      .catch((err) => {
+        setUploadSelectedName("");
+        setSaveError((err as Error).message);
+      });
   };
 
   const updateCommentDraft = (next: string, cursor: number, mode: "new" | "edit" = "new") => {
-    if (mode === "edit") setEditingCommentBody(next);
-    else setCommentBody(next);
+    const c = Math.max(0, Math.min(cursor, next.length));
+    if (mode === "edit") {
+      editingCommentCaretRef.current = c;
+      setEditingCommentBody(next);
+    } else {
+      commentCaretRef.current = c;
+      setCommentBody(next);
+    }
     const beforeCursor = next.slice(0, cursor);
     const mentionMatch = beforeCursor.match(/(^|\s)@([^\s@]*)$/);
     if (!mentionMatch) {
@@ -5351,17 +5420,18 @@ function CardModal(props: {
     const body = mode === "edit" ? editingCommentBody : commentBody;
     const query = mode === "edit" ? editingCommentMentionQuery : commentMentionQuery;
     const mentionStart = mode === "edit" ? editingCommentMentionStart : commentMentionStart;
-    const cursor = textarea?.selectionStart ?? body.length;
+    const caret = mode === "edit" ? editingCommentCaretRef.current : commentCaretRef.current;
+    const cursor = Math.max(0, Math.min(caret, body.length));
     const start = mentionStart ?? Math.max(0, cursor - query.length - 1);
     const label = user.name || user.email;
     const next = `${body.slice(0, start)}@${label} ${body.slice(cursor)}`;
     if (mode === "edit") {
-      setEditingCommentBody(next);
+      updateCommentDraft(next, start + label.length + 2, "edit");
       setEditingCommentMentionOpen(false);
       setEditingCommentMentionQuery("");
       setEditingCommentMentionStart(null);
     } else {
-      setCommentBody(next);
+      updateCommentDraft(next, start + label.length + 2);
       setCommentMentionOpen(false);
       setCommentMentionQuery("");
       setCommentMentionStart(null);
@@ -5377,27 +5447,28 @@ function CardModal(props: {
     if (!props.boardId) return;
     const textarea = mode === "edit" ? editingCommentTextareaRef.current : commentTextareaRef.current;
     const body = mode === "edit" ? editingCommentBody : commentBody;
-    const cursor = textarea?.selectionStart ?? body.length;
+    const caret = mode === "edit" ? editingCommentCaretRef.current : commentCaretRef.current;
+    const cursor = Math.max(0, Math.min(caret, body.length));
     const link = getCardShareLink(props.boardId, hit.id);
     const insertion = `${hit.description}: ${link}`;
     const prefix = body.slice(0, cursor);
-    const suffix = body.slice(textarea?.selectionEnd ?? cursor);
+    const suffix = body.slice(cursor);
     const needsLeadingSpace = prefix.length > 0 && !/\s$/.test(prefix);
     const needsTrailingSpace = suffix.length > 0 && !/^\s/.test(suffix);
     const next = `${prefix}${needsLeadingSpace ? " " : ""}${insertion}${needsTrailingSpace ? " " : ""}${suffix}`;
+    const pos = prefix.length + (needsLeadingSpace ? 1 : 0) + insertion.length + (needsTrailingSpace ? 1 : 0);
     if (mode === "edit") {
-      setEditingCommentBody(next);
+      updateCommentDraft(next, pos, "edit");
       setEditingCommentCardLinkOpen(false);
       setEditingCommentCardLinkQuery("");
       setEditingCommentCardLinkResults([]);
     } else {
-      setCommentBody(next);
+      updateCommentDraft(next, pos);
       setCommentCardLinkOpen(false);
       setCommentCardLinkQuery("");
       setCommentCardLinkResults([]);
     }
     window.setTimeout(() => {
-      const pos = prefix.length + (needsLeadingSpace ? 1 : 0) + insertion.length + (needsTrailingSpace ? 1 : 0);
       textarea?.focus();
       textarea?.setSelectionRange(pos, pos);
     }, 0);
@@ -5407,12 +5478,19 @@ function CardModal(props: {
     if (!card) return;
     const body = commentBody.trim();
     if (!body) return;
-    void Api.addComment(card.id, { body }).then(() => {
-      setCommentBody("");
-      setCommentMentionOpen(false);
-      setCommentCardLinkOpen(false);
-      return props.onChanged();
-    });
+    const attachmentIds = extractAttachmentIdsFromMarkdown(commentBody);
+    void Api.addComment(card.id, {
+      body,
+      ...(attachmentIds.length ? { attachmentIds } : {}),
+    })
+      .then(() => {
+        setCommentBody("");
+        commentCaretRef.current = 0;
+        setCommentMentionOpen(false);
+        setCommentCardLinkOpen(false);
+        return props.onChanged();
+      })
+      .catch((err) => setSaveError((err as Error).message));
   };
 
   const resetEditingCommentTools = () => {
@@ -5427,19 +5505,48 @@ function CardModal(props: {
   const resetEditingComment = () => {
     setEditingCommentId(null);
     setEditingCommentBody("");
+    editingCommentCaretRef.current = 0;
     resetEditingCommentTools();
   };
 
-  const saveEditingComment = (commentId: string) => {
+  /** Сохранить непустой черновик и выйти; пустой — выйти без запроса. Возвращает false при ошибке API. */
+  const saveEditingCommentIfDirty = async (commentId: string): Promise<boolean> => {
     const body = editingCommentBody.trim();
-    if (!body) return;
-    void Api.updateComment(commentId, { body }).then(() => {
-      setEditingCommentId(null);
-      setEditingCommentBody("");
-      setEditingCommentMentionOpen(false);
-      setEditingCommentCardLinkOpen(false);
-      return props.onChanged();
-    });
+    if (!body) {
+      resetEditingComment();
+      return true;
+    }
+    try {
+      setSaveError(null);
+      await Api.updateComment(commentId, { body });
+      resetEditingComment();
+      await props.onChanged();
+      return true;
+    } catch (e) {
+      setSaveError((e as Error).message);
+      return false;
+    }
+  };
+
+  const openOrToggleCommentEditor = (c: CardComment) => {
+    if (editingCommentId === c.id) {
+      void saveEditingCommentIfDirty(c.id);
+      return;
+    }
+    if (editingCommentId && editingCommentId !== c.id) {
+      void saveEditingCommentIfDirty(editingCommentId).then((ok) => {
+        if (!ok) return;
+        setEditingCommentId(c.id);
+        setEditingCommentBody(c.body ?? "");
+        editingCommentCaretRef.current = (c.body ?? "").length;
+        resetEditingCommentTools();
+      });
+      return;
+    }
+    setEditingCommentId(c.id);
+    setEditingCommentBody(c.body ?? "");
+    editingCommentCaretRef.current = (c.body ?? "").length;
+    resetEditingCommentTools();
   };
 
   const commentMentionUsers = props.allUsers.filter((u) => {
@@ -5535,7 +5642,7 @@ function CardModal(props: {
           <button
             type="button"
             className={classNames(
-              "rounded-md p-1.5 transition-colors",
+              "rounded-md p-1 transition-colors",
               favorite
                 ? "bg-amber-100 text-amber-600 ring-1 ring-amber-300/80 hover:bg-amber-200/90"
                 : "text-amber-500 hover:bg-amber-50 hover:text-amber-600",
@@ -5555,7 +5662,7 @@ function CardModal(props: {
                 });
             }}
           >
-            {favorite ? <IconStarFilled className="h-5 w-5" /> : <IconStarOutline className="h-5 w-5" />}
+            {favorite ? <IconStarFilled className="h-3.5 w-3.5" /> : <IconStarOutline className="h-3.5 w-3.5" />}
           </button>
           {(props.boardId && props.onShareLink) || canEditCard ? (
             <div className="relative" ref={headerActionsRef}>
@@ -5643,13 +5750,15 @@ function CardModal(props: {
             </div>
           ) : null}
           <IconButton
+            size="compact"
             title={panelFullscreen ? "Обычный размер окна" : "На весь экран"}
             aria-label={panelFullscreen ? "Обычный размер окна" : "На весь экран"}
             onClick={() => setPanelFullscreen((v) => !v)}
           >
-            {panelFullscreen ? <IconShrinkPanel className="h-5 w-5" /> : <IconExpandPanel className="h-5 w-5" />}
+            {panelFullscreen ? <IconShrinkPanel className="h-3.5 w-3.5" /> : <IconExpandPanel className="h-3.5 w-3.5" />}
           </IconButton>
           <IconButton
+            size="compact"
             title="Закрыть"
             onClick={() => {
               if (deleting) {
@@ -5659,7 +5768,7 @@ function CardModal(props: {
               void closeAndRefresh();
             }}
           >
-            <IconX className="h-5 w-5" />
+            <IconX className="h-3.5 w-3.5" />
           </IconButton>
         </div>
       }
@@ -5668,6 +5777,9 @@ function CardModal(props: {
         ref={cardLayoutRef}
         className={classNames("flex min-h-0 w-full", isLg ? "flex-row items-stretch gap-0" : "flex-col gap-4")}
       >
+        {canEditCard ? (
+          <input ref={uploadInputRef} type="file" className="sr-only" onChange={onAttachmentFileInputChange} aria-hidden />
+        ) : null}
         {(!isLg || !leftPaneCollapsed) ? (
         <div
           className={classNames(
@@ -5829,12 +5941,12 @@ function CardModal(props: {
               {canEditCard && !detailsEditing ? (
                 <button
                   type="button"
-                  className="grid h-8 w-8 shrink-0 place-items-center rounded-lg border border-slate-200 bg-white text-slate-800 hover:bg-slate-50"
+                  className="grid h-6 w-6 shrink-0 place-items-center rounded-lg border border-slate-200 bg-white text-slate-800 hover:bg-slate-50"
                   onClick={() => setDetailsEditing(true)}
                   title="Редактировать"
                   aria-label="Редактировать"
                 >
-                  <IconEdit className="h-4 w-4" />
+                  <IconEdit className="h-3.5 w-3.5" />
                 </button>
               ) : null}
             </div>
@@ -5858,7 +5970,7 @@ function CardModal(props: {
                 <div className="mt-1.5 flex justify-end">
                   <button
                     type="button"
-                    className="grid h-9 w-9 place-items-center rounded-xl border border-slate-200 bg-white text-slate-800 hover:bg-slate-50"
+                    className="grid h-6 w-6 place-items-center rounded-lg border border-slate-200 bg-white text-slate-800 hover:bg-slate-50"
                     onClick={() => {
                       setDetails(card.details ?? "");
                       setDetailsEditing(false);
@@ -5866,7 +5978,7 @@ function CardModal(props: {
                     title="Отмена"
                     aria-label="Отмена"
                   >
-                    <IconX className="h-5 w-5" />
+                    <IconX className="h-3.5 w-3.5" />
                   </button>
                 </div>
               </div>
@@ -5883,12 +5995,12 @@ function CardModal(props: {
                 {canManageCard ? (
                   <button
                     type="button"
-                    className={classNames(cardModalIconAdd, "h-8 w-8")}
+                    className={classNames(cardModalIconAdd, "h-6 w-6")}
                     title="Добавить участника"
                     aria-label="Добавить участника"
                     onClick={() => setParticipantAddOpen((v) => !v)}
                   >
-                    <IconPlus className="h-4 w-4" />
+                    <IconPlus className="h-3.5 w-3.5" />
                   </button>
                 ) : null}
               </div>
@@ -5911,7 +6023,7 @@ function CardModal(props: {
                     </div>
                     <button
                       type="button"
-                      className={classNames(cardModalIconAddEmphasis, "h-10 w-10 shrink-0")}
+                      className={classNames(cardModalIconAddEmphasis, "h-6 w-6 shrink-0")}
                       disabled={!participantAddUserId}
                       title="Добавить участника"
                       aria-label="Добавить участника"
@@ -5941,7 +6053,7 @@ function CardModal(props: {
                           .catch((err) => setParticipantError((err as Error).message));
                       }}
                     >
-                      <IconPlus className="h-5 w-5" />
+                      <IconPlus className="h-3.5 w-3.5" />
                     </button>
                   </div>
                   <div className="max-h-48 overflow-auto rounded-xl border border-slate-200 bg-white py-1 shadow-sm">
@@ -6085,28 +6197,18 @@ function CardModal(props: {
               {canEditCard ? (
                 <button
                   type="button"
-                  className={classNames(cardModalIconAdd, "h-8 w-8")}
-                  onClick={() => uploadInputRef.current?.click()}
+                  className={classNames(cardModalIconAdd, "h-6 w-6")}
+                  onClick={() => {
+                    uploadTargetRef.current = { kind: "card" };
+                    uploadInputRef.current?.click();
+                  }}
                   title="Добавить файл"
                   aria-label="Добавить файл"
                 >
-                  <IconPlus className="h-4 w-4" />
+                  <IconPlus className="h-3.5 w-3.5" />
                 </button>
               ) : null}
             </div>
-            {canEditCard ? (
-              <input
-                ref={uploadInputRef}
-                type="file"
-                className="sr-only"
-                onChange={(e) => {
-                  const f = e.target.files?.[0];
-                  if (!f) return;
-                  e.target.value = "";
-                  uploadAttachmentForCard(f);
-                }}
-              />
-            ) : null}
             {uploadSelectedName ? (
               <div className="mt-1 truncate text-xs text-slate-500" title={uploadSelectedName}>
                 {compactFileName(uploadSelectedName, 70)}
@@ -6141,12 +6243,12 @@ function CardModal(props: {
                       {canEditCard ? (
                         <button
                           type="button"
-                          className={classNames(cardModalIconDanger, "h-8 w-8")}
+                          className={classNames(cardModalIconDanger, "h-6 w-6")}
                           onClick={() => void Api.deleteAttachment(a.id).then(props.onChanged)}
                           title="Удалить"
                           aria-label="Удалить"
                         >
-                          <IconTrash className="h-4 w-4 text-rose-600" />
+                          <IconTrash className="h-3.5 w-3.5 text-rose-600" />
                         </button>
                       ) : null}
                     </div>
@@ -6248,17 +6350,20 @@ function CardModal(props: {
                     <div className="flex flex-wrap items-center gap-1">
                       <button
                         type="button"
-                        className="grid h-8 w-8 place-items-center rounded-lg text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                        className="grid h-6 w-6 place-items-center rounded-md text-slate-600 hover:bg-slate-100 hover:text-slate-900"
                         title="Добавить файл"
                         aria-label="Добавить файл"
-                        onClick={() => uploadInputRef.current?.click()}
+                        onClick={() => {
+                          uploadTargetRef.current = { kind: "newComment" };
+                          uploadInputRef.current?.click();
+                        }}
                       >
-                        <IconPaperclip className="h-4 w-4" />
+                        <IconPaperclip className="h-3.5 w-3.5" />
                       </button>
                       <div className="relative">
                         <button
                           type="button"
-                          className="grid h-8 w-8 place-items-center rounded-lg text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                          className="grid h-6 w-6 place-items-center rounded-md text-slate-600 hover:bg-slate-100 hover:text-slate-900"
                           title="Добавить ссылку на карточку"
                           aria-label="Добавить ссылку на карточку"
                           onClick={() => {
@@ -6266,7 +6371,7 @@ function CardModal(props: {
                             setCommentCardLinkOpen((v) => !v);
                           }}
                         >
-                          <IconLink className="h-4 w-4" />
+                          <IconLink className="h-3.5 w-3.5" />
                         </button>
                         {commentCardLinkOpen ? (
                           <div className="absolute left-0 top-full z-30 mt-1 w-72 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg">
@@ -6304,14 +6409,13 @@ function CardModal(props: {
                       </div>
                       <button
                         type="button"
-                        className="grid h-8 w-8 place-items-center rounded-lg text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                        className="grid h-6 w-6 place-items-center rounded-md text-slate-600 hover:bg-slate-100 hover:text-slate-900"
                         title="Упомянуть пользователя"
                         aria-label="Упомянуть пользователя"
                         onClick={() => {
-                          const textarea = commentTextareaRef.current;
-                          const cursor = textarea?.selectionStart ?? commentBody.length;
+                          const cursor = Math.max(0, Math.min(commentCaretRef.current, commentBody.length));
                           const prefix = commentBody.slice(0, cursor);
-                          const suffix = commentBody.slice(textarea?.selectionEnd ?? cursor);
+                          const suffix = commentBody.slice(cursor);
                           const needsSpace = prefix.length > 0 && !/\s$/.test(prefix);
                           const next = `${prefix}${needsSpace ? " " : ""}@${suffix}`;
                           const nextCursor = prefix.length + (needsSpace ? 1 : 0) + 1;
@@ -6322,18 +6426,18 @@ function CardModal(props: {
                           }, 0);
                         }}
                       >
-                        <IconAt className="h-4 w-4" />
+                        <IconAt className="h-3.5 w-3.5" />
                       </button>
                     </div>
                     <button
                       type="button"
-                      className={classNames(cardModalIconAddEmphasis, "h-9 w-9")}
+                      className={classNames(cardModalIconAddEmphasis, "h-6 w-6")}
                       disabled={!commentBody.trim()}
                       title="Добавить комментарий"
                       aria-label="Добавить комментарий"
                       onClick={submitComment}
                     >
-                      <IconPlus className="h-5 w-5" />
+                      <IconPlus className="h-3.5 w-3.5" />
                     </button>
                   </div>
                 </div>
@@ -6395,38 +6499,38 @@ function CardModal(props: {
                       return (
                         <div className="flex items-center gap-2">
                           <button
-                            className="grid h-8 w-8 place-items-center rounded-lg border border-slate-200 bg-white text-slate-800 hover:bg-slate-50"
-                            onClick={() => {
-                              setEditingCommentId(c.id);
-                              setEditingCommentBody(c.body ?? "");
-                              resetEditingCommentTools();
-                            }}
+                            type="button"
+                            className={classNames(
+                              "grid h-6 w-6 place-items-center rounded-lg border text-slate-800 transition-colors",
+                              editingCommentId === c.id
+                                ? "border-[#246c7c]/40 bg-[#246c7c]/12 text-[#1a4d58] ring-1 ring-[#246c7c]/25"
+                                : "border-slate-200 bg-white hover:bg-slate-50",
+                            )}
+                            onClick={() => openOrToggleCommentEditor(c)}
                             title="Редактировать"
                             aria-label="Редактировать"
+                            aria-pressed={editingCommentId === c.id}
                           >
-                            <IconEdit />
+                            <IconEdit className="h-3.5 w-3.5" />
                           </button>
                           <button
-                            className={classNames(cardModalIconDanger, "h-8 w-8")}
-                            onClick={() => void Api.deleteComment(c.id).then(props.onChanged)}
+                            type="button"
+                            className={classNames(cardModalIconDanger, "h-6 w-6")}
+                            onClick={() => {
+                              if (editingCommentId === c.id) resetEditingComment();
+                              void Api.deleteComment(c.id).then(props.onChanged);
+                            }}
                             title="Удалить"
                             aria-label="Удалить"
                           >
-                            <IconTrash className="h-4 w-4 text-rose-600" />
+                            <IconTrash className="h-3.5 w-3.5 text-rose-600" />
                           </button>
                         </div>
                       );
                     })()}
                   </div>
                   {editingCommentId === c.id ? (
-                    <div
-                      className="relative mt-2 grid gap-2"
-                      ref={editingCommentComposerRef}
-                      onBlur={(e) => {
-                        if (e.currentTarget.contains(e.relatedTarget as Node | null)) return;
-                        saveEditingComment(c.id);
-                      }}
-                    >
+                    <div className="relative mt-2 grid gap-2" ref={editingCommentComposerRef}>
                       <div className="space-y-1">
                         <MarkdownRichEditor
                           ref={editingCommentTextareaRef}
@@ -6439,17 +6543,20 @@ function CardModal(props: {
                           <div className="flex flex-wrap items-center gap-1">
                             <button
                               type="button"
-                              className="grid h-8 w-8 place-items-center rounded-lg text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                              className="grid h-6 w-6 place-items-center rounded-md text-slate-600 hover:bg-slate-100 hover:text-slate-900"
                               title="Добавить файл"
                               aria-label="Добавить файл"
-                              onClick={() => uploadInputRef.current?.click()}
+                              onClick={() => {
+                                uploadTargetRef.current = { kind: "editComment", commentId: c.id };
+                                uploadInputRef.current?.click();
+                              }}
                             >
-                              <IconPaperclip className="h-4 w-4" />
+                              <IconPaperclip className="h-3.5 w-3.5" />
                             </button>
                             <div className="relative">
                               <button
                                 type="button"
-                                className="grid h-8 w-8 place-items-center rounded-lg text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                                className="grid h-6 w-6 place-items-center rounded-md text-slate-600 hover:bg-slate-100 hover:text-slate-900"
                                 title="Добавить ссылку на карточку"
                                 aria-label="Добавить ссылку на карточку"
                                 onClick={() => {
@@ -6457,7 +6564,7 @@ function CardModal(props: {
                                   setEditingCommentCardLinkOpen((v) => !v);
                                 }}
                               >
-                                <IconLink className="h-4 w-4" />
+                                <IconLink className="h-3.5 w-3.5" />
                               </button>
                               {editingCommentCardLinkOpen ? (
                                 <div className="absolute left-0 top-full z-30 mt-1 w-72 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg">
@@ -6495,14 +6602,13 @@ function CardModal(props: {
                             </div>
                             <button
                               type="button"
-                              className="grid h-8 w-8 place-items-center rounded-lg text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                              className="grid h-6 w-6 place-items-center rounded-md text-slate-600 hover:bg-slate-100 hover:text-slate-900"
                               title="Упомянуть пользователя"
                               aria-label="Упомянуть пользователя"
                               onClick={() => {
-                                const textarea = editingCommentTextareaRef.current;
-                                const cursor = textarea?.selectionStart ?? editingCommentBody.length;
+                                const cursor = Math.max(0, Math.min(editingCommentCaretRef.current, editingCommentBody.length));
                                 const prefix = editingCommentBody.slice(0, cursor);
-                                const suffix = editingCommentBody.slice(textarea?.selectionEnd ?? cursor);
+                                const suffix = editingCommentBody.slice(cursor);
                                 const needsSpace = prefix.length > 0 && !/\s$/.test(prefix);
                                 const next = `${prefix}${needsSpace ? " " : ""}@${suffix}`;
                                 const nextCursor = prefix.length + (needsSpace ? 1 : 0) + 1;
@@ -6513,17 +6619,17 @@ function CardModal(props: {
                                 }, 0);
                               }}
                             >
-                              <IconAt className="h-4 w-4" />
+                              <IconAt className="h-3.5 w-3.5" />
                             </button>
                           </div>
                           <button
                             type="button"
-                            className="grid h-9 w-9 place-items-center rounded-xl border border-slate-200 bg-white text-slate-800 hover:bg-slate-50"
+                            className="grid h-6 w-6 place-items-center rounded-lg border border-slate-200 bg-white text-slate-800 hover:bg-slate-50"
                             title="Отмена"
                             aria-label="Отмена"
                             onClick={() => resetEditingComment()}
                           >
-                            <IconX className="h-5 w-5" />
+                            <IconX className="h-3.5 w-3.5" />
                           </button>
                         </div>
                       </div>
