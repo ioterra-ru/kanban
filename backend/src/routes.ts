@@ -1048,8 +1048,11 @@ router.get(
       include: {
         column: { select: { id: true, title: true } },
         author: { select: { id: true, email: true, name: true, avatarPreset: true, avatarUploadName: true } },
-        comments: { orderBy: { createdAt: "desc" } },
-        attachments: { orderBy: { createdAt: "asc" } },
+        comments: {
+          orderBy: { createdAt: "desc" },
+          include: { attachments: { orderBy: { createdAt: "asc" } } },
+        },
+        attachments: { where: { commentId: null }, orderBy: { createdAt: "asc" } },
         participants: { include: { user: { select: { id: true, email: true, name: true, avatarPreset: true, avatarUploadName: true } } } },
       },
     });
@@ -1455,6 +1458,7 @@ router.post(
 
 const CommentCreateSchema = z.object({
   body: z.string().min(1),
+  attachmentIds: z.array(z.string().uuid()).max(50).optional(),
 });
 
 const CommentUpdateSchema = z.object({
@@ -1481,6 +1485,18 @@ router.post(
         body: data.body,
       },
     });
+
+    if (data.attachmentIds?.length) {
+      const { count } = await prisma.attachment.updateMany({
+        where: { cardId, id: { in: data.attachmentIds }, commentId: null },
+        data: { commentId: comment.id },
+      });
+      if (count !== data.attachmentIds.length) {
+        await prisma.comment.delete({ where: { id: comment.id } });
+        throw new HttpError(400, "Некорректные вложения для комментария");
+      }
+    }
+
     const cinfo = await prisma.card.findFirst({
       where: { id: cardId, boardId },
       select: { description: true },
@@ -1608,6 +1624,24 @@ router.post(
     const exists = await prisma.card.count({ where: { id: cardId, boardId } });
     if (!exists) throw new HttpError(404, "Card not found");
 
+    let commentId: string | undefined;
+    try {
+      const raw = (req.body as { commentId?: unknown })?.commentId;
+      if (raw != null && String(raw).trim() !== "") {
+        commentId = z.string().uuid().parse(typeof raw === "string" ? raw : String(raw));
+      }
+    } catch {
+      throw new HttpError(400, "Invalid commentId");
+    }
+    if (commentId) {
+      const com = await prisma.comment.findFirst({
+        where: { id: commentId, cardId },
+        select: { authorId: true },
+      });
+      if (!com) throw new HttpError(404, "Comment not found");
+      if (actor.role !== Role.ADMIN && com.authorId !== actor.id) throw new HttpError(403, "Forbidden");
+    }
+
     // Multer/or browser may send original filename in a mojibake form.
     // Try to repair common UTF-8-as-latin1 cases (e.g. Cyrillic names).
     const repairedOriginalName = (() => {
@@ -1628,6 +1662,7 @@ router.post(
     const attachment = await prisma.attachment.create({
       data: {
         cardId,
+        commentId: commentId ?? null,
         filename: repairedOriginalName,
         storedName: req.file.filename,
         mimeType: req.file.mimetype,

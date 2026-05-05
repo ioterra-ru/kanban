@@ -125,7 +125,7 @@ export const Api = {
 
   deleteCard: (id: string) => api<{ ok: true }>(`/api/cards/${id}`, { method: "DELETE" }),
 
-  addComment: (cardId: string, input: { body: string }) =>
+  addComment: (cardId: string, input: { body: string; attachmentIds?: string[] }) =>
     api<{ comment: unknown }>(`/api/cards/${cardId}/comments`, { method: "POST", body: JSON.stringify(input) }),
 
   updateComment: (commentId: string, input: { body: string }) =>
@@ -134,9 +134,10 @@ export const Api = {
   deleteComment: (commentId: string) =>
     api<{ ok: true }>(`/api/comments/${commentId}`, { method: "DELETE" }),
 
-  uploadAttachment: async (cardId: string, file: File) => {
+  uploadAttachment: async (cardId: string, file: File, opts?: { commentId?: string }) => {
     const fd = new FormData();
     fd.set("file", file);
+    if (opts?.commentId) fd.set("commentId", opts.commentId);
     return await api<{ attachment: unknown }>(`/api/cards/${cardId}/attachments`, {
       method: "POST",
       body: fd,
