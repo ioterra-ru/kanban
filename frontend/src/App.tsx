@@ -101,6 +101,8 @@ function Modal(props: {
   panelOverlay?: React.ReactNode;
   /** Панель на весь вьюпорт без отступов оверлея (окно «на весь экран»). */
   fillViewport?: boolean;
+  /** Область под шапкой: по умолчанию вертикальный скролл; для карточки — flex-колонка без внешнего скролла. */
+  bodyClassName?: string;
   children: React.ReactNode;
   onClose: () => void;
 }) {
@@ -128,7 +130,7 @@ function Modal(props: {
     >
       <div
         className={classNames(
-          "relative flex flex-col overflow-hidden bg-white shadow-2xl",
+          "relative flex min-h-0 flex-col overflow-hidden bg-white shadow-2xl",
           fill
             ? "h-full max-h-full w-full rounded-none"
             : classNames(
@@ -150,7 +152,15 @@ function Modal(props: {
             <div className="shrink-0">{headerRight}</div>
           </div>
         )}
-        <div className={classNames("flex-1 overflow-x-hidden overflow-y-auto p-4", fill && "min-h-0")}>{props.children}</div>
+        <div
+          className={classNames(
+            "flex-1 p-4",
+            fill && "min-h-0",
+            props.bodyClassName ?? "overflow-x-hidden overflow-y-auto",
+          )}
+        >
+          {props.children}
+        </div>
         {props.panelOverlay}
       </div>
     </div>
@@ -3669,9 +3679,14 @@ function ProfileModal(props: {
   return (
     <Modal
       open={true}
-      title="Личный кабинет"
       onClose={props.onClose}
       panelStyle={{ height: "70vh", minHeight: "400px" }}
+      headerLeft={
+        <div className="flex min-w-0 items-center gap-3">
+          <img src="/ioterra.svg" alt="" className="h-9 w-9 shrink-0" width={36} height={36} aria-hidden />
+          <div className="text-lg font-semibold text-slate-900">Личный кабинет</div>
+        </div>
+      }
     >
       <div className="flex flex-col gap-3 h-full min-h-0">
         <div className="shrink-0 flex flex-wrap gap-1 border-b border-slate-200 pb-2">
@@ -4829,7 +4844,11 @@ function CardModal(props: {
 }) {
   const card = props.card;
   const uploadInputRef = useRef<HTMLInputElement>(null);
-  type CardFileUploadTarget = { kind: "card" } | { kind: "newComment" } | { kind: "editComment"; commentId: string };
+  type CardFileUploadTarget =
+    | { kind: "card" }
+    | { kind: "newComment" }
+    | { kind: "editComment"; commentId: string }
+    | { kind: "details" };
   const uploadTargetRef = useRef<CardFileUploadTarget>({ kind: "card" });
   const commentComposerRef = useRef<HTMLDivElement | null>(null);
   const commentTextareaRef = useRef<HTMLTextAreaElement | null>(null);
@@ -4840,7 +4859,8 @@ function CardModal(props: {
   const editingCommentCaretRef = useRef(0);
   const persistInFlightRef = useRef<Promise<boolean> | null>(null);
   const detailsTextareaRef = useRef<HTMLTextAreaElement>(null);
-  const detailsEditWrapperRef = useRef<HTMLDivElement>(null);
+  const detailsComposerRef = useRef<HTMLDivElement | null>(null);
+  const detailsCaretRef = useRef(0);
 
   const [title, setTitle] = useState("");
   const [details, setDetails] = useState("");
@@ -4869,6 +4889,23 @@ function CardModal(props: {
   const [editingCommentCardLinkQuery, setEditingCommentCardLinkQuery] = useState("");
   const [editingCommentCardLinkResults, setEditingCommentCardLinkResults] = useState<CardSearchHit[]>([]);
   const [editingCommentCardLinkSearching, setEditingCommentCardLinkSearching] = useState(false);
+
+  const [detailsMentionOpen, setDetailsMentionOpen] = useState(false);
+  const [detailsMentionQuery, setDetailsMentionQuery] = useState("");
+  const [detailsMentionStart, setDetailsMentionStart] = useState<number | null>(null);
+  const [detailsCardLinkOpen, setDetailsCardLinkOpen] = useState(false);
+  const [detailsCardLinkQuery, setDetailsCardLinkQuery] = useState("");
+  const [detailsCardLinkResults, setDetailsCardLinkResults] = useState<CardSearchHit[]>([]);
+  const [detailsCardLinkSearching, setDetailsCardLinkSearching] = useState(false);
+
+  const resetDetailsTools = () => {
+    setDetailsMentionOpen(false);
+    setDetailsMentionQuery("");
+    setDetailsMentionStart(null);
+    setDetailsCardLinkOpen(false);
+    setDetailsCardLinkQuery("");
+    setDetailsCardLinkResults([]);
+  };
 
   const [participants, setParticipants] = useState<
     Array<{ user: Pick<User, "id" | "email" | "name" | "avatarPreset" | "avatarUploadName"> }>
@@ -4994,6 +5031,8 @@ function CardModal(props: {
     setEditingCommentCardLinkOpen(false);
     setEditingCommentCardLinkQuery("");
     setEditingCommentCardLinkResults([]);
+    resetDetailsTools();
+    detailsCaretRef.current = (card.details ?? "").length;
     setDetailsEditing(false);
     setHeaderActionsOpen(false);
     setPanelFullscreen(false);
@@ -5147,6 +5186,35 @@ function CardModal(props: {
     document.addEventListener("mousedown", onDocClick);
     return () => document.removeEventListener("mousedown", onDocClick);
   }, [editingCommentMentionOpen, editingCommentCardLinkOpen]);
+
+  useEffect(() => {
+    if (!detailsCardLinkOpen) return;
+    const q = detailsCardLinkQuery.trim();
+    if (!q) {
+      setDetailsCardLinkResults([]);
+      setDetailsCardLinkSearching(false);
+      return;
+    }
+    setDetailsCardLinkSearching(true);
+    const t = window.setTimeout(() => {
+      Api.searchCards(q)
+        .then((r) => setDetailsCardLinkResults(r.cards))
+        .catch(() => setDetailsCardLinkResults([]))
+        .finally(() => setDetailsCardLinkSearching(false));
+    }, 250);
+    return () => window.clearTimeout(t);
+  }, [detailsCardLinkOpen, detailsCardLinkQuery]);
+
+  useEffect(() => {
+    if (!detailsMentionOpen && !detailsCardLinkOpen) return;
+    const onDocClick = (e: MouseEvent) => {
+      if (detailsComposerRef.current && !detailsComposerRef.current.contains(e.target as Node)) {
+        resetDetailsTools();
+      }
+    };
+    document.addEventListener("mousedown", onDocClick);
+    return () => document.removeEventListener("mousedown", onDocClick);
+  }, [detailsMentionOpen, detailsCardLinkOpen]);
 
   useEffect(() => {
     if (!editingCommentCardLinkOpen) return;
@@ -5313,6 +5381,23 @@ function CardModal(props: {
     return await p;
   };
 
+  /** Как у комментария: повторное нажатие «карандаш» сохраняет и выходит из режима правки. */
+  const toggleDetailsEditing = () => {
+    if (!canEditCard || !card) return;
+    if (!detailsEditing) {
+      resetDetailsTools();
+      detailsCaretRef.current = details.length;
+      setDetailsEditing(true);
+      return;
+    }
+    void persist().then((ok) => {
+      if (ok) {
+        resetDetailsTools();
+        setDetailsEditing(false);
+      }
+    });
+  };
+
   const applyAssigneeEmail = (email: string) => {
     if (!canManageCard) return;
     setAssignee(email);
@@ -5329,6 +5414,38 @@ function CardModal(props: {
     if (!ok) return; // keep modal open so user sees "Не сохранено"
     await props.onChanged(); // refresh board + card data in parent
     props.onClose();
+  };
+
+  const updateDetailsDraft = (next: string, cursor: number) => {
+    const c = Math.max(0, Math.min(cursor, next.length));
+    detailsCaretRef.current = c;
+    setDetails(next);
+    const beforeCursor = next.slice(0, c);
+    const mentionMatch = beforeCursor.match(/(^|\s)@([^\s@]*)$/);
+    if (!mentionMatch) {
+      setDetailsMentionOpen(false);
+      setDetailsMentionQuery("");
+      setDetailsMentionStart(null);
+      return;
+    }
+    setDetailsCardLinkOpen(false);
+    setDetailsMentionOpen(true);
+    setDetailsMentionQuery(mentionMatch[2] ?? "");
+    setDetailsMentionStart(c - (mentionMatch[2]?.length ?? 0) - 1);
+  };
+
+  const insertAttachmentMarkdownIntoDetails = (markdown: string) => {
+    const textarea = detailsTextareaRef.current;
+    const body = details;
+    const caret = detailsCaretRef.current;
+    const start = Math.max(0, Math.min(caret, body.length));
+    const next = body.slice(0, start) + markdown + body.slice(start);
+    const cursor = start + markdown.length;
+    updateDetailsDraft(next, cursor);
+    window.setTimeout(() => {
+      textarea?.focus();
+      textarea?.setSelectionRange(cursor, cursor);
+    }, 0);
   };
 
   const insertAttachmentMarkdownIntoComment = (mode: "new" | "edit", markdown: string) => {
@@ -5369,7 +5486,10 @@ function CardModal(props: {
     void Api.uploadAttachment(card.id, f, t.kind === "editComment" ? { commentId: t.commentId } : undefined)
       .then((res) => {
         const att = res.attachment as { id: string; filename: string; mimeType: string };
-        insertAttachmentMarkdownIntoComment(t.kind === "editComment" ? "edit" : "new", markdownForUploadedAttachment(att));
+        const md = markdownForUploadedAttachment(att);
+        if (t.kind === "editComment") insertAttachmentMarkdownIntoComment("edit", md);
+        else if (t.kind === "details") insertAttachmentMarkdownIntoDetails(md);
+        else insertAttachmentMarkdownIntoComment("new", md);
         setUploadSelectedName("");
         return props.onChanged();
       })
@@ -5443,8 +5563,50 @@ function CardModal(props: {
     }, 0);
   };
 
-  const insertCardLink = (hit: CardSearchHit, mode: "new" | "edit" = "new") => {
+  const insertDetailsMention = (user: Pick<User, "id" | "email" | "name" | "avatarPreset" | "avatarUploadName">) => {
+    const textarea = detailsTextareaRef.current;
+    const body = details;
+    const query = detailsMentionQuery;
+    const mentionStart = detailsMentionStart;
+    const caret = detailsCaretRef.current;
+    const cursor = Math.max(0, Math.min(caret, body.length));
+    const start = mentionStart ?? Math.max(0, cursor - query.length - 1);
+    const label = user.name || user.email;
+    const next = `${body.slice(0, start)}@${label} ${body.slice(cursor)}`;
+    updateDetailsDraft(next, start + label.length + 2);
+    resetDetailsTools();
+    window.setTimeout(() => {
+      const pos = start + label.length + 2;
+      textarea?.focus();
+      textarea?.setSelectionRange(pos, pos);
+    }, 0);
+  };
+
+  const insertCardLink = (hit: CardSearchHit, mode: "new" | "edit" | "details" = "new") => {
     if (!props.boardId) return;
+    if (mode === "details") {
+      const textarea = detailsTextareaRef.current;
+      const body = details;
+      const caret = detailsCaretRef.current;
+      const cursor = Math.max(0, Math.min(caret, body.length));
+      const link = getCardShareLink(props.boardId, hit.id);
+      const insertion = `${hit.description}: ${link}`;
+      const prefix = body.slice(0, cursor);
+      const suffix = body.slice(cursor);
+      const needsLeadingSpace = prefix.length > 0 && !/\s$/.test(prefix);
+      const needsTrailingSpace = suffix.length > 0 && !/^\s/.test(suffix);
+      const next = `${prefix}${needsLeadingSpace ? " " : ""}${insertion}${needsTrailingSpace ? " " : ""}${suffix}`;
+      const pos = prefix.length + (needsLeadingSpace ? 1 : 0) + insertion.length + (needsTrailingSpace ? 1 : 0);
+      updateDetailsDraft(next, pos);
+      setDetailsCardLinkOpen(false);
+      setDetailsCardLinkQuery("");
+      setDetailsCardLinkResults([]);
+      window.setTimeout(() => {
+        textarea?.focus();
+        textarea?.setSelectionRange(pos, pos);
+      }, 0);
+      return;
+    }
     const textarea = mode === "edit" ? editingCommentTextareaRef.current : commentTextareaRef.current;
     const body = mode === "edit" ? editingCommentBody : commentBody;
     const caret = mode === "edit" ? editingCommentCaretRef.current : commentCaretRef.current;
@@ -5561,6 +5723,12 @@ function CardModal(props: {
     return (u.name ?? "").toLowerCase().includes(q) || (u.email ?? "").toLowerCase().includes(q);
   });
 
+  const detailsMentionUsers = props.allUsers.filter((u) => {
+    const q = detailsMentionQuery.trim().toLowerCase();
+    if (!q) return true;
+    return (u.name ?? "").toLowerCase().includes(q) || (u.email ?? "").toLowerCase().includes(q);
+  });
+
   const cardModalIconAdd =
     "grid place-items-center rounded-lg border-2 border-teal-300/80 bg-white text-slate-700 shadow-sm transition-colors hover:bg-teal-50/70 hover:text-[#246c7c] hover:border-teal-500";
   const cardModalIconAddEmphasis =
@@ -5590,6 +5758,7 @@ function CardModal(props: {
       }}
       showCloseButton={false}
       fillViewport={panelFullscreen}
+      bodyClassName="flex min-h-0 flex-col overflow-x-hidden overflow-y-hidden"
       headerClassName="bg-gradient-to-b from-slate-100 to-slate-50"
       panelClassName={classNames("max-w-none", panelFullscreen && "rounded-none border border-slate-200")}
       panelStyle={
@@ -5625,16 +5794,26 @@ function CardModal(props: {
         )
       }
       headerLeft={
-        <div className="min-w-0">
-          <input
-            className="w-full rounded-lg border border-transparent bg-transparent px-2 py-1 text-lg font-semibold text-slate-900 outline-none focus:border-slate-200 focus:bg-white read-only:cursor-default read-only:focus:border-transparent read-only:focus:bg-transparent"
-            value={title}
-            readOnly={!canEditCard}
-            onChange={(e) => setTitle(e.target.value)}
-            onBlur={() => void persist()}
-            placeholder="Название карточки"
+        <div className="flex min-w-0 items-center gap-3">
+          <img
+            src="/ioterra.svg"
+            alt=""
+            className="h-9 w-9 shrink-0"
+            width={36}
+            height={36}
+            aria-hidden
           />
-          {saveError ? <div className="mt-2 text-xs text-rose-700">{saveError}</div> : null}
+          <div className="min-w-0 flex-1">
+            <input
+              className="w-full rounded-lg border border-transparent bg-transparent px-2 py-1 text-lg font-semibold text-slate-900 outline-none focus:border-slate-200 focus:bg-white read-only:cursor-default read-only:focus:border-transparent read-only:focus:bg-transparent"
+              value={title}
+              readOnly={!canEditCard}
+              onChange={(e) => setTitle(e.target.value)}
+              onBlur={() => void persist()}
+              placeholder="Название карточки"
+            />
+            {saveError ? <div className="mt-2 text-xs text-rose-700">{saveError}</div> : null}
+          </div>
         </div>
       }
       headerRight={
@@ -5775,7 +5954,10 @@ function CardModal(props: {
     >
       <div
         ref={cardLayoutRef}
-        className={classNames("flex min-h-0 w-full", isLg ? "flex-row items-stretch gap-0" : "flex-col gap-4")}
+        className={classNames(
+          "flex min-h-0 w-full flex-1 flex-col",
+          isLg ? "lg:flex-row lg:items-stretch lg:gap-0" : "gap-4",
+        )}
       >
         {canEditCard ? (
           <input ref={uploadInputRef} type="file" className="sr-only" onChange={onAttachmentFileInputChange} aria-hidden />
@@ -5783,13 +5965,13 @@ function CardModal(props: {
         {(!isLg || !leftPaneCollapsed) ? (
         <div
           className={classNames(
-            "grid min-w-0 max-w-full gap-3 overflow-x-hidden pr-0",
+            "flex min-h-0 min-w-0 max-w-full flex-1 flex-col gap-3 overflow-x-hidden overflow-y-auto pr-0 lg:overflow-y-auto",
             isLg && "lg:min-w-0 lg:basis-0 lg:pr-1",
             isLg && !rightPaneCollapsed && !leftPaneCollapsed && "lg:flex-1",
             isLg && rightPaneCollapsed && "lg:flex-1",
           )}
         >
-          <div className="rounded-2xl border border-slate-200 bg-white p-2">
+          <div className="shrink-0 rounded-2xl border border-slate-200 bg-white p-2">
             <div className="mb-1.5 text-sm font-semibold text-slate-900">Параметры</div>
             <div className="grid gap-[2px]">
               <div className={cardParamRowClass}>
@@ -5935,61 +6117,176 @@ function CardModal(props: {
             </div>
           </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-white p-2">
-            <div className="mb-1.5 flex items-center justify-between gap-2">
+          <div className="flex shrink-0 flex-col overflow-x-hidden rounded-2xl border border-slate-200 bg-white p-2">
+            <div className="mb-1.5 flex shrink-0 items-center justify-between gap-2 pr-0.5">
               <div className="text-sm font-semibold text-slate-900">Описание</div>
-              {canEditCard && !detailsEditing ? (
+              {canEditCard ? (
                 <button
                   type="button"
-                  className="grid h-6 w-6 shrink-0 place-items-center rounded-lg border border-slate-200 bg-white text-slate-800 hover:bg-slate-50"
-                  onClick={() => setDetailsEditing(true)}
-                  title="Редактировать"
-                  aria-label="Редактировать"
+                  className={classNames(
+                    "grid h-6 w-6 shrink-0 place-items-center rounded-lg border text-slate-800 transition-colors",
+                    detailsEditing
+                      ? "border-[#246c7c]/40 bg-[#246c7c]/12 text-[#1a4d58] ring-1 ring-[#246c7c]/25"
+                      : "border-slate-200 bg-white hover:bg-slate-50",
+                  )}
+                  onClick={toggleDetailsEditing}
+                  title={detailsEditing ? "Сохранить и закрыть правку" : "Редактировать"}
+                  aria-label={detailsEditing ? "Сохранить и закрыть правку" : "Редактировать"}
+                  aria-pressed={detailsEditing}
                 >
                   <IconEdit className="h-3.5 w-3.5" />
                 </button>
               ) : null}
             </div>
-            {canEditCard && detailsEditing ? (
-              <div
-                ref={detailsEditWrapperRef}
-                onBlur={(e) => {
-                  if (e.currentTarget.contains(e.relatedTarget as Node | null)) return;
-                  void persist().then((ok) => {
-                    if (ok) setDetailsEditing(false);
-                  });
-                }}
-              >
-                <MarkdownRichEditor
-                  ref={detailsTextareaRef}
-                  value={details}
-                  onChange={(v) => setDetails(v)}
-                  minHeight="180px"
-                  ariaLabel="Описание карточки"
-                />
-                <div className="mt-1.5 flex justify-end">
-                  <button
-                    type="button"
-                    className="grid h-6 w-6 place-items-center rounded-lg border border-slate-200 bg-white text-slate-800 hover:bg-slate-50"
-                    onClick={() => {
-                      setDetails(card.details ?? "");
-                      setDetailsEditing(false);
-                    }}
-                    title="Отмена"
-                    aria-label="Отмена"
-                  >
-                    <IconX className="h-3.5 w-3.5" />
-                  </button>
+            <div
+              className={classNames(
+                "overflow-x-hidden",
+                detailsEditing ? "pb-1" : "max-h-[min(60vh,28rem)] overflow-y-auto",
+              )}
+            >
+              {canEditCard && detailsEditing ? (
+                <div className="relative" ref={detailsComposerRef}>
+                  <div className="space-y-1">
+                    <MarkdownRichEditor
+                      ref={detailsTextareaRef}
+                      value={details}
+                      onChange={(v, c) => updateDetailsDraft(v, c ?? v.length)}
+                      minHeight="100px"
+                      ariaLabel="Описание карточки"
+                    />
+                    <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-slate-50/90 px-2 py-1.5">
+                      <div className="flex flex-wrap items-center gap-1">
+                        <button
+                          type="button"
+                          className="grid h-6 w-6 place-items-center rounded-md text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                          title="Добавить файл"
+                          aria-label="Добавить файл"
+                          onClick={() => {
+                            uploadTargetRef.current = { kind: "details" };
+                            uploadInputRef.current?.click();
+                          }}
+                        >
+                          <IconPaperclip className="h-3.5 w-3.5" />
+                        </button>
+                        <div className="relative">
+                          <button
+                            type="button"
+                            className="grid h-6 w-6 place-items-center rounded-md text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                            title="Добавить ссылку на карточку"
+                            aria-label="Добавить ссылку на карточку"
+                            onClick={() => {
+                              setDetailsMentionOpen(false);
+                              setDetailsCardLinkOpen((v) => !v);
+                            }}
+                          >
+                            <IconLink className="h-3.5 w-3.5" />
+                          </button>
+                          {detailsCardLinkOpen ? (
+                            <div className="absolute left-0 top-full z-30 mt-1 w-72 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg">
+                              <div className="border-b border-slate-100 p-2">
+                                <input
+                                  type="text"
+                                  className="w-full rounded-lg border border-slate-200 px-2 py-1.5 text-sm outline-none focus:border-[#246c7c]"
+                                  placeholder="Найти карточку..."
+                                  value={detailsCardLinkQuery}
+                                  onChange={(e) => setDetailsCardLinkQuery(e.target.value)}
+                                  autoFocus
+                                />
+                              </div>
+                              <div className="max-h-56 overflow-auto py-1">
+                                {detailsCardLinkSearching ? (
+                                  <div className="px-3 py-3 text-sm text-slate-500">Ищем...</div>
+                                ) : detailsCardLinkQuery.trim() && detailsCardLinkResults.length === 0 ? (
+                                  <div className="px-3 py-3 text-sm text-slate-500">Ничего не найдено</div>
+                                ) : (
+                                  detailsCardLinkResults.map((hit) => (
+                                    <button
+                                      key={hit.id}
+                                      type="button"
+                                      className="w-full px-3 py-2 text-left text-sm hover:bg-slate-50"
+                                      onClick={() => insertCardLink(hit, "details")}
+                                    >
+                                      <div className="truncate font-medium text-slate-900">{hit.description}</div>
+                                      <div className="mt-0.5 text-xs text-slate-500">{hit.columnTitle}</div>
+                                    </button>
+                                  ))
+                                )}
+                              </div>
+                            </div>
+                          ) : null}
+                        </div>
+                        <button
+                          type="button"
+                          className="grid h-6 w-6 place-items-center rounded-md text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                          title="Упомянуть пользователя"
+                          aria-label="Упомянуть пользователя"
+                          onClick={() => {
+                            const cursor = Math.max(0, Math.min(detailsCaretRef.current, details.length));
+                            const prefix = details.slice(0, cursor);
+                            const suffix = details.slice(cursor);
+                            const needsSpace = prefix.length > 0 && !/\s$/.test(prefix);
+                            const next = `${prefix}${needsSpace ? " " : ""}@${suffix}`;
+                            const nextCursor = prefix.length + (needsSpace ? 1 : 0) + 1;
+                            updateDetailsDraft(next, nextCursor);
+                            window.setTimeout(() => {
+                              detailsTextareaRef.current?.focus();
+                              detailsTextareaRef.current?.setSelectionRange(nextCursor, nextCursor);
+                            }, 0);
+                          }}
+                        >
+                          <IconAt className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                  {detailsMentionOpen ? (
+                    <div className="absolute left-0 right-0 top-full z-30 mt-1 max-h-56 overflow-auto rounded-xl border border-slate-200 bg-white py-1 shadow-lg">
+                      {detailsMentionUsers.length === 0 ? (
+                        <div className="px-3 py-3 text-sm text-slate-500">Нет пользователей</div>
+                      ) : (
+                        detailsMentionUsers.map((u) => (
+                          <button
+                            key={u.id}
+                            type="button"
+                            className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm text-slate-800 hover:bg-slate-50"
+                            onClick={() => insertDetailsMention(u)}
+                          >
+                            <AvatarImg user={u} size={24} />
+                            <span className="min-w-0 flex-1 truncate">{u.name || u.email}</span>
+                            <span className="hidden truncate text-xs text-slate-500 sm:block">{u.email}</span>
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  ) : null}
                 </div>
+              ) : (
+                <div className="rounded-xl border border-slate-100 bg-slate-50/90 p-2">
+                  <MarkdownHtmlBlock source={details} />
+                </div>
+              )}
+            </div>
+            {canEditCard && detailsEditing ? (
+              <div className="mt-2 flex shrink-0 justify-end border-t border-slate-100 pt-2">
+                <button
+                  type="button"
+                  className="grid h-6 w-6 place-items-center rounded-lg border border-slate-200 bg-white text-slate-800 hover:bg-slate-50"
+                  onClick={() => {
+                    setDetails(card.details ?? "");
+                    detailsCaretRef.current = (card.details ?? "").length;
+                    resetDetailsTools();
+                    setDetailsEditing(false);
+                  }}
+                  title="Отмена"
+                  aria-label="Отмена"
+                >
+                  <IconX className="h-3.5 w-3.5" />
+                </button>
               </div>
-            ) : (
-              <div className="rounded-xl border border-slate-100 bg-slate-50/90 p-2">
-                <MarkdownHtmlBlock source={details} />
-              </div>
-            )}
+            ) : null}
           </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-white p-2">
+          <div className="shrink-0 rounded-2xl border border-slate-200 bg-white p-2">
             <div className="mb-2 flex items-center justify-between gap-2">
               <div className="text-sm font-semibold text-slate-900">Участники и ответственный</div>
                 {canManageCard ? (
@@ -6191,8 +6488,8 @@ function CardModal(props: {
               </div>
           </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-white p-2">
-            <div className="mb-1.5 flex items-center justify-between gap-2">
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white p-2">
+            <div className="mb-1.5 flex shrink-0 items-center justify-between gap-2">
               <div className="text-sm font-semibold text-slate-900">Вложения</div>
               {canEditCard ? (
                 <button
@@ -6210,11 +6507,12 @@ function CardModal(props: {
               ) : null}
             </div>
             {uploadSelectedName ? (
-              <div className="mt-1 truncate text-xs text-slate-500" title={uploadSelectedName}>
+              <div className="mt-1 shrink-0 truncate text-xs text-slate-500" title={uploadSelectedName}>
                 {compactFileName(uploadSelectedName, 70)}
               </div>
             ) : null}
-            <div className="mt-2 grid gap-2">
+            <div className="mt-2 min-h-0 flex-1 overflow-y-auto">
+              <div className="grid gap-2">
               {card.attachments.length === 0 ? (
                 <div className="text-xs text-slate-500">Пока нет файлов.</div>
               ) : (
@@ -6255,6 +6553,7 @@ function CardModal(props: {
                   </div>
                 ))
               )}
+              </div>
             </div>
           </div>
         </div>
@@ -6271,7 +6570,7 @@ function CardModal(props: {
         ) : null}
 
         {isLg && !leftPaneCollapsed && !rightPaneCollapsed ? (
-          <div className="relative flex w-5 shrink-0 flex-col items-stretch border-x border-slate-200/80 bg-slate-50/90 py-0.5">
+          <div className="relative flex min-h-0 w-5 shrink-0 flex-col items-stretch border-x border-slate-200/80 bg-slate-50/90 py-0.5">
             <button
               type="button"
               className="mx-auto grid h-5 w-5 shrink-0 place-items-center rounded text-slate-500 hover:bg-white hover:text-slate-800"
@@ -6326,16 +6625,16 @@ function CardModal(props: {
         {(!isLg || !rightPaneCollapsed) ? (
         <div
           className={classNames(
-            "rounded-2xl border border-slate-200 bg-white p-2",
+            "flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white p-2",
             isLg && leftPaneCollapsed && "min-w-0 flex-1",
             isLg && !leftPaneCollapsed && "min-w-0 shrink-0",
-            !isLg && "w-full",
+            !isLg && "w-full flex-1",
           )}
           style={isLg && !leftPaneCollapsed ? { width: rightWidth } : undefined}
         >
-          <div className="mb-1.5 text-sm font-semibold text-slate-900">Комментарии</div>
+          <div className="mb-1.5 shrink-0 text-sm font-semibold text-slate-900">Комментарии</div>
           {canEditCard ? (
-            <div className="mb-2 grid gap-2" ref={commentComposerRef}>
+            <div className="mb-2 grid shrink-0 gap-2" ref={commentComposerRef}>
               <div className="relative flex items-start gap-2">
                 <AvatarImg user={props.viewer} size={24} />
                 <div className="min-w-0 flex-1 space-y-1">
@@ -6469,7 +6768,8 @@ function CardModal(props: {
               ) : null}
             </div>
           ) : null}
-          <div className="grid max-h-[420px] gap-2 overflow-auto pr-1">
+          <div className="flex min-h-0 flex-1 flex-col overflow-y-auto pr-1">
+            <div className="grid gap-2">
             {card.comments.length === 0 ? (
               <div className="text-xs text-slate-500">Комментариев нет.</div>
             ) : (
@@ -6660,6 +6960,7 @@ function CardModal(props: {
                 </div>
               ))
             )}
+            </div>
           </div>
 
         </div>
