@@ -5766,9 +5766,7 @@ function CardModal(props: {
           ? { width: "100%", height: "100%", maxHeight: "100%" }
           : {
               width: Math.min(panelSize.w, window.innerWidth - 32),
-              ...(panelHasCustomSize || panelResizing
-                ? { height: Math.min(panelSize.h, window.innerHeight - 32) }
-                : { maxHeight: window.innerHeight - 32 }),
+              height: Math.min(panelSize.h, window.innerHeight - 32),
             }
       }
       panelOverlay={
@@ -6488,7 +6486,7 @@ function CardModal(props: {
               </div>
           </div>
 
-          <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white p-2">
+          <div className="flex min-h-32 shrink-0 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white p-2">
             <div className="mb-1.5 flex shrink-0 items-center justify-between gap-2">
               <div className="text-sm font-semibold text-slate-900">Вложения</div>
               {canEditCard ? (
