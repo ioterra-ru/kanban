@@ -36,6 +36,7 @@ import type {
 import { extractAttachmentIdsFromMarkdown, markdownForUploadedAttachment } from "./utils/commentAttachments";
 import { compactFileName } from "./utils/files";
 import { AVATAR_PRESETS, autoAvatarPreset, avatarSrc } from "./utils/avatar";
+import { useIsMobile } from "./hooks/useIsMobile";
 
 function classNames(...xs: Array<string | false | null | undefined>) {
   return xs.filter(Boolean).join(" ");
@@ -265,7 +266,7 @@ function SortableColumnSection(props: {
       ref={setNodeRef}
       style={style}
       className={classNames(
-        "column-section flex h-full min-h-0 w-[340px] shrink-0 flex-col",
+        "column-section flex w-full shrink-0 flex-col min-h-[140px] max-h-[min(68vh,560px)] lg:h-full lg:min-h-0 lg:max-h-none lg:w-[340px]",
         isDragging && "opacity-80 ring-2 ring-[#246c7c] rounded-xl",
       )}
     >
@@ -1052,6 +1053,7 @@ function App() {
   const [shareConfirm, setShareConfirm] = useState<{ cardTitle: string; link: string } | null>(null);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
+  const isMobile = useIsMobile();
   const isObserver = me?.user?.role === "OBSERVER";
 
   const displayColumns = useMemo(() => {
@@ -1433,7 +1435,11 @@ function App() {
     requestAnimationFrame(() => {
       const colEl = columnSectionRefs.current.get(columnId);
       const cardEl = cardTileRefs.current.get(cardId);
-      colEl?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+      colEl?.scrollIntoView({
+        behavior: "smooth",
+        block: isMobile ? "start" : "nearest",
+        inline: isMobile ? "nearest" : "center",
+      });
       setTimeout(() => {
         cardEl?.scrollIntoView({ behavior: "smooth", block: "center" });
       }, 100);
@@ -1446,115 +1452,225 @@ function App() {
 
   return (
     <div className="flex h-full flex-col">
-      <header className="border-b border-slate-200 bg-white px-5 py-4">
-        <div className="flex items-center gap-4 min-w-0">
-          <div className="flex items-center gap-3 flex-shrink-0">
-            <MainAppMenuFlyout
-              boards={boards}
-              currentBoardId={currentBoardId}
-              allUsers={allUsers ?? []}
-              onSelectBoard={async (boardId) => {
-                if (!boardId) return;
-                setBoardVisibleCardIds(null);
-                setLoading(true);
-                try {
-                  await Api.selectBoard({ boardId });
-                  setCurrentBoardId(boardId);
-                  await Promise.all([
-                    reload(),
-                    Api.listAllUsers()
-                      .then((d) => setAllUsers(d.users as any))
-                      .catch(() => setAllUsers([])),
-                  ]);
-                } catch (e) {
-                  setError((e as Error).message);
-                } finally {
-                  setLoading(false);
-                }
-              }}
-              onOpenCardOnBoard={navigateToBoardAndOpenCard}
-              setError={setError}
-              onApplyBoardCardFilter={onApplyBoardCardFilter}
-              onShowMyCardsOnBoard={onShowMyCardsOnBoard}
-            />
-            <button
-              type="button"
-              onClick={() => {
-                clearBoardCardFilter();
-                setError(null);
-              }}
-              className="flex items-center gap-3 rounded-lg text-left outline-none ring-offset-2 focus-visible:ring-2 focus-visible:ring-[#246c7c]/40"
-              title="Показать все карточки на доске"
-            >
-              <img src="/ioterra.svg" alt="ИоТерра" className="h-16 w-16 shrink-0" />
-              <div className="leading-tight">
-                <div className="text-2xl font-extrabold text-slate-900">ИоТерра Канбан</div>
-                <div className="mt-0.5 text-xs font-medium text-slate-400">
-                  v{import.meta.env.VITE_APP_VERSION || "dev"} · © ИоТерра {new Date().getFullYear()}
-                </div>
-              </div>
-            </button>
-          </div>
-          <div className="flex-1 flex justify-center items-stretch gap-2 min-w-0 h-12">
-            {boards.length ? (
-              <select
-                className="h-full min-w-0 max-w-full rounded-xl border border-slate-200 bg-white/90 pl-3 pr-8 text-2xl font-bold leading-none text-slate-800 outline-none focus:border-[#246c7c] [&>option]:text-sm"
-                value={currentBoardId ?? ""}
-                onChange={(e) => {
-                  const id = e.target.value;
-                  if (!id) return;
+      <header
+        className={classNames(
+          "border-b border-slate-200 bg-white",
+          isMobile ? "px-3 py-3" : "px-5 py-4",
+        )}
+      >
+        <div
+          className={classNames(
+            "flex min-w-0",
+            isMobile ? "flex-col gap-3" : "flex-row items-center gap-4",
+          )}
+        >
+          <div
+            className={classNames(
+              "flex min-w-0 items-center",
+              isMobile ? "w-full justify-between gap-2" : "gap-4 flex-shrink-0",
+            )}
+          >
+            <div className="flex min-w-0 items-center gap-2 md:gap-3 flex-shrink-0">
+              <MainAppMenuFlyout
+                boards={boards}
+                currentBoardId={currentBoardId}
+                allUsers={allUsers ?? []}
+                onSelectBoard={async (boardId) => {
+                  if (!boardId) return;
                   setBoardVisibleCardIds(null);
                   setLoading(true);
-                  void Api.selectBoard({ boardId: id })
-                    .then(() => {
-                      setCurrentBoardId(id);
-                      return Promise.all([
-                        reload(),
-                        Api.listAllUsers()
-                          .then((d) => setAllUsers(d.users as any))
-                          .catch(() => setAllUsers([])),
-                      ]);
-                    })
-                    .finally(() => setLoading(false));
+                  try {
+                    await Api.selectBoard({ boardId });
+                    setCurrentBoardId(boardId);
+                    await Promise.all([
+                      reload(),
+                      Api.listAllUsers()
+                        .then((d) => setAllUsers(d.users as any))
+                        .catch(() => setAllUsers([])),
+                    ]);
+                  } catch (e) {
+                    setError((e as Error).message);
+                  } finally {
+                    setLoading(false);
+                  }
+                }}
+                onOpenCardOnBoard={navigateToBoardAndOpenCard}
+                setError={setError}
+                onApplyBoardCardFilter={onApplyBoardCardFilter}
+                onShowMyCardsOnBoard={onShowMyCardsOnBoard}
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  clearBoardCardFilter();
+                  setError(null);
+                }}
+                className="flex min-w-0 items-center gap-2 rounded-lg text-left outline-none ring-offset-2 focus-visible:ring-2 focus-visible:ring-[#246c7c]/40 md:gap-3"
+                title="Показать все карточки на доске"
+              >
+                <img
+                  src="/ioterra.svg"
+                  alt="ИоТерра"
+                  className={classNames("shrink-0", isMobile ? "h-11 w-11" : "h-16 w-16")}
+                />
+                <div className="min-w-0 leading-tight">
+                  <div
+                    className={classNames(
+                      "font-extrabold text-slate-900",
+                      isMobile ? "text-base leading-snug" : "text-2xl",
+                    )}
+                  >
+                    ИоТерра Канбан
+                  </div>
+                  {!isMobile ? (
+                    <div className="mt-0.5 text-xs font-medium text-slate-400">
+                      v{import.meta.env.VITE_APP_VERSION || "dev"} · © ИоТерра {new Date().getFullYear()}
+                    </div>
+                  ) : (
+                    <div className="mt-0.5 text-[11px] font-medium text-slate-400">
+                      v{import.meta.env.VITE_APP_VERSION || "dev"}
+                    </div>
+                  )}
+                </div>
+              </button>
+            </div>
+            {isMobile ? (
+              <div className="flex flex-shrink-0 items-center">
+                <div className="flex items-center gap-1 rounded-xl border border-slate-200 bg-slate-50/80 px-1.5 py-1">
+                  <AvatarImg user={me.user} size={24} />
+                  <button
+                    type="button"
+                    className="rounded-lg border border-slate-200 bg-white p-1.5 text-slate-600 hover:bg-slate-100"
+                    onClick={() => setProfileOpen(true)}
+                    title="Кабинет"
+                    aria-label="Кабинет"
+                  >
+                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                      />
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                  </button>
+                  <button
+                    type="button"
+                    className="rounded-lg border border-slate-200 bg-white p-1.5 text-slate-600 hover:bg-slate-100"
+                    onClick={() => void Api.logout().then(loadMe)}
+                    title="Выйти"
+                    aria-label="Выйти"
+                  >
+                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                      />
+                    </svg>
+                  </button>
+                </div>
+              </div>
+            ) : null}
+          </div>
+
+          <div
+            className={classNames(
+              "flex min-w-0 items-stretch gap-2",
+              isMobile ? "h-auto w-full flex-col" : "h-12 flex-1 justify-center",
+            )}
+          >
+            <div className={classNames("flex min-h-[44px] min-w-0 gap-2", isMobile ? "w-full items-stretch" : "h-full flex-1 justify-center")}>
+              {boards.length ? (
+                <select
+                  className={classNames(
+                    "min-w-0 max-w-full rounded-xl border border-slate-200 bg-white/90 pl-3 pr-8 font-bold leading-none text-slate-800 outline-none focus:border-[#246c7c] [&>option]:text-sm",
+                    isMobile ? "h-11 flex-1 text-base" : "h-full text-2xl",
+                  )}
+                  value={currentBoardId ?? ""}
+                  onChange={(e) => {
+                    const id = e.target.value;
+                    if (!id) return;
+                    setBoardVisibleCardIds(null);
+                    setLoading(true);
+                    void Api.selectBoard({ boardId: id })
+                      .then(() => {
+                        setCurrentBoardId(id);
+                        return Promise.all([
+                          reload(),
+                          Api.listAllUsers()
+                            .then((d) => setAllUsers(d.users as any))
+                            .catch(() => setAllUsers([])),
+                        ]);
+                      })
+                      .finally(() => setLoading(false));
+                  }}
+                >
+                  {boards.map((b) => (
+                    <option key={b.id} value={b.id} style={{ fontSize: "0.875rem" }}>
+                      {b.name}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <span
+                  className={classNames(
+                    "flex items-center rounded-xl border border-slate-200 bg-white/90 font-bold text-slate-800",
+                    isMobile ? "h-11 flex-1 px-3 text-base" : "h-full px-3 text-2xl",
+                  )}
+                >
+                  Доска
+                </span>
+              )}
+              <button
+                type="button"
+                className={classNames(
+                  "flex flex-shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-transparent text-slate-600 hover:bg-slate-100 disabled:opacity-50 disabled:hover:bg-transparent",
+                  isMobile ? "h-11 w-11" : "h-full w-12",
+                )}
+                disabled={columns.length === 0}
+                title="Создание новой карточки"
+                aria-label="Создание новой карточки"
+                onClick={() => {
+                  setCreateColumn(columns[0]?.id ?? "");
+                  setCreateTitle("");
+                  setCreateDetails("");
+                  setCreateCustomer("");
+                  setCreateOpen(true);
                 }}
               >
-                {boards.map((b) => (
-                  <option key={b.id} value={b.id} style={{ fontSize: "0.875rem" }}>
-                    {b.name}
-                  </option>
-                ))}
-              </select>
-            ) : (
-              <span className="flex h-full items-center rounded-xl border border-slate-200 bg-white/90 px-3 text-2xl font-bold text-slate-800">Доска</span>
-            )}
-            <button
-              type="button"
-              className="flex h-full w-12 flex-shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-transparent text-slate-600 hover:bg-slate-100 disabled:opacity-50 disabled:hover:bg-transparent"
-              disabled={columns.length === 0}
-              title="Создание новой карточки"
-              aria-label="Создание новой карточки"
-              onClick={() => {
-                setCreateColumn(columns[0]?.id ?? "");
-                setCreateTitle("");
-                setCreateDetails("");
-                setCreateCustomer("");
-                setCreateOpen(true);
-              }}
+                <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 5v14M5 12h14" />
+                </svg>
+              </button>
+            </div>
+            <div
+              className={classNames(
+                "relative flex min-h-[44px] min-w-0 items-center rounded-xl border border-slate-200 bg-white focus-within:border-[#246c7c]",
+                isMobile ? "w-full" : "max-w-md flex-1",
+              )}
             >
-              <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 5v14M5 12h14" />
-              </svg>
-            </button>
-            <div className="relative flex h-full min-w-0 items-center rounded-xl border border-slate-200 bg-white focus-within:border-[#246c7c]">
               <span className="pointer-events-none absolute left-3 text-slate-400" aria-hidden>
                 <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                  />
                 </svg>
               </span>
               <input
                 ref={searchInputRef}
-                type="text"
-                className={`h-full w-72 min-w-0 rounded-xl border-0 bg-transparent py-0 pl-9 text-sm text-slate-800 outline-none focus:ring-0 placeholder:text-slate-400 ${searchQuery ? "pr-9" : "pr-3"}`}
+                type="search"
+                enterKeyHint="search"
+                autoCapitalize="none"
+                autoCorrect="off"
+                className={classNames(
+                  "min-w-0 rounded-xl border-0 bg-transparent py-0 pl-9 text-sm text-slate-800 outline-none focus:ring-0 placeholder:text-slate-400",
+                  isMobile ? "h-11 w-full" : "h-full w-72",
+                  searchQuery ? "pr-9" : "pr-3",
+                )}
                 placeholder="Поиск карточки"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -1582,7 +1698,10 @@ function App() {
               {searchOpen && searchResults !== null ? (
                 <div
                   data-search-panel
-                  className="absolute top-full left-0 z-50 mt-1 max-h-72 w-80 overflow-auto rounded-xl border border-slate-200 bg-white shadow-lg"
+                  className={classNames(
+                    "absolute top-full z-50 mt-1 max-h-72 overflow-auto rounded-xl border border-slate-200 bg-white shadow-lg",
+                    isMobile ? "left-0 right-0 w-auto" : "left-0 w-80",
+                  )}
                   onMouseDown={(e) => e.preventDefault()}
                 >
                   {searchResults.length === 0 ? (
@@ -1616,37 +1735,44 @@ function App() {
               ) : null}
             </div>
           </div>
-          <div className="flex items-center flex-shrink-0 ml-10">
-            <div className="flex items-center gap-1 rounded-xl border border-slate-200 bg-slate-50/80 px-2 py-1.5">
-              <AvatarImg user={me.user} size={24} />
-              <span className="px-2 text-sm font-semibold text-slate-800">{me.user.name}</span>
-              <span className="text-slate-400">·</span>
-              <span className="text-sm text-slate-600">{roleLabelRu(me.user.role)}</span>
-              <button
-                type="button"
-                className="rounded-lg border border-slate-200 bg-white p-1.5 text-slate-600 hover:bg-slate-100"
-                onClick={() => setProfileOpen(true)}
-                title="Кабинет"
-                aria-label="Кабинет"
-              >
-                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-              </button>
-              <button
-                type="button"
-                className="rounded-lg border border-slate-200 bg-white p-1.5 text-slate-600 hover:bg-slate-100"
-                onClick={() => void Api.logout().then(loadMe)}
-                title="Выйти"
-                aria-label="Выйти"
-              >
-                <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                </svg>
-              </button>
+
+          {!isMobile ? (
+            <div className="ml-10 flex flex-shrink-0 items-center">
+              <div className="flex items-center gap-1 rounded-xl border border-slate-200 bg-slate-50/80 px-2 py-1.5">
+                <AvatarImg user={me.user} size={24} />
+                <span className="px-2 text-sm font-semibold text-slate-800">{me.user.name}</span>
+                <span className="text-slate-400">·</span>
+                <span className="text-sm text-slate-600">{roleLabelRu(me.user.role)}</span>
+                <button
+                  type="button"
+                  className="rounded-lg border border-slate-200 bg-white p-1.5 text-slate-600 hover:bg-slate-100"
+                  onClick={() => setProfileOpen(true)}
+                  title="Кабинет"
+                  aria-label="Кабинет"
+                >
+                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                    />
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                </button>
+                <button
+                  type="button"
+                  className="rounded-lg border border-slate-200 bg-white p-1.5 text-slate-600 hover:bg-slate-100"
+                  onClick={() => void Api.logout().then(loadMe)}
+                  title="Выйти"
+                  aria-label="Выйти"
+                >
+                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                  </svg>
+                </button>
+              </div>
             </div>
-          </div>
+          ) : null}
         </div>
         {error ? <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-800">{error}</div> : null}
       </header>
@@ -1654,14 +1780,14 @@ function App() {
       {boardFilterActive ? (
         <div
           role="status"
-          className="border-b border-teal-200/90 bg-teal-50 px-4 py-2 text-center text-sm text-slate-800"
+          className="border-b border-teal-200/90 bg-teal-50 px-3 py-2 text-center text-xs leading-snug text-slate-800 lg:px-4 lg:py-2 lg:text-sm lg:leading-normal"
         >
           Показаны только отфильтрованные карточки. Полный вид доски — нажмите{" "}
           <span className="font-semibold text-[#1a4d58]">«ИоТерра Канбан»</span> или логотип ИоТерра слева.
         </div>
       ) : null}
 
-      <main className="flex min-h-0 flex-1 flex-col overflow-auto p-5">
+      <main className="flex min-h-0 flex-1 flex-col overflow-auto p-3 lg:p-5">
         <DndContext
           sensors={sensors}
           collisionDetection={boardCollisionDetection}
@@ -1731,10 +1857,10 @@ function App() {
             });
           }}
         >
-          <div className="flex min-h-0 min-w-[1200px] flex-1 items-stretch gap-4">
+          <div className="flex min-h-0 flex-1 flex-col items-stretch gap-4 lg:flex-row lg:min-w-[1200px]">
             <SortableContext
               items={columns.map((c) => `${COLUMN_PREFIX}${c.id}`)}
-              strategy={horizontalListSortingStrategy}
+              strategy={isMobile ? verticalListSortingStrategy : horizontalListSortingStrategy}
             >
               {displayColumns.map((col) => (
                 <SortableColumnSection
@@ -1893,7 +2019,7 @@ function App() {
 
           <DragOverlay>
             {activeCardId && cardsById.get(activeCardId) ? (
-              <div className="w-[340px]">
+              <div className="w-[min(340px,92vw)] lg:w-[340px]">
                 <div className="rounded-xl border border-slate-200 bg-white p-3 shadow-2xl">
                   <div className="text-sm font-semibold">{cardsById.get(activeCardId)!.description}</div>
                   {assigneeDisplay(cardsById.get(activeCardId)!.assignee) ? (
