@@ -4929,7 +4929,6 @@ function CardModal(props: {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [panelSize, setPanelSize] = useState<{ w: number; h: number }>({ w: 1120, h: 740 });
-  const [panelHasCustomSize, setPanelHasCustomSize] = useState(false);
   const [panelResizing, setPanelResizing] = useState(false);
   const [panelFullscreen, setPanelFullscreen] = useState(false);
   const panelResizeRef = useRef<{ startX: number; startY: number; startW: number; startH: number } | null>(null);
@@ -5052,7 +5051,6 @@ function CardModal(props: {
           typeof window !== "undefined" ? Math.max(480, window.innerWidth - 48) : Math.max(480, nextW);
         const maxRight = Math.max(CARD_MIN_RIGHT_PX, layoutGuess - CARD_MIN_LEFT_PX - CARD_SPLITTER_COL_PX);
         setRightWidth(clamp(nextRightW, CARD_MIN_RIGHT_PX, maxRight));
-        setPanelHasCustomSize(true);
       }
     } catch {
       // ignore
@@ -5306,7 +5304,6 @@ function CardModal(props: {
       panelResizeRef.current = null;
       document.body.style.cursor = "";
       document.body.style.userSelect = "";
-      setPanelHasCustomSize(true);
       try {
         localStorage.setItem(
           `ioterra.cardModal.size.${props.viewer.id}`,
@@ -5777,7 +5774,6 @@ function CardModal(props: {
             onMouseDown={(e) => {
               panelResizeRef.current = { startX: e.clientX, startY: e.clientY, startW: panelSize.w, startH: panelSize.h };
               setPanelResizing(true);
-              setPanelHasCustomSize(true);
               document.body.style.cursor = "se-resize";
               document.body.style.userSelect = "none";
               e.preventDefault();
