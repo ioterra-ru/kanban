@@ -5055,7 +5055,6 @@ function CardModal(props: {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [panelSize, setPanelSize] = useState<{ w: number; h: number }>({ w: 1120, h: 740 });
-  const [panelHasCustomSize, setPanelHasCustomSize] = useState(false);
   const [panelResizing, setPanelResizing] = useState(false);
   const [panelFullscreen, setPanelFullscreen] = useState(false);
   const panelResizeRef = useRef<{ startX: number; startY: number; startW: number; startH: number } | null>(null);
@@ -5178,7 +5177,6 @@ function CardModal(props: {
           typeof window !== "undefined" ? Math.max(480, window.innerWidth - 48) : Math.max(480, nextW);
         const maxRight = Math.max(CARD_MIN_RIGHT_PX, layoutGuess - CARD_MIN_LEFT_PX - CARD_SPLITTER_COL_PX);
         setRightWidth(clamp(nextRightW, CARD_MIN_RIGHT_PX, maxRight));
-        setPanelHasCustomSize(true);
       }
     } catch {
       // ignore
@@ -5432,7 +5430,6 @@ function CardModal(props: {
       panelResizeRef.current = null;
       document.body.style.cursor = "";
       document.body.style.userSelect = "";
-      setPanelHasCustomSize(true);
       try {
         localStorage.setItem(
           `ioterra.cardModal.size.${props.viewer.id}`,
@@ -5892,9 +5889,7 @@ function CardModal(props: {
           ? { width: "100%", height: "100%", maxHeight: "100%" }
           : {
               width: Math.min(panelSize.w, window.innerWidth - 32),
-              ...(panelHasCustomSize || panelResizing
-                ? { height: Math.min(panelSize.h, window.innerHeight - 32) }
-                : { maxHeight: window.innerHeight - 32 }),
+              height: Math.min(panelSize.h, window.innerHeight - 32),
             }
       }
       panelOverlay={
@@ -5905,7 +5900,6 @@ function CardModal(props: {
             onMouseDown={(e) => {
               panelResizeRef.current = { startX: e.clientX, startY: e.clientY, startW: panelSize.w, startH: panelSize.h };
               setPanelResizing(true);
-              setPanelHasCustomSize(true);
               document.body.style.cursor = "se-resize";
               document.body.style.userSelect = "none";
               e.preventDefault();
@@ -6614,7 +6608,7 @@ function CardModal(props: {
               </div>
           </div>
 
-          <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white p-2">
+          <div className="flex min-h-32 shrink-0 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white p-2">
             <div className="mb-1.5 flex shrink-0 items-center justify-between gap-2">
               <div className="text-sm font-semibold text-slate-900">Вложения</div>
               {canEditCard ? (
