@@ -68,14 +68,14 @@ function importanceBadge(importance: Importance) {
   }
 }
 
-function cardBorderClass(importance: Importance) {
+function cardImportanceClass(importance: Importance) {
   switch (importance) {
     case "LOW":
-      return "border-slate-200 hover:border-slate-300";
+      return "border-slate-200 bg-slate-50 hover:border-slate-300 hover:bg-slate-200";
     case "MEDIUM":
-      return "border-[#246c7c] hover:border-[#246c7c]";
+      return "border-[#246c7c] bg-[#e7f4f6] hover:border-[#246c7c] hover:bg-[#d3ebef]";
     case "HIGH":
-      return "border-[#ac4c1c] hover:border-[#ac4c1c]";
+      return "border-[#ac4c1c] bg-[#fff0e8] hover:border-[#ac4c1c] hover:bg-[#ffe0d0]";
   }
 }
 
@@ -334,9 +334,8 @@ function CardTile(props: {
       ref={setRefs}
       style={style}
       className={classNames(
-        "group rounded-xl border-2 bg-white p-3 shadow-sm transition-colors",
-        cardBorderClass(props.card.importance),
-        "hover:bg-slate-200",
+        "group rounded-xl border-2 p-3 shadow-sm transition-colors",
+        cardImportanceClass(props.card.importance),
         isDragging && "opacity-50",
         props.isSelected && "ring-2 ring-[#246c7c] ring-offset-2",
       )}
