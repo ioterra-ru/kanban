@@ -79,6 +79,13 @@ function cardImportanceClass(importance: Importance) {
   }
 }
 
+function cardSurfaceClass(importance: Importance, paused: boolean) {
+  if (paused) {
+    return "border-amber-400 bg-amber-100 hover:border-amber-500 hover:bg-amber-200";
+  }
+  return cardImportanceClass(importance);
+}
+
 function getCardShareLink(boardId: string, cardId: string): string {
   const base = window.location.origin + window.location.pathname + (window.location.search || "");
   return `${base}#board/${boardId}/card/${cardId}`;
@@ -335,7 +342,7 @@ function CardTile(props: {
       style={style}
       className={classNames(
         "group rounded-xl border-2 p-3 shadow-sm transition-colors",
-        cardImportanceClass(props.card.importance),
+        cardSurfaceClass(props.card.importance, props.card.paused),
         isDragging && "opacity-50",
         props.isSelected && "ring-2 ring-[#246c7c] ring-offset-2",
       )}
@@ -4998,6 +5005,7 @@ function CardModal(props: {
   const [uploadSelectedName, setUploadSelectedName] = useState<string>("");
 
   const [commentBody, setCommentBody] = useState("");
+  const [commentComposerOpen, setCommentComposerOpen] = useState(false);
   const [commentMentionOpen, setCommentMentionOpen] = useState(false);
   const [commentMentionQuery, setCommentMentionQuery] = useState("");
   const [commentMentionStart, setCommentMentionStart] = useState<number | null>(null);
@@ -5140,6 +5148,7 @@ function CardModal(props: {
     setDeleting(false);
     setCommentBody("");
     commentCaretRef.current = 0;
+    setCommentComposerOpen(false);
     setCommentMentionOpen(false);
     setCommentMentionQuery("");
     setCommentMentionStart(null);
@@ -5770,6 +5779,7 @@ function CardModal(props: {
       .then(() => {
         setCommentBody("");
         commentCaretRef.current = 0;
+        setCommentComposerOpen(false);
         setCommentMentionOpen(false);
         setCommentCardLinkOpen(false);
         return props.onChanged();
@@ -6751,8 +6761,43 @@ function CardModal(props: {
           )}
           style={isLg && !leftPaneCollapsed ? { width: rightWidth } : undefined}
         >
-          <div className="mb-1.5 shrink-0 text-sm font-semibold text-slate-900">Комментарии</div>
-          {canEditCard ? (
+          <div className="mb-1.5 flex shrink-0 items-center justify-between gap-2">
+            <div className="text-sm font-semibold text-slate-900">Комментарии</div>
+            {canEditCard ? (
+              commentComposerOpen ? (
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-1 rounded-lg px-1.5 py-0.5 text-xs font-medium text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                  title="Скрыть поле ввода"
+                  aria-label="Скрыть поле ввода"
+                  aria-expanded={true}
+                  onClick={() => {
+                    setCommentComposerOpen(false);
+                    setCommentMentionOpen(false);
+                    setCommentCardLinkOpen(false);
+                  }}
+                >
+                  <IconChevronUp className="h-3.5 w-3.5" />
+                  Скрыть
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  className={classNames(cardModalIconAddEmphasis, "h-7 w-7")}
+                  title={commentBody.trim() ? "Продолжить черновик комментария" : "Написать комментарий"}
+                  aria-label={commentBody.trim() ? "Продолжить черновик комментария" : "Написать комментарий"}
+                  aria-expanded={false}
+                  onClick={() => {
+                    setCommentComposerOpen(true);
+                    window.setTimeout(() => commentTextareaRef.current?.focus(), 0);
+                  }}
+                >
+                  <IconPlus className="h-4 w-4" />
+                </button>
+              )
+            ) : null}
+          </div>
+          {canEditCard && commentComposerOpen ? (
             <div className="mb-2 grid shrink-0 gap-2" ref={commentComposerRef}>
               <div className="relative flex items-start gap-2">
                 <AvatarImg user={props.viewer} size={24} />
