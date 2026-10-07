@@ -241,6 +241,7 @@ function SortableColumnSection(props: {
   renderHeader: (dragHandle: React.ReactNode) => React.ReactNode;
   children: React.ReactNode;
   columnDragDisabled?: boolean;
+  collapsed?: boolean;
 }) {
   const { setNodeRef, transform, transition, attributes, listeners, isDragging } = useSortable({
     id: `${COLUMN_PREFIX}${props.col.id}`,
@@ -273,15 +274,28 @@ function SortableColumnSection(props: {
       ref={setNodeRef}
       style={style}
       className={classNames(
-        "column-section flex w-full shrink-0 flex-col min-h-[140px] max-h-[min(68vh,560px)] lg:h-full lg:min-h-0 lg:max-h-none lg:w-[340px]",
+        "column-section flex w-full shrink-0 flex-col lg:h-full lg:min-h-0 lg:max-h-none lg:w-[340px]",
+        props.collapsed
+          ? "min-h-0 max-h-none rounded-xl border border-slate-200 bg-white px-2 py-1"
+          : "min-h-[140px] max-h-[min(68vh,560px)]",
         isDragging && "opacity-80 ring-2 ring-[#246c7c] rounded-xl",
       )}
     >
-      <div className="column-scroll-area flex min-h-0 flex-1 flex-col overflow-y-auto">
-        <div className="sticky top-0 z-10 shrink-0 border-b border-slate-100 bg-white pb-2 pt-0.5">
+      <div
+        className={classNames(
+          "column-scroll-area flex flex-col",
+          props.collapsed ? "overflow-visible" : "min-h-0 flex-1 overflow-y-auto",
+        )}
+      >
+        <div
+          className={classNames(
+            "sticky top-0 z-10 shrink-0 bg-white pt-0.5",
+            props.collapsed ? "border-b-0 pb-0" : "border-b border-slate-100 pb-2",
+          )}
+        >
           {props.renderHeader(handle)}
         </div>
-        <div className="min-h-0 flex-1">{props.children}</div>
+        {props.collapsed ? null : <div className="min-h-0 flex-1">{props.children}</div>}
       </div>
     </section>
   );
@@ -1056,6 +1070,7 @@ function App() {
   const cardTileRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const [columnActionsOpen, setColumnActionsOpen] = useState<string | null>(null);
   const columnActionsRef = useRef<HTMLDivElement | null>(null);
+  const [collapsedColumnIds, setCollapsedColumnIds] = useState<Set<string>>(() => new Set());
   const [shareConfirm, setShareConfirm] = useState<{ cardTitle: string; link: string } | null>(null);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
@@ -1433,12 +1448,27 @@ function App() {
     }
   };
 
+  const toggleColumnCollapsed = (columnId: string) => {
+    setCollapsedColumnIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(columnId)) next.delete(columnId);
+      else next.add(columnId);
+      return next;
+    });
+  };
+
   const goToCard = (cardId: string, columnId: string) => {
     setSearchOpen(false);
     setSearchQuery("");
     setSearchResults(null);
     setSelectedCardId(cardId);
-    requestAnimationFrame(() => {
+    setCollapsedColumnIds((prev) => {
+      if (!prev.has(columnId)) return prev;
+      const next = new Set(prev);
+      next.delete(columnId);
+      return next;
+    });
+    window.setTimeout(() => {
       const colEl = columnSectionRefs.current.get(columnId);
       const cardEl = cardTileRefs.current.get(cardId);
       colEl?.scrollIntoView({
@@ -1446,10 +1476,10 @@ function App() {
         block: isMobile ? "start" : "nearest",
         inline: isMobile ? "nearest" : "center",
       });
-      setTimeout(() => {
+      window.setTimeout(() => {
         cardEl?.scrollIntoView({ behavior: "smooth", block: "center" });
       }, 100);
-    });
+    }, 0);
   };
 
   if (loading) {
@@ -1863,7 +1893,7 @@ function App() {
             });
           }}
         >
-          <div className="flex min-h-0 flex-1 flex-col items-stretch gap-4 lg:flex-row lg:min-w-[1200px]">
+          <div className="flex flex-col items-stretch gap-4 lg:h-full lg:min-h-0 lg:flex-1 lg:flex-row lg:min-w-[1200px]">
             <SortableContext
               items={columns.map((c) => `${COLUMN_PREFIX}${c.id}`)}
               strategy={isMobile ? verticalListSortingStrategy : horizontalListSortingStrategy}
@@ -1873,20 +1903,37 @@ function App() {
                   key={col.id}
                   col={col}
                   columnDragDisabled={isObserver}
+                  collapsed={isMobile && collapsedColumnIds.has(col.id)}
                   renderHeader={(handle) => (
-                    <div className="mb-2 flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-1">
+                    <div className={classNames("flex items-center justify-between gap-2", isMobile && collapsedColumnIds.has(col.id) ? "mb-0" : "mb-2")}>
+                      <div className="flex min-w-0 items-center gap-1">
                         {handle}
+                        {isMobile ? (
+                          <button
+                            type="button"
+                            className="grid h-10 w-10 shrink-0 place-items-center rounded-lg border border-slate-200 bg-white text-slate-800 hover:bg-slate-50"
+                            title={collapsedColumnIds.has(col.id) ? "Развернуть колонку" : "Свернуть колонку"}
+                            aria-expanded={!collapsedColumnIds.has(col.id)}
+                            aria-label={collapsedColumnIds.has(col.id) ? `Развернуть «${col.title}»` : `Свернуть «${col.title}»`}
+                            onClick={() => toggleColumnCollapsed(col.id)}
+                          >
+                            {collapsedColumnIds.has(col.id) ? (
+                              <IconChevronDown className="h-5 w-5" />
+                            ) : (
+                              <IconChevronUp className="h-5 w-5" />
+                            )}
+                          </button>
+                        ) : null}
                         <div
                           ref={(el) => {
                             if (el) columnSectionRefs.current.set(col.id, el);
                           }}
-                          className="text-sm font-semibold text-slate-900"
+                          className="min-w-0 truncate text-sm font-semibold text-slate-900"
                         >
                           {col.title} <span className="text-slate-500">({col.cards.length})</span>
                         </div>
                       </div>
-                      <div className="flex items-center gap-1">
+                      <div className="flex shrink-0 items-center gap-1">
                         {!isObserver ? (
                           <button
                             type="button"
